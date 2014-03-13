@@ -1,13 +1,10 @@
 package gmf
 
 /*
+
 #cgo pkg-config: libavformat
 
 #include "libavformat/avformat.h"
-
-AVStream* gmf_get_stream(AVFormatContext *ctx, int idx) {
-    return ctx->streams[idx];
-}
 
 */
 import "C"
@@ -20,13 +17,13 @@ import (
 
 type FmtCtx struct {
 	avCtx *_Ctype_AVFormatContext
+	ofmt  *OutputFmt
 }
 
 func init() {
 	C.av_register_all()
 }
 
-// Format Context
 func NewCtx() *FmtCtx {
 	return &FmtCtx{
 		avCtx: C.avformat_alloc_context(),
@@ -46,6 +43,8 @@ func (this *FmtCtx) OpenInput(filename string) error {
 		return errors.New(fmt.Sprintf("Unable to find stream info: %s", AvError(int(averr))))
 	}
 
+	// C.av_opt_set_int(this.avCtx.codec, "refcounted_frames", 1, 0)
+
 	return nil
 }
 
@@ -56,11 +55,52 @@ func (this *FmtCtx) OpenOutput(ofmt *OutputFmt) error {
 		return errors.New("Error opening output. OutputFmt is empty.")
 	}
 
+	this.ofmt = ofmt
+
 	cfilename := C.CString(ofmt.Filename)
 	defer C.free(unsafe.Pointer(cfilename))
 
 	if averr := C.avformat_alloc_output_context2(&this.avCtx, ofmt.avOutputFmt, nil, cfilename); averr < 0 {
 		return errors.New(fmt.Sprintf("Error opening output '%s': %s", ofmt.Filename, AvError(int(averr))))
+	}
+
+	return nil
+}
+
+func (this *FmtCtx) CloseOutput() {
+	C.av_write_trailer(this.avCtx)
+	C.avio_close(this.avCtx.pb)
+}
+
+func (this *FmtCtx) IsFileOpened() bool {
+	if int(this.avCtx.flags&C.AVFMT_NOFILE) == 0 {
+		return false
+	}
+
+	return true
+}
+
+func (this *FmtCtx) WriteHeader() error {
+	// check is file opened
+
+	cfilename := C.CString(this.ofmt.Filename)
+	defer C.free(unsafe.Pointer(cfilename))
+
+	if averr := C.avio_open(&this.avCtx.pb, cfilename, C.AVIO_FLAG_WRITE); averr < 0 {
+		return errors.New(fmt.Sprintf("Unable to open '%s': %s", this.ofmt.Filename, AvError(int(averr))))
+	}
+	fmt.Println("avCtx.pb:", this.avCtx.pb)
+
+	if averr := C.avformat_write_header(this.avCtx, nil); averr < 0 {
+		return errors.New(fmt.Sprintf("Unable to write header to '%s': %s", this.ofmt.Filename, AvError(int(averr))))
+	}
+
+	return nil
+}
+
+func (this *FmtCtx) WritePacket(p *Packet) error {
+	if averr := C.av_interleaved_write_frame(this.avCtx, &p.avPacket); averr < 0 {
+		return errors.New(fmt.Sprintf("Unable to write packet to '%s': %s", this.ofmt.Filename, AvError(int(averr))))
 	}
 
 	return nil
@@ -78,6 +118,13 @@ func (this *FmtCtx) SetOformat(ofmt *OutputFmt) error {
 	return nil
 }
 
+func (this *FmtCtx) Dump() {
+	cfilename := C.CString(this.ofmt.Filename)
+	defer C.free(unsafe.Pointer(cfilename))
+
+	C.av_dump_format(this.avCtx, 0, cfilename, 1)
+}
+
 func (this *FmtCtx) StreamsCnt() int {
 	return int(this.avCtx.nb_streams)
 }
@@ -90,6 +137,15 @@ func (this *FmtCtx) GetStream(idx int) (*Stream, error) {
 	return &Stream{
 		avStream: C.gmf_get_stream(this.avCtx, C.int(idx)),
 	}, nil
+}
+
+func (this *FmtCtx) GetVideoStream() (*Stream, error) {
+	idx := C.av_find_best_stream(this.avCtx, C.AVMEDIA_TYPE_VIDEO, -1, -1, nil, 0)
+	if int(idx) < 0 {
+		return nil, errors.New(fmt.Sprintf("Can't find video stream"))
+	}
+
+	return this.GetStream(int(idx))
 }
 
 func (this *FmtCtx) Packets() chan *Packet {
@@ -129,46 +185,6 @@ func (this *FmtCtx) NewStream(c *Codec, _ error) *Stream {
 
 func (this *FmtCtx) Free() {
 	C.avformat_free_context(this.avCtx)
-}
-
-// Stream
-type Stream struct {
-	avStream *_Ctype_AVStream
-	cc       *CodecCtx
-}
-
-func (this *Stream) Index() int {
-	return int(this.avStream.index)
-}
-
-func (this *Stream) Id() int {
-	return int(this.avStream.id)
-}
-
-func (this *Stream) NbFrames() int {
-	return int(this.avStream.nb_frames)
-}
-
-func (this *Stream) CodecCtx() *CodecCtx {
-	if this.cc != nil {
-		return this.cc
-	}
-
-	c, err := NewDecoder(int(this.avStream.codec.codec_id))
-	if err != nil {
-		panic(fmt.Sprintf("Can't init codec for stream '%d', error:", this.Index(), err))
-	}
-
-	this.cc = &CodecCtx{
-		codec:      c,
-		avCodecCtx: this.avStream.codec,
-	}
-
-	if err := this.cc.Open(nil); err != nil {
-		panic(fmt.Sprintf("Can't open code for stream '%d', error: %v", this.Index(), err))
-	}
-
-	return this.cc
 }
 
 // OutputFmt
