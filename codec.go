@@ -17,9 +17,11 @@ import (
 )
 
 var (
-	CODEC_TYPE_AUDIO   int   = C.AVMEDIA_TYPE_AUDIO
-	CODEC_TYPE_VIDEO   int   = C.AVMEDIA_TYPE_VIDEO
-	AV_PIX_FMT_YUV420P int32 = C.AV_PIX_FMT_YUV420P
+	CODEC_TYPE_AUDIO        int   = C.AVMEDIA_TYPE_AUDIO
+	CODEC_TYPE_VIDEO        int   = C.AVMEDIA_TYPE_VIDEO
+	AV_PIX_FMT_YUV420P      int32 = C.AV_PIX_FMT_YUV420P
+	FF_PROFILE_MPEG4_SIMPLE int   = C.FF_PROFILE_MPEG4_SIMPLE
+	AV_NOPTS_VALUE          int   = C.AV_NOPTS_VALUE
 )
 
 func init() {
@@ -78,6 +80,8 @@ func NewEncoder(i interface{}) (*Codec, error) {
 	if avc == nil {
 		return nil, errors.New(fmt.Sprintf("Unable to find codec by value '%v'", i))
 	}
+
+	fmt.Println("---codec---", "\n", avc)
 
 	return &Codec{avCodec: avc}, nil
 }

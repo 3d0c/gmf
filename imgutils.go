@@ -56,6 +56,11 @@ static void copy_helper(uint8_t **ptrs, int *linesize, AVFrame *src, int w, int 
 */
 import "C"
 
+//
+// UNFINISHED!
+// @todo remove some testing stuff from helpers
+//
+
 import (
 	"errors"
 	"fmt"

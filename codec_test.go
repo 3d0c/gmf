@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestCodec(t *testing.T) {
+func _TestCodec(t *testing.T) {
 	type test struct {
 		In       interface{}
 		Expected interface{}
@@ -27,7 +27,7 @@ func TestCodec(t *testing.T) {
 	}
 }
 
-func TestNewPacket(t *testing.T) {
+func _TestNewPacket(t *testing.T) {
 	expectedPts := -9223372036854775808
 	p := NewPacket()
 	if p.Pts() != expectedPts {

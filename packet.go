@@ -43,8 +43,6 @@ func (this *Packet) Decode(cc *CodecCtx) (*Frame, int, error) {
 
 	if frames[cc.Type()] == nil {
 		frames[cc.Type()] = &Frame{avFrame: C.av_frame_alloc(), mediaType: cc.Type()}
-		frames[cc.Type()].avFrame.pts = 1
-		frames[cc.Type()].pts = 0
 	}
 
 	switch cc.Type() {
@@ -147,12 +145,24 @@ func (this *Packet) Pts() int {
 	return int(this.avPacket.pts)
 }
 
+func (this *Packet) SetPts(pts int) {
+	this.avPacket.pts = C.int64_t(pts)
+}
+
 func (this *Packet) Dts() int {
 	return int(this.avPacket.dts)
 }
 
+func (this *Packet) SetDts(val int) {
+	this.avPacket.dts = _Ctype_int64_t(val)
+}
+
 func (this *Packet) Duration() int {
 	return int(this.avPacket.duration)
+}
+
+func (this *Packet) SetDuration(duration int) {
+	this.avPacket.duration = C.int(duration)
 }
 
 func (this *Packet) StreamIndex() int {
@@ -161,4 +171,12 @@ func (this *Packet) StreamIndex() int {
 
 func (this *Packet) Size() int {
 	return int(this.avPacket.size)
+}
+
+func (this *Packet) Data() []byte {
+	return C.GoBytes(unsafe.Pointer(this.avPacket.data), C.int(this.avPacket.size))
+}
+
+func (this *Packet) Dump() {
+	fmt.Println("pkt:{\n", "pts:", this.avPacket.pts, "\ndts:", this.avPacket.dts, "\ndata:", string(C.GoBytes(unsafe.Pointer(this.avPacket.data), 128)), "size:", this.avPacket.size, "\n}")
 }

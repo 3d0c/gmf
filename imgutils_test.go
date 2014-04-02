@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestImg(t *testing.T) {
+func _TestImg(t *testing.T) {
 	img, err := NewImage(100, 100, AV_PIX_FMT_YUV420P, 1)
 	if err != nil {
 		t.Fatal("Unexpected error:", err)
