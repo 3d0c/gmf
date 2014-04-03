@@ -42,7 +42,7 @@ func NewCtx() *FmtCtx {
 }
 
 func NewOutputCtx(i interface{}) (*FmtCtx, error) {
-	this := &FmtCtx{}
+	this := &FmtCtx{streams: make(map[int]*Stream)}
 
 	switch t := i.(type) {
 	case string:

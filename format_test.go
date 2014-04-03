@@ -166,12 +166,9 @@ func _TestPacketsIterator(t *testing.T) {
 	}
 }
 
-func _TestEncode(t *testing.T) {
+func TestEncode(t *testing.T) {
 	ctx := NewCtx()
 	defer ctx.Free()
-
-	outCtx := NewCtx()
-	defer outCtx.Free()
 
 	if err := ctx.OpenInput(testVideoFile); err != nil {
 		t.Fatalf("Unexpected error: %v\n", err)
@@ -179,10 +176,16 @@ func _TestEncode(t *testing.T) {
 		log.Printf("Input file %s opened. %d streams found.\n", testVideoFile, ctx.StreamsCnt())
 	}
 
-	if err := outCtx.OpenOutput(NewOutputFmt("mpeg", testVideoOutput, "")); err != nil {
-		t.Fatalf("Unexpected error: %v\n", err)
+	inputVideo, err := ctx.GetVideoStream()
+	if err != nil {
+		t.Fatal(err)
 	} else {
-		log.Printf("Output file %s opened", testVideoOutput)
+		inputVideo.GetCodecCtx().SetOpt()
+	}
+
+	outCtx, err := NewOutputCtx(testVideoOutput)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	i := 0
@@ -234,6 +237,14 @@ func _TestEncode(t *testing.T) {
 
 	videoEncCtx.CopyCtx(assert(ctx.GetVideoStream()).(*Stream))
 
+	if outCtx.IsGlobalHeader() {
+		videoEncCtx.SetFlag(CODEC_FLAG_GLOBAL_HEADER)
+		log.Println("AVFMT_GLOBALHEADER flag is set.")
+	}
+
+	// copy porfile from source
+	videoEncCtx.SetProfile(inputVideo.GetCodecCtx().GetProfile())
+
 	if err := videoEncCtx.Open(nil); err != nil {
 		t.Fatal(err)
 	}
@@ -258,16 +269,6 @@ func _TestEncode(t *testing.T) {
 
 	outCtx.Dump()
 
-	inputVideo, err := ctx.GetVideoStream()
-	if err != nil {
-		t.Fatal(err)
-	} else {
-		inputVideo.GetCodecCtx().SetOpt()
-	}
-
-	// copy porfile from source
-	videoEncCtx.SetProfile(inputVideo.GetCodecCtx().GetProfile())
-
 	for packet := range ctx.Packets() {
 		if packet.Size() == 0 {
 			t.Fatalf("Expected any non zero size.")
@@ -291,19 +292,18 @@ func _TestEncode(t *testing.T) {
 			// log.Println("codecCtx Id:", stream.GetCodecCtx().Id())
 		}
 
-		packet.SetPts(packet.Pts() + RescaleQ(ctx.TsOffset(ctx.StartTime()), AV_TIME_BASE_Q, stream.TimeBase()))
+		// packet.SetPts(packet.Pts() + RescaleQ(ctx.TsOffset(ctx.StartTime()), AV_TIME_BASE_Q, stream.TimeBase()))
 
-		log.Println("---packet in---")
-		log.Println("pts:", packet.Pts(), "duration:", packet.Duration(), "size:", packet.Size(), "time_base:", stream.TimeBase())
+		// log.Println("---packet in---")
+		// log.Println("pts:", packet.Pts(), "duration:", packet.Duration(), "size:", packet.Size(), "time_base:", stream.TimeBase())
 
 		frame, got, err := packet.Decode(stream.GetCodecCtx())
 		if got != 0 {
-			frame.SetBestPts()
-			log.Println("---codecCtx")
-			log.Println(videoEncCtx.avCodecCtx)
-			log.Println("---frame decoded---")
+			// frame.SetBestPts()
+			frame.SetPts(i)
+			log.Println("---frame---")
 			log.Println("pkt_duration:", frame.PktDuration(), "pkt_pos:", frame.PktPos(), "pts:", frame.Pts(), "w:", frame.Width(), "h:", frame.Height(), "key_frame:", frame.KeyFrame())
-			log.Println(frame.avFrame)
+			// log.Println(frame.avFrame)
 			if p, ready, _ := frame.Encode(videoEncCtx); ready {
 				if outSt, err := outCtx.GetStream(0); err == nil {
 					if p.Pts() != AV_NOPTS_VALUE {
@@ -311,7 +311,7 @@ func _TestEncode(t *testing.T) {
 					}
 				}
 
-				log.Println("---packet out---[enc]")
+				log.Println("---packet out---")
 				log.Println("size:", p.Size(), "pts:", p.Pts(), "duration:", p.Duration())
 				w++
 				if err := outCtx.WritePacket(p); err != nil {
@@ -327,9 +327,9 @@ func _TestEncode(t *testing.T) {
 		frame.Unref()
 
 		i++
-		if i > 6 {
-			break
-		}
+		// if i > 6 {
+		// 	break
+		// }
 	}
 
 	log.Println("output ctx duration:", outCtx.Duration())

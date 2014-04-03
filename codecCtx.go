@@ -57,7 +57,7 @@ func (this *CodecCtx) CopyCtx(ist *Stream) {
 	codec.codec_id = icodec.codec_id
 	codec.codec_type = icodec.codec_type
 
-	codec.codec_tag = icodec.codec_tag
+	// codec.codec_tag = icodec.codec_tag
 
 	codec.bit_rate = icodec.bit_rate
 	codec.rc_max_rate = icodec.rc_max_rate
