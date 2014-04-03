@@ -307,7 +307,11 @@ func TestEncode(t *testing.T) {
 			if p, ready, _ := frame.Encode(videoEncCtx); ready {
 				if outSt, err := outCtx.GetStream(0); err == nil {
 					if p.Pts() != AV_NOPTS_VALUE {
-						p.SetPts(RescaleQ(i, outSt.GetCodecCtx().TimeBase(), stream.TimeBase()))
+						p.SetPts(RescaleQ(p.Pts(), outSt.GetCodecCtx().TimeBase(), stream.TimeBase()))
+					}
+
+					if p.Dts() != AV_NOPTS_VALUE {
+						p.SetDts(RescaleQ(p.Dts(), outSt.GetCodecCtx().TimeBase(), stream.TimeBase()))
 					}
 				}
 

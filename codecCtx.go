@@ -87,6 +87,7 @@ func (this *CodecCtx) CopyCtx(ist *Stream) {
 	codec.time_base.num *= icodec.ticks_per_frame
 
 	fmt.Println("codec.time_base:", codec.time_base)
+	fmt.Println("codec.bit_rate:", codec.bit_rate)
 }
 
 func (this *CodecCtx) Open(opts *Options) error {
