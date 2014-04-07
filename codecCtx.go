@@ -95,6 +95,7 @@ func (this *CodecCtx) Open(opts *Options) error {
 	return nil
 }
 
+// @todo
 func (this *CodecCtx) SetOpt() {
 	// mock
 	C.av_opt_set_int(unsafe.Pointer(this.avCodecCtx), C.CString("refcounted_frames"), 1, 0)
@@ -124,43 +125,52 @@ func (this *CodecCtx) GetProfile() int {
 	return int(this.avCodecCtx.profile)
 }
 
-func (this *CodecCtx) SetProfile(profile int) {
+func (this *CodecCtx) SetProfile(profile int) *CodecCtx {
 	this.avCodecCtx.profile = C.int(profile)
+	return this
 }
 
 func (this *CodecCtx) TimeBase() AVRational {
 	return AVRational(this.avCodecCtx.time_base)
 }
 
-func (this *CodecCtx) SetBitRate(val int) {
+func (this *CodecCtx) SetBitRate(val int) *CodecCtx {
 	this.avCodecCtx.bit_rate = C.int(val)
+	return this
 }
 
-func (this *CodecCtx) SetWidth(val int) {
+func (this *CodecCtx) SetWidth(val int) *CodecCtx {
 	this.avCodecCtx.width = C.int(val)
+	return this
 }
 
-func (this *CodecCtx) SetHeight(val int) {
+func (this *CodecCtx) SetHeight(val int) *CodecCtx {
 	this.avCodecCtx.height = C.int(val)
+	return this
 }
 
-func (this *CodecCtx) SetTimeBase(val AVR) {
+func (this *CodecCtx) SetTimeBase(val AVR) *CodecCtx {
 	this.avCodecCtx.time_base.num = C.int(val.Num)
 	this.avCodecCtx.time_base.den = C.int(val.Den)
+	return this
 }
 
-func (this *CodecCtx) SetGopSize(val int) {
+func (this *CodecCtx) SetGopSize(val int) *CodecCtx {
 	this.avCodecCtx.gop_size = C.int(val)
+	return this
 }
 
-func (this *CodecCtx) SetMaxBFrames(val int) {
+func (this *CodecCtx) SetMaxBFrames(val int) *CodecCtx {
 	this.avCodecCtx.max_b_frames = C.int(val)
+	return this
 }
 
-func (this *CodecCtx) SetPixFmt(val int32) {
+func (this *CodecCtx) SetPixFmt(val int32) *CodecCtx {
 	this.avCodecCtx.pix_fmt = val
+	return this
 }
 
-func (this *CodecCtx) SetFlag(flag int) {
+func (this *CodecCtx) SetFlag(flag int) *CodecCtx {
 	this.avCodecCtx.flags |= C.int(flag)
+	return this
 }

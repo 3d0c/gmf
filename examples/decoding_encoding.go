@@ -1,6 +1,7 @@
 package main
 
 /*
+
 #cgo pkg-config: libavformat libavutil
 
 #include "libavutil/frame.h"

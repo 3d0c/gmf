@@ -167,7 +167,7 @@ func _TestPacketsIterator(t *testing.T) {
 	}
 }
 
-func TestEncode(t *testing.T) {
+func _TestEncode(t *testing.T) {
 	ctx := NewCtx()
 	defer ctx.Free()
 
