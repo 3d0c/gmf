@@ -249,6 +249,11 @@ func (this *FmtCtx) StartTime() int {
 	return int(this.avCtx.start_time)
 }
 
+func (this *FmtCtx) SetStartTime(val int) *FmtCtx {
+	this.avCtx.start_time = C.int64_t(val)
+	return this
+}
+
 func (this *FmtCtx) TsOffset(stime int) int {
 	// temp solution. see ffmpeg_opt.c:899
 	return (0 - stime)

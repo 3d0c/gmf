@@ -7,18 +7,6 @@ package main
 #include "libavformat/avformat.h"
 #include "libavformat/avio.h"
 
-void set_data(AVFrame *frame, int idx, int y, int x, uint8_t data) {
-    if(!frame) {
-        fprintf(stderr, "frame is NULL\n");
-    }
-
-    if(!frame->linesize[idx]) {
-        fprintf(stderr, "wrong index, %d\n", idx);
-    }
-
-    frame->data[idx][y * frame->linesize[idx] + x] = data;
-}
-
 */
 import "C"
 
@@ -28,6 +16,7 @@ import (
 	. "github.com/3d0c/gmf"
 	"log"
 	"os"
+	// "unsafe"
 )
 
 func fatal(err error) {
@@ -80,52 +69,16 @@ func videoEncodeExample() {
 		fatal(err)
 	}
 
-	// This is what WriteHeader() does:
-
-	// if ret := int(C.avio_open(&((*_Ctype_AVFormatContext)(outputCtx.AvPtr()).pb), C.CString("./test-ctx.mpg"), C.AVIO_FLAG_WRITE)); ret < 0 {
-	// 	fatal(errors.New("avio_open error"))
-	// }
-
-	// if ret := int(C.avformat_write_header((*_Ctype_AVFormatContext)(outputCtx.AvPtr()), nil)); ret < 0 {
-	// 	fatal(errors.New("write_header error"))
-	// }
-
-	// (*_Ctype_AVFormatContext)(outputCtx.AvPtr()).start_time = 0
-	// (*_Ctype_AVFormatContext)(outputCtx.AvPtr()).duration = 0
-	// (*_Ctype_AVFormatContext)(outputCtx.AvPtr()).duration_estimation_method = C.AVFMT_DURATION_FROM_PTS
+	outputCtx.SetStartTime(0)
 
 	if err := outputCtx.WriteHeader(); err != nil {
 		fatal(err)
 	}
 
-	// We're creating dummy image by hand, so we should create
-	// frame too. Generally, packet.Decode() returns frame.
-	frame := NewFrame()
-	frame.SetWidth(videoEncCtx.Width())
-	frame.SetHeight(videoEncCtx.Height())
-	frame.SetFormat(videoEncCtx.PixFmt())
-
-	if err := frame.ImgAlloc(); err != nil {
-		fatal(err)
-	}
-
+	var frame *Frame
 	i := 0
 
-	for i = 0; i < 25; i++ {
-		for y := 0; y < videoEncCtx.Height(); y++ {
-			for x := 0; x < videoEncCtx.Width(); x++ {
-				C.set_data((*_Ctype_AVFrame)(frame.AvPtr()), 0, C.int(y), C.int(x), C.uint8_t(x+y+i*3))
-			}
-		}
-
-		// Cb and Cr
-		for y := 0; y < videoEncCtx.Height()/2; y++ {
-			for x := 0; x < videoEncCtx.Width()/2; x++ {
-				C.set_data((*_Ctype_AVFrame)(frame.AvPtr()), 1, C.int(y), C.int(x), C.uint8_t(128+y+i*2))
-				C.set_data((*_Ctype_AVFrame)(frame.AvPtr()), 2, C.int(y), C.int(x), C.uint8_t(64+x+i*5))
-			}
-		}
-
+	for frame = range GenSyntVideo(videoEncCtx.Width(), videoEncCtx.Height(), videoEncCtx.PixFmt()) {
 		frame.SetPts(i)
 
 		if p, ready, err := frame.Encode(videoStream.GetCodecCtx()); ready {
@@ -148,6 +101,8 @@ func videoEncodeExample() {
 		} else if err != nil {
 			fatal(err)
 		}
+
+		i++
 	}
 
 	frame.SetPts(i)

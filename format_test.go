@@ -10,6 +10,7 @@ import (
 var (
 	testVideoFile   = "tmp/src2s.mp4"
 	testVideoOutput = "tmp/out.mp4"
+	// testVideoOutput = "tmp/out.mpg"
 )
 
 func init() {
@@ -292,11 +293,6 @@ func TestEncode(t *testing.T) {
 			// log.Println("codecCtx Id:", stream.GetCodecCtx().Id())
 		}
 
-		// packet.SetPts(packet.Pts() + RescaleQ(ctx.TsOffset(ctx.StartTime()), AV_TIME_BASE_Q, stream.TimeBase()))
-
-		// log.Println("---packet in---")
-		// log.Println("pts:", packet.Pts(), "duration:", packet.Duration(), "size:", packet.Size(), "time_base:", stream.TimeBase())
-
 		frame, got, err := packet.Decode(stream.GetCodecCtx())
 		if got != 0 {
 			// frame.SetBestPts()
@@ -337,13 +333,8 @@ func TestEncode(t *testing.T) {
 	}
 
 	log.Println("output ctx duration:", outCtx.Duration())
-	log.Println(i, "frames")
+
 	outCtx.CloseOutput()
 
-	if i == 0 {
-		t.Error("Expected any non zero value")
-	} else {
-		log.Println(i, "frames encoded", w, "written")
-	}
-
+	log.Println(i, "frames encoded", w, "written")
 }

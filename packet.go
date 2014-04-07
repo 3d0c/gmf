@@ -23,6 +23,14 @@ import (
 	"unsafe"
 )
 
+// In cause of this:
+//  > AVFrame is typically allocated once and then reused multiple times to hold
+//  > different data (e.g. a single AVFrame to hold frames received from a
+//  > decoder).
+// this stuff with map of singletons is used.
+//
+var frames map[int]*Frame = make(map[int]*Frame, 0)
+
 type Packet struct {
 	avPacket _Ctype_AVPacket
 }
@@ -76,8 +84,6 @@ func (this *Packet) DecodeV2(cc *CodecCtx) *Frame {
 
 	if frames[cc.Type()] == nil {
 		frames[cc.Type()] = &Frame{avFrame: C.av_frame_alloc(), mediaType: cc.Type()}
-		frames[cc.Type()].avFrame.pts = 1
-		frames[cc.Type()].pts = 0
 	}
 
 	ret := C.avcodec_decode_video2(cc.avCodecCtx, frames[CODEC_TYPE_VIDEO].avFrame, (*C.int)(unsafe.Pointer(&gotOutput)), &this.avPacket)
@@ -100,8 +106,6 @@ func (this *Packet) DecodeV(cc *CodecCtx) chan *Frame {
 
 	if frames[cc.Type()] == nil {
 		frames[cc.Type()] = &Frame{avFrame: C.av_frame_alloc(), mediaType: cc.Type()}
-		frames[cc.Type()].avFrame.pts = 1
-		frames[cc.Type()].pts = 0
 	}
 
 	yield := make(chan *Frame)

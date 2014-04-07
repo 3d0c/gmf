@@ -8,9 +8,17 @@ package gmf
 #include "libavutil/frame.h"
 #include "libavutil/imgutils.h"
 
-int gmf_image_alloc(AVFrame *frame, int w, int h, int fmt, int align) {
-	fprintf(stderr, "allocating, %d, %d, %d, %d\n", w, h, fmt, align);
-	return av_image_alloc(frame->data, frame->linesize, w, h, fmt, align);
+void gmf_set_frame_data(AVFrame *frame, int idx, int l_size, uint8_t data) {
+    if(!frame) {
+        fprintf(stderr, "frame is NULL\n");
+    }
+
+    // frame->data[idx][y * frame->linesize[idx] + x] = data;
+    frame->data[idx][l_size] = data;
+}
+
+int gmf_get_frame_line_size(AVFrame *frame, int idx) {
+	return frame->linesize[idx];
 }
 
 */
@@ -25,19 +33,7 @@ import (
 type Frame struct {
 	avFrame   *_Ctype_AVFrame
 	mediaType int
-	pts       int64
 }
-
-// In cause of this:
-//  > AVFrame is typically allocated once and then reused multiple times to hold
-//  > different data (e.g. a single AVFrame to hold frames received from a
-//  > decoder).
-// this stuff with map of singletons is used.
-//
-// @todo find for a better way. // see ffmpeg.c:1317
-// @todo remove flush option // devmode
-//
-var frames map[int]*Frame = make(map[int]*Frame, 0)
 
 func NewFrame() *Frame {
 	return &Frame{avFrame: C.av_frame_alloc()}
@@ -71,6 +67,10 @@ func (this *Frame) Encode(cc *CodecCtx) (*Packet, bool, error) {
 	// ready := (ret == 0 && gotOutput > 0 && int(p.avPacket.size) > 0)
 	ready := (gotOutput > 0)
 	return p, ready, nil
+}
+
+func (this *Frame) Scale(width int, height int) *Frame {
+	return nil
 }
 
 func (this *Frame) AvPtr() unsafe.Pointer {
@@ -137,22 +137,38 @@ func (this *Frame) KeyFrame() int {
 	return int(this.avFrame.key_frame)
 }
 
-func (this *Frame) SetFormat(val int32) {
+func (this *Frame) SetFormat(val int32) *Frame {
 	this.avFrame.format = C.int(val) //C.int(val)
+	return this
 }
 
-func (this *Frame) SetWidth(val int) {
+func (this *Frame) SetWidth(val int) *Frame {
 	this.avFrame.width = C.int(val)
+	return this
 }
 
-func (this *Frame) SetHeight(val int) {
+func (this *Frame) SetHeight(val int) *Frame {
 	this.avFrame.height = C.int(val)
+	return this
 }
 
 func (this *Frame) ImgAlloc() error {
-	if ret := int(C.gmf_image_alloc(this.avFrame, C.int(this.Width()), C.int(this.Height()), C.int(AV_PIX_FMT_YUV420P), 32)); ret < 0 {
+	if ret := int(C.av_image_alloc(
+		(**C.uint8_t)(unsafe.Pointer(&this.avFrame.data)),
+		(*_Ctype_int)(unsafe.Pointer(&this.avFrame.linesize)),
+		C.int(this.Width()), C.int(this.Height()), C.AV_PIX_FMT_YUV420P, 32)); ret < 0 {
 		return errors.New(fmt.Sprintf("Unable to allocate raw image buffer: %v", AvError(ret)))
 	}
 
 	return nil
+}
+
+func (this *Frame) SetData(idx int, lineSize int, data int) *Frame {
+	C.gmf_set_frame_data(this.avFrame, C.int(idx), C.int(lineSize), (_Ctype_uint8_t)(data))
+
+	return this
+}
+
+func (this *Frame) LineSize(idx int) int {
+	return int(C.gmf_get_frame_line_size(this.avFrame, C.int(idx)))
 }
