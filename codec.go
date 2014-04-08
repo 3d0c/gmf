@@ -81,8 +81,6 @@ func NewEncoder(i interface{}) (*Codec, error) {
 		return nil, errors.New(fmt.Sprintf("Unable to find codec by value '%v'", i))
 	}
 
-	fmt.Println("---codec---", "\n", avc)
-
 	return &Codec{avCodec: avc}, nil
 }
 
@@ -94,8 +92,8 @@ func (this *Codec) LongName() string {
 	return C.GoString(this.avCodec.long_name)
 }
 
-// > ...field names that are keywords in Go can be
-// > accessed by prefixing them with an underscore
 func (this *Codec) Type() int {
+	// > ...field names that are keywords in Go can be
+	// > accessed by prefixing them with an underscore
 	return int(this.avCodec._type)
 }

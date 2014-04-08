@@ -1,23 +1,11 @@
 package main
 
-/*
-
-#cgo pkg-config: libavformat libavutil
-
-#include "libavutil/frame.h"
-#include "libavformat/avformat.h"
-#include "libavformat/avio.h"
-
-*/
-import "C"
-
 import (
 	"errors"
 	"fmt"
 	. "github.com/3d0c/gmf"
 	"log"
 	"os"
-	// "unsafe"
 )
 
 func fatal(err error) {
@@ -25,7 +13,8 @@ func fatal(err error) {
 	os.Exit(0)
 }
 
-func videoEncodeExample() {
+func main() {
+	outputfilename := "sample-encoding.mpg"
 	codec, err := NewEncoder(AV_CODEC_ID_MPEG1VIDEO)
 	// codec, err := NewEncoder("mpeg4")
 	if err != nil {
@@ -37,18 +26,20 @@ func videoEncodeExample() {
 		fatal(err)
 	}
 
-	outputCtx, err := NewOutputCtx("./test-ctx.mpg")
+	outputCtx, err := NewOutputCtx(outputfilename)
 	if err != nil {
 		fatal(err)
 	}
 
-	videoEncCtx.SetBitRate(400000)
-	videoEncCtx.SetWidth(352)
-	videoEncCtx.SetHeight(288)
-	videoEncCtx.SetTimeBase(AVR{1, 25})
-	videoEncCtx.SetGopSize(10)
-	videoEncCtx.SetMaxBFrames(1)
-	videoEncCtx.SetPixFmt(AV_PIX_FMT_YUV420P)
+	videoEncCtx.
+		SetBitRate(400000).
+		SetWidth(dstWidth).
+		SetHeight(dstHeight).
+		SetTimeBase(AVR{1, 25}).
+		SetPixFmt(AV_PIX_FMT_YUV420P).
+		SetGopSize(10).
+		SetMaxBFrames(1).
+		SetProfile(FF_PROFILE_MPEG4_SIMPLE)
 
 	// videoEncCtx.SetProfile(C.FF_PROFILE_MPEG4_SIMPLE)
 
@@ -120,8 +111,6 @@ func videoEncodeExample() {
 	}
 
 	outputCtx.CloseOutput()
-}
 
-func main() {
-	videoEncodeExample()
+	log.Println(i, "frames written to", outputfilename)
 }
