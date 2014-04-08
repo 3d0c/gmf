@@ -9,8 +9,8 @@ func TestScale(t *testing.T) {
 	srcWidth, srcHeight := 640, 480
 	dstWidth, dstHeight := 320, 200
 
-	codec, err := NewEncoder(AV_CODEC_ID_MPEG1VIDEO)
-	// codec, err := NewEncoder("mpeg4")
+	// codec, err := NewEncoder(AV_CODEC_ID_MPEG1VIDEO)
+	codec, err := NewEncoder("mpeg4")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,9 +28,9 @@ func TestScale(t *testing.T) {
 
 	dstCodecCtx.SetBitRate(400000).SetWidth(dstWidth).SetHeight(dstHeight).SetTimeBase(AVR{1, 25}).SetGopSize(10).SetMaxBFrames(1).SetPixFmt(AV_PIX_FMT_YUV420P)
 
-	// videoEncCtx.SetProfile(C.FF_PROFILE_MPEG4_SIMPLE)
+	dstCodecCtx.SetProfile(FF_PROFILE_MPEG4_SIMPLE)
 
-	outputCtx, err := NewOutputCtx("tmp/test-ctx.mpg")
+	outputCtx, err := NewOutputCtx("tmp/test-ctx.mp4")
 	if err != nil {
 		t.Fatal(err)
 	}

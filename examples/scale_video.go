@@ -39,8 +39,6 @@ func main() {
 		SetHeight(dstHeight).
 		SetTimeBase(AVR{1, 25}).
 		SetPixFmt(AV_PIX_FMT_YUV420P).
-		SetGopSize(10).
-		SetMaxBFrames(1).
 		SetProfile(FF_PROFILE_MPEG4_SIMPLE)
 
 	outputCtx, err := NewOutputCtx(outputfilename)
@@ -50,7 +48,6 @@ func main() {
 
 	if outputCtx.IsGlobalHeader() {
 		dstCodecCtx.SetFlag(CODEC_FLAG_GLOBAL_HEADER)
-		log.Println("AVFMT_GLOBALHEADER flag is set.")
 	}
 
 	videoStream := outputCtx.NewStream(codec, nil)

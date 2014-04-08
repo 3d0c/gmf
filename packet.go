@@ -6,7 +6,6 @@ package gmf
 
 #include "libavcodec/avcodec.h"
 
-// pointer arithmetic helper
 void shift_data(AVPacket *pkt, int offset) {
     pkt->data += offset;
     pkt->size -= offset;

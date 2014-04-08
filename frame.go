@@ -13,7 +13,6 @@ void gmf_set_frame_data(AVFrame *frame, int idx, int l_size, uint8_t data) {
         fprintf(stderr, "frame is NULL\n");
     }
 
-    // frame->data[idx][y * frame->linesize[idx] + x] = data;
     frame->data[idx][l_size] = data;
 }
 
@@ -171,4 +170,12 @@ func (this *Frame) SetData(idx int, lineSize int, data int) *Frame {
 
 func (this *Frame) LineSize(idx int) int {
 	return int(C.gmf_get_frame_line_size(this.avFrame, C.int(idx)))
+}
+
+func (this *Frame) Clone() *Frame {
+	return &Frame{avFrame: C.av_frame_clone(this.avFrame)}
+}
+
+func (this *Frame) Free() {
+	C.av_frame_free(&this.avFrame)
 }

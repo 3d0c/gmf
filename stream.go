@@ -63,12 +63,6 @@ func (this *Stream) NbFrames() int {
 	return int(this.avStream.nb_frames)
 }
 
-func (this *Stream) SetPts(p *Packet) {
-	p.SetPts(this.Pts)
-	this.Pts += 512
-	fmt.Println("stream:", this.Pts)
-}
-
 func (this *Stream) TimeBase() AVRational {
 	return AVRational(this.avStream.time_base)
 }

@@ -15,8 +15,9 @@ func fatal(err error) {
 
 func main() {
 	outputfilename := "sample-encoding.mpg"
+	dstWidth, dstHeight := 640, 480
+
 	codec, err := NewEncoder(AV_CODEC_ID_MPEG1VIDEO)
-	// codec, err := NewEncoder("mpeg4")
 	if err != nil {
 		fatal(err)
 	}
@@ -37,15 +38,11 @@ func main() {
 		SetHeight(dstHeight).
 		SetTimeBase(AVR{1, 25}).
 		SetPixFmt(AV_PIX_FMT_YUV420P).
-		SetGopSize(10).
-		SetMaxBFrames(1).
-		SetProfile(FF_PROFILE_MPEG4_SIMPLE)
-
-	// videoEncCtx.SetProfile(C.FF_PROFILE_MPEG4_SIMPLE)
+		SetProfile(FF_PROFILE_MPEG4_SIMPLE).
+		SetMbDecision(FF_MB_DECISION_RD)
 
 	if outputCtx.IsGlobalHeader() {
 		videoEncCtx.SetFlag(CODEC_FLAG_GLOBAL_HEADER)
-		log.Println("AVFMT_GLOBALHEADER flag is set.")
 	}
 
 	videoStream := outputCtx.NewStream(codec, nil)
@@ -74,8 +71,6 @@ func main() {
 		frame.SetPts(i)
 
 		if p, ready, err := frame.Encode(videoStream.GetCodecCtx()); ready {
-			log.Println("pkt[orig].Pts/Dts/Size:", p.Pts(), p.Dts(), p.Size())
-
 			if p.Pts() != AV_NOPTS_VALUE {
 				p.SetPts(RescaleQ(p.Pts(), videoStream.GetCodecCtx().TimeBase(), videoStream.TimeBase()))
 			}

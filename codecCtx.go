@@ -23,8 +23,13 @@ import (
 
 var (
 	AV_CODEC_ID_MPEG1VIDEO   int = C.AV_CODEC_ID_MPEG1VIDEO
+	AV_CODEC_ID_MPEG2VIDEO   int = C.AV_CODEC_ID_MPEG2VIDEO
 	AV_CODEC_ID_H264         int = C.AV_CODEC_ID_H264
+	AV_CODEC_ID_MPEG4        int = C.AV_CODEC_ID_MPEG4
 	CODEC_FLAG_GLOBAL_HEADER int = C.CODEC_FLAG_GLOBAL_HEADER
+	FF_MB_DECISION_SIMPLE    int = C.FF_MB_DECISION_SIMPLE
+	FF_MB_DECISION_BITS      int = C.FF_MB_DECISION_BITS
+	FF_MB_DECISION_RD        int = C.FF_MB_DECISION_RD
 )
 
 type CodecCtx struct {
@@ -172,5 +177,10 @@ func (this *CodecCtx) SetPixFmt(val int32) *CodecCtx {
 
 func (this *CodecCtx) SetFlag(flag int) *CodecCtx {
 	this.avCodecCtx.flags |= C.int(flag)
+	return this
+}
+
+func (this *CodecCtx) SetMbDecision(val int) *CodecCtx {
+	this.avCodecCtx.mb_decision = C.int(val)
 	return this
 }
