@@ -41,8 +41,12 @@ func (this *Stream) GetCodecCtx() *CodecCtx {
 	return this.cc
 }
 
-func (this *Stream) SetCodecCtx(cc *CodecCtx) error {
-	// check here, is codec opened.
+func (this *Stream) SetCodecCtx(cc *CodecCtx) {
+	if cc == nil {
+		// don't sure about it.
+		panic("Codec context is not initialized.")
+	}
+
 	this.avStream.codec = cc.avCodecCtx
 	return nil
 }

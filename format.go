@@ -16,8 +16,12 @@ import "C"
 import (
 	"errors"
 	"fmt"
-	// "os"
 	"unsafe"
+)
+
+var (
+	AVMEDIA_TYPE_VIDEO int32 = C.AVMEDIA_TYPE_VIDEO
+	AVMEDIA_TYPE_AUDIO int32 = C.AVMEDIA_TYPE_AUDIO
 )
 
 type FmtCtx struct {
@@ -66,11 +70,17 @@ func NewOutputCtx(i interface{}) (*FmtCtx, error) {
 	return this, nil
 }
 
-func (this *FmtCtx) AvPtr() unsafe.Pointer {
-	return unsafe.Pointer(this.avCtx)
+// Just a helper for NewCtx().OpenInput()
+func NewInputCtx(filename string) (*FmtCtx, error) {
+	ctx := NewCtx()
+
+	if err := ctx.OpenInput(filename); err != nil {
+		return nil, err
+	}
+
+	return ctx, nil
 }
 
-// @todo avformat_close_input()
 func (this *FmtCtx) OpenInput(filename string) error {
 	cfilename := C.CString(filename)
 	defer C.free(unsafe.Pointer(cfilename))
@@ -102,17 +112,17 @@ func (this *FmtCtx) OpenOutput(ofmt *OutputFmt) error {
 		return errors.New(fmt.Sprintf("Error opening output '%s': %s", ofmt.Filename, AvError(int(averr))))
 	}
 
-	// tests
-	// this.avCtx.max_delay = C.int(0.7 * C.AV_TIME_BASE)
-	// this.avCtx.max_index_size = 1048576
-	// this.avCtx.max_picture_buffer = 3041280
-
 	return nil
 }
 
 func (this *FmtCtx) CloseOutput() {
 	C.av_write_trailer(this.avCtx)
 	C.avio_close(this.avCtx.pb)
+	this.Free()
+}
+
+func (this *FmtCtx) CloseInput() {
+	C.avformat_close_input(&this.avCtx)
 	this.Free()
 }
 
@@ -193,10 +203,10 @@ func (this *FmtCtx) GetStream(idx int) (*Stream, error) {
 	return this.streams[idx], nil
 }
 
-func (this *FmtCtx) GetVideoStream() (*Stream, error) {
-	idx := C.av_find_best_stream(this.avCtx, C.AVMEDIA_TYPE_VIDEO, -1, -1, nil, 0)
+func (this *FmtCtx) GetBestStream(typ int32) (*Stream, error) {
+	idx := C.av_find_best_stream(this.avCtx, typ, -1, -1, nil, 0)
 	if int(idx) < 0 {
-		return nil, errors.New(fmt.Sprintf("Can't find video stream"))
+		return nil, errors.New(fmt.Sprintf("stream type %d not found", typ))
 	}
 
 	return this.GetStream(int(idx))
@@ -222,7 +232,7 @@ func (this *FmtCtx) Packets() chan *Packet {
 	return yield
 }
 
-func (this *FmtCtx) NewStream(c *Codec, _ error) *Stream {
+func (this *FmtCtx) NewStream(c *Codec) *Stream {
 	var avCodec *_Ctype_AVCodec = nil
 
 	if c != nil {
@@ -237,6 +247,10 @@ func (this *FmtCtx) NewStream(c *Codec, _ error) *Stream {
 
 }
 
+// Use it if context is created manually.
+// example:
+//   ctx := NewCtx()
+//   defer ctx.Free()
 func (this *FmtCtx) Free() {
 	C.avformat_free_context(this.avCtx)
 }

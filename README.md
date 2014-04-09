@@ -1,7 +1,7 @@
 ### Go Media Framework.
 FFmpeg libav* Go bindings.
 
-#### Status — `unfinished`.
+#### Status: `unfinished`
 It covers very basic avformat, avcodec and swscale features.    
 More bindings and cool features are coming soon.
 

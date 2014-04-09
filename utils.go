@@ -43,14 +43,6 @@ func RescaleQ(a int, encBase AVRational, stBase AVRational) int {
 	return int(C.av_rescale_q(C.int64_t(a), _Ctype_AVRational(encBase), _Ctype_AVRational(stBase)))
 }
 
-func assert(i interface{}, err error) interface{} {
-	if err != nil {
-		panic(err)
-	}
-
-	return i
-}
-
 // Synthetic video generator. It produces 25 iteratable frames.
 // Used for tests.
 func GenSyntVideo(w, h int, fmt int32) chan *Frame {

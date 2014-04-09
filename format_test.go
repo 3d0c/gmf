@@ -13,8 +13,12 @@ var (
 	// testVideoOutput = "tmp/out.mpg"
 )
 
-func init() {
-	// log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
+func assert(i interface{}, err error) interface{} {
+	if err != nil {
+		panic(err)
+	}
+
+	return i
 }
 
 func _TestFmtCtx(t *testing.T) {
@@ -75,7 +79,7 @@ func _TestNewStream(t *testing.T) {
 	}
 
 	for i := 0; i < 2; i++ {
-		stream := ctx.NewStream(NewEncoder("mpeg4"))
+		stream := ctx.NewStream(assert(NewEncoder("mpeg4")).(*Codec))
 		if stream == nil {
 			t.Fatalf("Unable to create new stream")
 		}
@@ -177,7 +181,7 @@ func _TestEncode(t *testing.T) {
 		log.Printf("Input file %s opened. %d streams found.\n", testVideoFile, ctx.StreamsCnt())
 	}
 
-	inputVideo, err := ctx.GetVideoStream()
+	inputVideo, err := ctx.GetBestStream(AV_TIME_BASE)
 	if err != nil {
 		t.Fatal(err)
 	} else {
@@ -236,7 +240,7 @@ func _TestEncode(t *testing.T) {
 		t.Fatal("Unable to create video encoder context.")
 	}
 
-	videoEncCtx.CopyCtx(assert(ctx.GetVideoStream()).(*Stream))
+	videoEncCtx.CopyCtx(assert(ctx.GetBestStream(AVMEDIA_TYPE_VIDEO)).(*Stream))
 
 	if outCtx.IsGlobalHeader() {
 		videoEncCtx.SetFlag(CODEC_FLAG_GLOBAL_HEADER)

@@ -1,5 +1,13 @@
 package main
 
+// BUG(3d0c):
+// 1.
+//   Insufficient thread locking around avcodec_open/close()
+//   [NULL @ 0x6001200] No lock manager is set, please see av_lockmgr_register()
+//   Assertion ff_avcodec_locked failed at libavcodec/utils.c:3271
+//
+// 2. Last frame isn't processed
+
 import (
 	"errors"
 	"fmt"
@@ -55,7 +63,6 @@ func encodeWorker(o output, wg *sync.WaitGroup) {
 
 	if outputCtx.IsGlobalHeader() {
 		videoEncCtx.SetFlag(CODEC_FLAG_GLOBAL_HEADER)
-		log.Println("AVFMT_GLOBALHEADER flag is set.")
 	}
 
 	videoStream := outputCtx.NewStream(codec, nil)
@@ -104,7 +111,6 @@ func encodeWorker(o output, wg *sync.WaitGroup) {
 			}
 
 			// log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
-
 		} else if err != nil {
 			fatal(err)
 		}
