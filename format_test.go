@@ -247,7 +247,7 @@ func _TestEncode(t *testing.T) {
 		log.Println("AVFMT_GLOBALHEADER flag is set.")
 	}
 
-	// copy porfile from source
+	// copy profile from source
 	videoEncCtx.SetProfile(inputVideo.GetCodecCtx().GetProfile())
 
 	if err := videoEncCtx.Open(nil); err != nil {

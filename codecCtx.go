@@ -52,9 +52,9 @@ func NewCodecCtx(codec *Codec) *CodecCtx {
 	return result
 }
 
-func (this *CodecCtx) CopyCtx(ist *Stream) {
+func (this *CodecCtx) CopyCtx(ist *Stream) *CodecCtx {
 	codec := this.avCodecCtx
-	icodec := ist.GetCodecCtx().avCodecCtx
+	icodec := ist.CodecCtx().avCodecCtx
 
 	codec.bits_per_raw_sample = icodec.bits_per_raw_sample
 	codec.chroma_sample_location = icodec.chroma_sample_location
@@ -77,9 +77,6 @@ func (this *CodecCtx) CopyCtx(ist *Stream) {
 	codec.extradata_size = icodec.extradata_size
 	codec.bits_per_coded_sample = icodec.bits_per_coded_sample
 
-	// fmt.Println("ist.avStream.time_base", ist.avStream.time_base)
-	// codec.time_base = ist.avStream.time_base
-
 	codec.pix_fmt = icodec.pix_fmt
 	codec.width = icodec.width
 	codec.height = icodec.height
@@ -90,6 +87,27 @@ func (this *CodecCtx) CopyCtx(ist *Stream) {
 
 	codec.time_base = icodec.time_base
 	codec.time_base.num *= icodec.ticks_per_frame
+
+	return this
+}
+
+func (this *CodecCtx) CopyRequired(ist *Stream) *CodecCtx {
+	codec := this.avCodecCtx
+	icodec := ist.CodecCtx().avCodecCtx
+
+	codec.bit_rate = icodec.bit_rate
+	codec.pix_fmt = icodec.pix_fmt
+	codec.width = icodec.width
+	codec.height = icodec.height
+
+	codec.time_base = icodec.time_base
+	codec.time_base.num *= icodec.ticks_per_frame
+
+	codec.sample_fmt = icodec.sample_fmt
+	codec.sample_rate = icodec.sample_rate
+	codec.channels = icodec.channels
+
+	return this
 }
 
 func (this *CodecCtx) Open(opts *Options) error {
@@ -110,6 +128,7 @@ func (this *CodecCtx) Id() int {
 	return int(this.avCodecCtx.codec_id)
 }
 
+// @todo change it to int32
 func (this *CodecCtx) Type() int {
 	return int(this.avCodecCtx.codec_type)
 }

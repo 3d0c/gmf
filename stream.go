@@ -16,17 +16,16 @@ import (
 type Stream struct {
 	avStream *_Ctype_AVStream
 	cc       *CodecCtx
-	Pts      int
 }
 
-func (this *Stream) GetCodecCtx() *CodecCtx {
+func (this *Stream) CodecCtx() *CodecCtx {
 	if this.cc != nil {
 		return this.cc
 	}
 
 	c, err := NewDecoder(int(this.avStream.codec.codec_id))
 	if err != nil {
-		panic(fmt.Sprintf("Can't init codec for stream '%d', error:", this.Index(), err))
+		panic(fmt.Sprintf("unable to initialize codec for stream '%d', error:", this.Index(), err))
 	}
 
 	this.cc = &CodecCtx{
@@ -34,11 +33,12 @@ func (this *Stream) GetCodecCtx() *CodecCtx {
 		avCodecCtx: this.avStream.codec,
 	}
 
-	if err := this.cc.Open(nil); err != nil {
-		panic(fmt.Sprintf("Can't open code for stream '%d', error: %v", this.Index(), err))
-	}
-
 	return this.cc
+}
+
+func (this *Stream) GetCodecCtx() *CodecCtx {
+	panic("[deprecated] deprecated method call")
+	return nil
 }
 
 func (this *Stream) SetCodecCtx(cc *CodecCtx) {
@@ -48,11 +48,10 @@ func (this *Stream) SetCodecCtx(cc *CodecCtx) {
 	}
 
 	this.avStream.codec = cc.avCodecCtx
-	return nil
-}
 
-func (this *Stream) RescaleTimestamp() int {
-	return int(C.av_rescale_q(1, this.avStream.codec.time_base, this.avStream.time_base))
+	if this.cc != nil {
+		this.cc.avCodecCtx = cc.avCodecCtx
+	}
 }
 
 func (this *Stream) Index() int {

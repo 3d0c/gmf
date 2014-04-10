@@ -64,6 +64,7 @@ func (this *Packet) Decode(cc *CodecCtx) (*Frame, int, error) {
 	case CODEC_TYPE_VIDEO:
 		// pkt->dts  = av_rescale_q(ist->dts, AV_TIME_BASE_Q, ist->st->time_base);
 		// this.avPacket.dts = C.av_rescale_q(ist->dts, AV_TIME_BASE_Q, ist->st->time_base)
+		fmt.Println(cc.avCodecCtx)
 		ret := C.avcodec_decode_video2(cc.avCodecCtx, frames[CODEC_TYPE_VIDEO].avFrame, (*C.int)(unsafe.Pointer(&gotOutput)), &this.avPacket)
 		if ret < 0 {
 			return nil, 0, errors.New(fmt.Sprintf("Unable to decode video packet, averror: %s", AvError(int(ret))))
