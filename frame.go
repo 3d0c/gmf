@@ -31,7 +31,7 @@ import (
 
 type Frame struct {
 	avFrame   *_Ctype_AVFrame
-	mediaType int
+	mediaType int32
 }
 
 func NewFrame() *Frame {
@@ -45,13 +45,13 @@ func (this *Frame) Encode(cc *CodecCtx) (*Packet, bool, error) {
 	p := NewPacket()
 
 	switch this.mediaType {
-	case CODEC_TYPE_AUDIO:
+	case AVMEDIA_TYPE_AUDIO:
 		ret = int(C.avcodec_encode_audio2(cc.avCodecCtx, &p.avPacket, this.avFrame, (*C.int)(unsafe.Pointer(&gotOutput))))
 		if ret < 0 {
 			return nil, false, errors.New(fmt.Sprintf("Unable to encode video packet, averror: %s", AvError(int(ret))))
 		}
 
-	case CODEC_TYPE_VIDEO:
+	case AVMEDIA_TYPE_VIDEO:
 		cc.avCodecCtx.field_order = C.AV_FIELD_PROGRESSIVE
 
 		ret = int(C.avcodec_encode_video2(cc.avCodecCtx, &p.avPacket, this.avFrame, (*C.int)(unsafe.Pointer(&gotOutput))))
@@ -68,10 +68,7 @@ func (this *Frame) Encode(cc *CodecCtx) (*Packet, bool, error) {
 	return p, ready, nil
 }
 
-func (this *Frame) Scale(width int, height int) *Frame {
-	return nil
-}
-
+// @remove
 func (this *Frame) AvPtr() unsafe.Pointer {
 	return unsafe.Pointer(this.avFrame)
 }
@@ -84,6 +81,7 @@ func (this *Frame) Unref() {
 	C.av_frame_unref(this.avFrame)
 }
 
+// @remove
 func (this *Frame) SetPts(val int) {
 	this.avFrame.pts = (_Ctype_int64_t)(val)
 }
@@ -137,7 +135,7 @@ func (this *Frame) KeyFrame() int {
 }
 
 func (this *Frame) SetFormat(val int32) *Frame {
-	this.avFrame.format = C.int(val) //C.int(val)
+	this.avFrame.format = C.int(val)
 	return this
 }
 
@@ -151,6 +149,7 @@ func (this *Frame) SetHeight(val int) *Frame {
 	return this
 }
 
+// @todo PIX_FMT
 func (this *Frame) ImgAlloc() error {
 	if ret := int(C.av_image_alloc(
 		(**C.uint8_t)(unsafe.Pointer(&this.avFrame.data)),
@@ -178,4 +177,14 @@ func (this *Frame) Clone() *Frame {
 
 func (this *Frame) Free() {
 	C.av_frame_free(&this.avFrame)
+}
+
+func (this *Frame) SetNbSamples(val int) *Frame {
+	this.avFrame.nb_samples = C.int(val)
+	return this
+}
+
+func (this *Frame) SetChannelLayout(val int) *Frame {
+	this.avFrame.channel_layout = (_Ctype_uint64_t)(val)
+	return this
 }

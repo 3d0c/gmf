@@ -16,6 +16,7 @@ import (
 type Stream struct {
 	avStream *_Ctype_AVStream
 	cc       *CodecCtx
+	Pts      int
 }
 
 func (this *Stream) CodecCtx() *CodecCtx {
@@ -31,6 +32,10 @@ func (this *Stream) CodecCtx() *CodecCtx {
 	this.cc = &CodecCtx{
 		codec:      c,
 		avCodecCtx: this.avStream.codec,
+	}
+
+	if err := this.cc.Open(nil); err != nil {
+		panic(fmt.Sprintf("Can't open code for stream '%d', error: %v", this.Index(), err))
 	}
 
 	return this.cc
@@ -68,4 +73,16 @@ func (this *Stream) NbFrames() int {
 
 func (this *Stream) TimeBase() AVRational {
 	return AVRational(this.avStream.time_base)
+}
+
+func (this *Stream) Type() int32 {
+	return this.CodecCtx().Type()
+}
+
+func (this *Stream) IsAudio() bool {
+	return (this.Type() == AVMEDIA_TYPE_AUDIO)
+}
+
+func (this *Stream) IsVideo() bool {
+	return (this.Type() == AVMEDIA_TYPE_VIDEO)
 }

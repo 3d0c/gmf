@@ -7,9 +7,11 @@ import (
 	. "github.com/3d0c/gmf"
 	"log"
 	"os"
+	"runtime/debug"
 )
 
 func fatal(err error) {
+	debug.PrintStack()
 	log.Fatal(err)
 	os.Exit(0)
 }
@@ -39,8 +41,12 @@ func addStream(codecName string, oc *FmtCtx, ist *Stream) (int, int) {
 
 	cc.CopyRequired(ist)
 
-	if cc.Type() == int(AVMEDIA_TYPE_VIDEO) && oc.IsGlobalHeader() {
+	if oc.IsGlobalHeader() {
 		cc.SetFlag(CODEC_FLAG_GLOBAL_HEADER)
+	}
+
+	if cc.Type() == AVMEDIA_TYPE_AUDIO {
+		cc.SetSampleFmt(AV_SAMPLE_FMT_S16).SetBitRate(64000)
 	}
 
 	if err := cc.Open(nil); err != nil {
@@ -55,6 +61,8 @@ func addStream(codecName string, oc *FmtCtx, ist *Stream) (int, int) {
 func main() {
 	var srcFileName, dstFileName string
 	var stMap map[int]int = make(map[int]int, 0)
+
+	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
 
 	if len(os.Args) != 3 {
 		fmt.Println("Simple transcoder, it guesses source format and codecs and tries to convert it to v:mpeg4/a:mp2.")
@@ -91,46 +99,38 @@ func main() {
 		fatal(err)
 	}
 
-	i := 0
-
 	for packet := range inputCtx.Packets() {
 		ist := assert(inputCtx.GetStream(packet.StreamIndex())).(*Stream)
 
-		if ist.CodecCtx().Type() == int(AVMEDIA_TYPE_AUDIO) {
-			log.Println("skipping audio packet")
-			continue
-		}
+		ost := assert(outputCtx.GetStream(stMap[ist.Index()])).(*Stream)
 
-		frame, got, err := packet.Decode(ist.CodecCtx())
-		if got != 0 {
-			if ist.CodecCtx().Type() == int(AVMEDIA_TYPE_VIDEO) {
-				frame.SetPts(i)
+		for frame := range packet.Frames(ist.CodecCtx()) {
+			frame.SetPts(ost.Pts)
+
+			if ost.IsAudio() {
+				frame.
+					SetNbSamples(ost.CodecCtx().FrameSize()).
+					SetFormat(ost.CodecCtx().SampleFmt()).
+					SetChannelLayout(ost.CodecCtx().ChannelLayout())
 			}
 
-			ost := assert(outputCtx.GetStream(stMap[ist.Index()])).(*Stream)
-
 			if p, ready, _ := frame.Encode(ost.CodecCtx()); ready {
-				if ost.CodecCtx().Type() == int(AVMEDIA_TYPE_VIDEO) {
-					if p.Pts() != AV_NOPTS_VALUE {
-						p.SetPts(RescaleQ(p.Pts(), ost.CodecCtx().TimeBase(), ist.TimeBase()))
-					}
-
-					if p.Dts() != AV_NOPTS_VALUE {
-						p.SetDts(RescaleQ(p.Dts(), ost.CodecCtx().TimeBase(), ist.TimeBase()))
-					}
+				if p.Pts() != AV_NOPTS_VALUE {
+					p.SetPts(RescaleQ(p.Pts(), ost.CodecCtx().TimeBase(), ist.TimeBase()))
 				}
+
+				if p.Dts() != AV_NOPTS_VALUE {
+					p.SetDts(RescaleQ(p.Dts(), ost.CodecCtx().TimeBase(), ist.TimeBase()))
+				}
+
+				p.SetStreamIndex(ost.Index())
+
 				if err := outputCtx.WritePacket(p); err != nil {
 					fatal(err)
 				}
 			}
+
+			ost.Pts++
 		}
-
-		if got == 0 || err != nil {
-			fatal(err)
-		}
-
-		frame.Unref()
-
-		i++
 	}
 }

@@ -22,14 +22,15 @@ import (
 )
 
 var (
-	AV_CODEC_ID_MPEG1VIDEO   int = C.AV_CODEC_ID_MPEG1VIDEO
-	AV_CODEC_ID_MPEG2VIDEO   int = C.AV_CODEC_ID_MPEG2VIDEO
-	AV_CODEC_ID_H264         int = C.AV_CODEC_ID_H264
-	AV_CODEC_ID_MPEG4        int = C.AV_CODEC_ID_MPEG4
-	CODEC_FLAG_GLOBAL_HEADER int = C.CODEC_FLAG_GLOBAL_HEADER
-	FF_MB_DECISION_SIMPLE    int = C.FF_MB_DECISION_SIMPLE
-	FF_MB_DECISION_BITS      int = C.FF_MB_DECISION_BITS
-	FF_MB_DECISION_RD        int = C.FF_MB_DECISION_RD
+	AV_CODEC_ID_MPEG1VIDEO   int   = C.AV_CODEC_ID_MPEG1VIDEO
+	AV_CODEC_ID_MPEG2VIDEO   int   = C.AV_CODEC_ID_MPEG2VIDEO
+	AV_CODEC_ID_H264         int   = C.AV_CODEC_ID_H264
+	AV_CODEC_ID_MPEG4        int   = C.AV_CODEC_ID_MPEG4
+	CODEC_FLAG_GLOBAL_HEADER int   = C.CODEC_FLAG_GLOBAL_HEADER
+	FF_MB_DECISION_SIMPLE    int   = C.FF_MB_DECISION_SIMPLE
+	FF_MB_DECISION_BITS      int   = C.FF_MB_DECISION_BITS
+	FF_MB_DECISION_RD        int   = C.FF_MB_DECISION_RD
+	AV_SAMPLE_FMT_S16        int32 = C.AV_SAMPLE_FMT_S16
 )
 
 type CodecCtx struct {
@@ -107,6 +108,8 @@ func (this *CodecCtx) CopyRequired(ist *Stream) *CodecCtx {
 	codec.sample_rate = icodec.sample_rate
 	codec.channels = icodec.channels
 
+	codec.channel_layout = icodec.channel_layout
+
 	return this
 }
 
@@ -128,9 +131,8 @@ func (this *CodecCtx) Id() int {
 	return int(this.avCodecCtx.codec_id)
 }
 
-// @todo change it to int32
-func (this *CodecCtx) Type() int {
-	return int(this.avCodecCtx.codec_type)
+func (this *CodecCtx) Type() int32 {
+	return int32(this.avCodecCtx.codec_type)
 }
 
 func (this *CodecCtx) Width() int {
@@ -145,6 +147,14 @@ func (this *CodecCtx) PixFmt() int32 {
 	return int32(this.avCodecCtx.pix_fmt)
 }
 
+func (this *CodecCtx) FrameSize() int {
+	return int(this.avCodecCtx.frame_size)
+}
+
+func (this *CodecCtx) SampleFmt() int32 {
+	return this.avCodecCtx.sample_fmt
+}
+
 func (this *CodecCtx) GetProfile() int {
 	return int(this.avCodecCtx.profile)
 }
@@ -156,6 +166,10 @@ func (this *CodecCtx) SetProfile(profile int) *CodecCtx {
 
 func (this *CodecCtx) TimeBase() AVRational {
 	return AVRational(this.avCodecCtx.time_base)
+}
+
+func (this *CodecCtx) ChannelLayout() int {
+	return int(this.avCodecCtx.channel_layout)
 }
 
 func (this *CodecCtx) SetBitRate(val int) *CodecCtx {
@@ -201,5 +215,15 @@ func (this *CodecCtx) SetFlag(flag int) *CodecCtx {
 
 func (this *CodecCtx) SetMbDecision(val int) *CodecCtx {
 	this.avCodecCtx.mb_decision = C.int(val)
+	return this
+}
+
+func (this *CodecCtx) SetSampleFmt(val int32) *CodecCtx {
+	this.avCodecCtx.sample_fmt = val
+	return this
+}
+
+func (this *CodecCtx) SetSampleRate(val int) *CodecCtx {
+	this.avCodecCtx.sample_rate = C.int(val)
 	return this
 }

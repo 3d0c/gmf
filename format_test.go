@@ -131,7 +131,7 @@ func _TestPacketsIterator(t *testing.T) {
 			t.Fatal("Unexpected error:", err)
 		}
 
-		if stream.GetCodecCtx().Type() == CODEC_TYPE_AUDIO {
+		if stream.GetCodecCtx().Type() == AVMEDIA_TYPE_AUDIO {
 			// skip for tests
 			continue
 		}
@@ -286,7 +286,7 @@ func _TestEncode(t *testing.T) {
 			t.Fatal("Unexpected error:", err)
 		}
 
-		if stream.GetCodecCtx().Type() == CODEC_TYPE_AUDIO {
+		if stream.GetCodecCtx().Type() == AVMEDIA_TYPE_AUDIO {
 			// skip for tests
 			continue
 		}

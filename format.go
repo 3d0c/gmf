@@ -19,10 +19,7 @@ import (
 	"unsafe"
 )
 
-var (
-	AVMEDIA_TYPE_VIDEO int32 = C.AVMEDIA_TYPE_VIDEO
-	AVMEDIA_TYPE_AUDIO int32 = C.AVMEDIA_TYPE_AUDIO
-)
+var ()
 
 type FmtCtx struct {
 	avCtx   *_Ctype_AVFormatContext
@@ -161,7 +158,6 @@ func (this *FmtCtx) WriteHeader() error {
 
 func (this *FmtCtx) WritePacket(p *Packet) error {
 	if averr := C.av_interleaved_write_frame(this.avCtx, &p.avPacket); averr < 0 {
-		// if averr := C.av_write_frame(this.avCtx, &p.avPacket); averr < 0 {
 		return errors.New(fmt.Sprintf("Unable to write packet to '%s': %s", this.ofmt.Filename, AvError(int(averr))))
 	}
 
@@ -242,7 +238,7 @@ func (this *FmtCtx) NewStream(c *Codec) *Stream {
 	if st := C.avformat_new_stream(this.avCtx, avCodec); st == nil {
 		return nil
 	} else {
-		return &Stream{avStream: st}
+		return &Stream{avStream: st, Pts: 0}
 	}
 
 }
