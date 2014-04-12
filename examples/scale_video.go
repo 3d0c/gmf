@@ -50,7 +50,7 @@ func main() {
 		dstCodecCtx.SetFlag(CODEC_FLAG_GLOBAL_HEADER)
 	}
 
-	videoStream := outputCtx.NewStream(codec, nil)
+	videoStream := outputCtx.NewStream(codec)
 	if videoStream == nil {
 		fatal("Unable to create stream for videoEnc " + codec.LongName())
 	}
@@ -59,9 +59,7 @@ func main() {
 		fatal(err)
 	}
 
-	if err := videoStream.SetCodecCtx(dstCodecCtx); err != nil {
-		fatal(err)
-	}
+	videoStream.SetCodecCtx(dstCodecCtx)
 
 	// outputCtx.SetStartTime(0)
 
@@ -85,13 +83,13 @@ func main() {
 
 		swsCtx.Scale(frame, dstFrame)
 
-		if p, ready, err := dstFrame.Encode(videoStream.GetCodecCtx()); ready {
+		if p, ready, err := dstFrame.Encode(videoStream.CodecCtx()); ready {
 			if p.Pts() != AV_NOPTS_VALUE {
-				p.SetPts(RescaleQ(p.Pts(), videoStream.GetCodecCtx().TimeBase(), videoStream.TimeBase()))
+				p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 			}
 
 			if p.Dts() != AV_NOPTS_VALUE {
-				p.SetDts(RescaleQ(p.Dts(), videoStream.GetCodecCtx().TimeBase(), videoStream.TimeBase()))
+				p.SetDts(RescaleQ(p.Dts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 			}
 
 			if err := outputCtx.WritePacket(p); err != nil {
@@ -109,10 +107,10 @@ func main() {
 
 	frame.SetPts(i)
 
-	if p, ready, _ := frame.Encode(videoStream.GetCodecCtx()); ready {
-		p.SetPts(RescaleQ(p.Pts(), videoStream.GetCodecCtx().TimeBase(), videoStream.TimeBase()))
+	if p, ready, _ := frame.Encode(videoStream.CodecCtx()); ready {
+		p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 
-		p.SetDts(RescaleQ(p.Dts(), videoStream.GetCodecCtx().TimeBase(), videoStream.TimeBase()))
+		p.SetDts(RescaleQ(p.Dts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 
 		if err := outputCtx.WritePacket(p); err != nil {
 			fatal(err)
