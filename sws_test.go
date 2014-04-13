@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestScale(t *testing.T) {
+func _TestScale(t *testing.T) {
 	srcWidth, srcHeight := 640, 480
 	dstWidth, dstHeight := 320, 200
 
@@ -36,11 +36,11 @@ func TestScale(t *testing.T) {
 	}
 
 	if outputCtx.IsGlobalHeader() {
-		srcEncCtx.SetFlag(CODEC_FLAG_GLOBAL_HEADER)
+		dstCodecCtx.SetFlag(CODEC_FLAG_GLOBAL_HEADER)
 		log.Println("AVFMT_GLOBALHEADER flag is set.")
 	}
 
-	videoStream := outputCtx.NewStream(codec, nil)
+	videoStream := outputCtx.NewStream(codec)
 	if videoStream == nil {
 		t.Fatalf("Unable to create stream for videoEnc [%s]\n", codec.LongName())
 	}
@@ -49,9 +49,7 @@ func TestScale(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := videoStream.SetCodecCtx(dstCodecCtx); err != nil {
-		t.Fatal(err)
-	}
+	videoStream.SetCodecCtx(dstCodecCtx)
 
 	outputCtx.SetStartTime(0)
 
@@ -75,15 +73,15 @@ func TestScale(t *testing.T) {
 
 		swsCtx.Scale(frame, dstFrame)
 
-		if p, ready, err := dstFrame.Encode(videoStream.GetCodecCtx()); ready {
+		if p, ready, err := dstFrame.Encode(videoStream.CodecCtx()); ready {
 			log.Println("pkt[orig].Pts/Dts/Size:", p.Pts(), p.Dts(), p.Size())
 
 			if p.Pts() != AV_NOPTS_VALUE {
-				p.SetPts(RescaleQ(p.Pts(), videoStream.GetCodecCtx().TimeBase(), videoStream.TimeBase()))
+				p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 			}
 
 			if p.Dts() != AV_NOPTS_VALUE {
-				p.SetDts(RescaleQ(p.Dts(), videoStream.GetCodecCtx().TimeBase(), videoStream.TimeBase()))
+				p.SetDts(RescaleQ(p.Dts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 			}
 
 			if err := outputCtx.WritePacket(p); err != nil {
@@ -101,10 +99,10 @@ func TestScale(t *testing.T) {
 
 	frame.SetPts(i)
 
-	if p, ready, _ := frame.Encode(videoStream.GetCodecCtx()); ready {
-		p.SetPts(RescaleQ(p.Pts(), videoStream.GetCodecCtx().TimeBase(), videoStream.TimeBase()))
+	if p, ready, _ := frame.Encode(videoStream.CodecCtx()); ready {
+		p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 
-		p.SetDts(RescaleQ(p.Dts(), videoStream.GetCodecCtx().TimeBase(), videoStream.TimeBase()))
+		p.SetDts(RescaleQ(p.Dts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 
 		if err := outputCtx.WritePacket(p); err != nil {
 			t.Fatal(err)

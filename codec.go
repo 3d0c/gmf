@@ -27,6 +27,7 @@ var (
 
 func init() {
 	C.avcodec_register_all()
+	InitDesc()
 }
 
 type Codec struct {
@@ -83,6 +84,10 @@ func NewEncoder(i interface{}) (*Codec, error) {
 	}
 
 	return &Codec{avCodec: avc}, nil
+}
+
+func (this *Codec) Id() int {
+	return int(this.avCodec.id)
 }
 
 func (this *Codec) Name() string {
