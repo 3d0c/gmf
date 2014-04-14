@@ -52,5 +52,5 @@ func TestCodec(t *testing.T) {
 		}
 	}
 
-	log.Printf("%d encoder, %d decoders checked. %d not found", enc, dec, notfound)
+	log.Printf("%d encoders, %d decoders checked. %d not found", enc, dec, notfound)
 }

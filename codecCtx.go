@@ -53,7 +53,7 @@ func NewCodecCtx(codec *Codec) *CodecCtx {
 	return result
 }
 
-func (this *CodecCtx) CopyCtx(ist *Stream) *CodecCtx {
+func (this *CodecCtx) CopyExtra(ist *Stream) *CodecCtx {
 	codec := this.avCodecCtx
 	icodec := ist.CodecCtx().avCodecCtx
 
@@ -65,9 +65,7 @@ func (this *CodecCtx) CopyCtx(ist *Stream) *CodecCtx {
 
 	// codec.codec_tag = icodec.codec_tag
 
-	codec.bit_rate = icodec.bit_rate
 	codec.rc_max_rate = icodec.rc_max_rate
-
 	codec.rc_buffer_size = icodec.rc_buffer_size
 
 	codec.field_order = icodec.field_order
@@ -78,21 +76,12 @@ func (this *CodecCtx) CopyCtx(ist *Stream) *CodecCtx {
 	codec.extradata_size = icodec.extradata_size
 	codec.bits_per_coded_sample = icodec.bits_per_coded_sample
 
-	codec.pix_fmt = icodec.pix_fmt
-	codec.width = icodec.width
-	codec.height = icodec.height
 	codec.has_b_frames = icodec.has_b_frames
-
-	// av_reduce(&codec->time_base.num, &codec->time_base.den, codec->time_base.num, codec->time_base.den, INT_MAX);
-	// C.av_reduce(codec.time_base.num, codec.time_base.den, codec.time_base.num, )
-
-	codec.time_base = icodec.time_base
-	codec.time_base.num *= icodec.ticks_per_frame
 
 	return this
 }
 
-func (this *CodecCtx) CopyRequired(ist *Stream) *CodecCtx {
+func (this *CodecCtx) CopyBasic(ist *Stream) *CodecCtx {
 	codec := this.avCodecCtx
 	icodec := ist.CodecCtx().avCodecCtx
 
@@ -155,6 +144,11 @@ func (this *CodecCtx) SampleFmt() int32 {
 	return this.avCodecCtx.sample_fmt
 }
 
+func (this *CodecCtx) SampleRate() int {
+	return int(this.avCodecCtx.sample_rate)
+}
+
+// @todo remove 'Get'
 func (this *CodecCtx) GetProfile() int {
 	return int(this.avCodecCtx.profile)
 }
@@ -225,5 +219,10 @@ func (this *CodecCtx) SetSampleFmt(val int32) *CodecCtx {
 
 func (this *CodecCtx) SetSampleRate(val int) *CodecCtx {
 	this.avCodecCtx.sample_rate = C.int(val)
+	return this
+}
+
+func (this *CodecCtx) SetStrictCompliance(val int) *CodecCtx {
+	this.avCodecCtx.strict_std_compliance = C.int(val)
 	return this
 }

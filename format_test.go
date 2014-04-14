@@ -240,7 +240,7 @@ func _TestEncode(t *testing.T) {
 		t.Fatal("Unable to create video encoder context.")
 	}
 
-	videoEncCtx.CopyCtx(assert(ctx.GetBestStream(AVMEDIA_TYPE_VIDEO)).(*Stream))
+	videoEncCtx.CopyBasic(assert(ctx.GetBestStream(AVMEDIA_TYPE_VIDEO)).(*Stream))
 
 	if outCtx.IsGlobalHeader() {
 		videoEncCtx.SetFlag(CODEC_FLAG_GLOBAL_HEADER)

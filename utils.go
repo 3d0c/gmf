@@ -25,6 +25,10 @@ type AVR struct {
 	Den int
 }
 
+func (this AVR) AVRational() AVRational {
+	return AVRational{C.int(this.Num), C.int(this.Den)}
+}
+
 var (
 	AV_TIME_BASE   int        = C.AV_TIME_BASE
 	AV_TIME_BASE_Q AVRational = AVRational{1, C.int(AV_TIME_BASE)}
@@ -41,6 +45,10 @@ func AvError(averr int) error {
 
 func RescaleQ(a int, encBase AVRational, stBase AVRational) int {
 	return int(C.av_rescale_q(C.int64_t(a), _Ctype_AVRational(encBase), _Ctype_AVRational(stBase)))
+}
+
+func RescaleDelta(inTb AVRational, inTs int, fsTb AVRational, duration int, last *int, outTb AVRational) int {
+	return int(C.av_rescale_delta(_Ctype_AVRational(inTb), C.int64_t(inTs), _Ctype_AVRational(fsTb), C.int(duration), (*C.int64_t)(unsafe.Pointer(&last)), _Ctype_AVRational(outTb)))
 }
 
 // Synthetic video generator. It produces 25 iteratable frames.

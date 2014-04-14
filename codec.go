@@ -103,3 +103,7 @@ func (this *Codec) Type() int {
 	// > accessed by prefixing them with an underscore
 	return int(this.avCodec._type)
 }
+
+func (this *Codec) IsExperimental() bool {
+	return bool((this.avCodec.capabilities & C.CODEC_CAP_EXPERIMENTAL) != 0)
+}

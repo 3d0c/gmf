@@ -73,8 +73,8 @@ func (this *Frame) AvPtr() unsafe.Pointer {
 	return unsafe.Pointer(this.avFrame)
 }
 
-func (this *Frame) Pts() int64 {
-	return int64(this.avFrame.pts)
+func (this *Frame) Pts() int {
+	return int(this.avFrame.pts)
 }
 
 func (this *Frame) Unref() {
@@ -132,6 +132,10 @@ func (this *Frame) PktDuration() int {
 
 func (this *Frame) KeyFrame() int {
 	return int(this.avFrame.key_frame)
+}
+
+func (this *Frame) NbSamples() int {
+	return int(this.avFrame.nb_samples)
 }
 
 func (this *Frame) SetFormat(val int32) *Frame {
