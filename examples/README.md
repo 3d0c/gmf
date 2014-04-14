@@ -14,7 +14,7 @@ go run encoding-multiple.go
 ```
 
 ##### transcode.go 
-is a simple transcoder. It gets two best streams (video and audio) from input and converts them to mpeg4 and mp2.
+is a simple transcoder. It gets two best streams (video and audio) from input and converts them to mpeg4 and aac.
 
 ```sh
 go run transcode [input] [output.mp4]

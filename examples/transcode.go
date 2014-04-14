@@ -1,7 +1,6 @@
 package main
 
 import (
-	// "errors"
 	"errors"
 	"fmt"
 	. "github.com/3d0c/gmf"

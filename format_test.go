@@ -7,12 +7,6 @@ import (
 	"testing"
 )
 
-var (
-	testVideoFile   = "tmp/src2s.mp4"
-	testVideoOutput = "tmp/out.mp4"
-	// testVideoOutput = "tmp/out.mpg"
-)
-
 func assert(i interface{}, err error) interface{} {
 	if err != nil {
 		panic(err)
@@ -21,12 +15,17 @@ func assert(i interface{}, err error) interface{} {
 	return i
 }
 
+func TestContextCreation(t *testing.T) {
+}
+
 func _TestFmtCtx(t *testing.T) {
 	ctx := NewCtx()
 
 	if ctx.avCtx == nil {
 		t.Fatal("AVContenxt is not initialized")
 	}
+
+	ctx.Free()
 }
 
 func _TestStreamFail(t *testing.T) {
@@ -35,7 +34,7 @@ func _TestStreamFail(t *testing.T) {
 	if stream, err := ctx.GetStream(1); err != nil {
 		log.Printf("Expected error got: %v", err)
 	} else {
-		t.Errorf("Expected error, stream with id %d got", stream.Id())
+		t.Errorf("Expected error. Stream with id %d got", stream.Id())
 	}
 
 	ctx.Free()

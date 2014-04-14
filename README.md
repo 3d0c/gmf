@@ -1,7 +1,7 @@
 ### Go Media Framework 
 This is a FFmpeg libav* Go bindings.
 
-#### Status: `unfinished`
+#### Status: `beta`
 It covers very basic avformat, avcodec and swscale features.    
 More bindings and cool features are coming soon.
 
@@ -24,7 +24,7 @@ go get github.com/3d0c/gmf
 ```
 
 #### Usage
-Please see examples and tests. 
+Please see [examples](examples/) and tests. 
 
 #### Credits
 I borrowed the name from project, abandoned on code.google.com/p/gmf. Original code is available here in intitial commit from 03 Apr 2013.
