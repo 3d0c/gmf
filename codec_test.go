@@ -12,14 +12,14 @@ func TestCodec(t *testing.T) {
 		if codec.IsEncoder {
 			encById, err := NewEncoder(codec.Id())
 			if err != nil {
-				log.Println(err)
+				// log.Println(err)
 				notfound++
 				continue
 			}
 
 			encByName, err := NewEncoder(codec.Name())
 			if err != nil {
-				log.Println(err)
+				// log.Println(err)
 				notfound++
 				continue
 			}
@@ -32,14 +32,14 @@ func TestCodec(t *testing.T) {
 		} else {
 			decById, err := NewDecoder(codec.Id())
 			if err != nil {
-				log.Println(err)
+				// log.Println(err)
 				notfound++
 				continue
 			}
 
 			decByName, err := NewDecoder(codec.Name())
 			if err != nil {
-				log.Println(err)
+				// log.Println(err)
 				notfound++
 				continue
 			}

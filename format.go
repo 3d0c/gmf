@@ -31,6 +31,8 @@ func init() {
 	C.av_register_all()
 }
 
+// @todo return error if avCtx is null
+// @todo start_time is it needed?
 func NewCtx() *FmtCtx {
 	ctx := &FmtCtx{
 		avCtx:   C.avformat_alloc_context(),
@@ -56,6 +58,10 @@ func NewOutputCtx(i interface{}) (*FmtCtx, error) {
 		return nil, errors.New(fmt.Sprintf("unexpected type %v", t))
 	}
 
+	if this.ofmt == nil {
+		return nil, errors.New(fmt.Sprintf("output format is not initialized. Unable to allocate context"))
+	}
+
 	cfilename := C.CString(this.ofmt.Filename)
 	defer C.free(unsafe.Pointer(cfilename))
 
@@ -70,6 +76,10 @@ func NewOutputCtx(i interface{}) (*FmtCtx, error) {
 // Just a helper for NewCtx().OpenInput()
 func NewInputCtx(filename string) (*FmtCtx, error) {
 	ctx := NewCtx()
+
+	if ctx.avCtx == nil {
+		return nil, errors.New(fmt.Sprintf("unable to allocate context"))
+	}
 
 	if err := ctx.OpenInput(filename); err != nil {
 		return nil, err
@@ -113,8 +123,15 @@ func (this *FmtCtx) OpenOutput(ofmt *OutputFmt) error {
 }
 
 func (this *FmtCtx) CloseOutput() {
-	C.av_write_trailer(this.avCtx)
-	C.avio_close(this.avCtx.pb)
+	if this.avCtx == nil {
+		return
+	}
+
+	if this.avCtx.pb != nil {
+		C.av_write_trailer(this.avCtx)
+		C.avio_close(this.avCtx.pb)
+	}
+
 	this.Free()
 }
 
@@ -123,27 +140,19 @@ func (this *FmtCtx) CloseInput() {
 	this.Free()
 }
 
-func (this *FmtCtx) IsFileOpened() bool {
-	if int(this.avCtx.flags&C.AVFMT_NOFILE) == 0 {
-		return false
-	}
-
-	return true
+func (this *FmtCtx) IsNoFile() bool {
+	return this.avCtx.oformat != nil && (this.avCtx.oformat.flags&C.AVFMT_NOFILE) != 0
 }
 
 func (this *FmtCtx) IsGlobalHeader() bool {
-	if int(this.avCtx.oformat.flags&C.AVFMT_GLOBALHEADER) != 0 {
-		return true
-	}
-
-	return false
+	return this.avCtx != nil && this.avCtx.oformat != nil && (this.avCtx.oformat.flags&C.AVFMT_GLOBALHEADER) != 0
 }
 
 func (this *FmtCtx) WriteHeader() error {
 	cfilename := C.CString(this.ofmt.Filename)
 	defer C.free(unsafe.Pointer(cfilename))
 
-	if !this.IsFileOpened() {
+	if !this.IsNoFile() {
 		if averr := C.avio_open(&this.avCtx.pb, cfilename, C.AVIO_FLAG_WRITE); averr < 0 {
 			return errors.New(fmt.Sprintf("Unable to open '%s': %s", this.ofmt.Filename, AvError(int(averr))))
 		}
@@ -243,12 +252,10 @@ func (this *FmtCtx) NewStream(c *Codec) *Stream {
 
 }
 
-// Use it if context is created manually.
-// example:
-//   ctx := NewCtx()
-//   defer ctx.Free()
 func (this *FmtCtx) Free() {
-	C.avformat_free_context(this.avCtx)
+	if this.avCtx != nil {
+		C.avformat_free_context(this.avCtx)
+	}
 }
 
 func (this *FmtCtx) Duration() int {

@@ -110,6 +110,19 @@ func (this *CodecCtx) Open(opts *Options) error {
 	return nil
 }
 
+func (this *CodecCtx) Close() {
+	C.avcodec_close(this.avCodecCtx)
+}
+
+func (this *CodecCtx) Free() {
+	C.av_freep(unsafe.Pointer(&this.avCodecCtx))
+}
+
+func (this *CodecCtx) Release() {
+	C.avcodec_close(this.avCodecCtx)
+	C.av_freep(unsafe.Pointer(&this.avCodecCtx))
+}
+
 // @todo
 func (this *CodecCtx) SetOpt() {
 	// mock
@@ -178,6 +191,12 @@ func (this *CodecCtx) SetWidth(val int) *CodecCtx {
 
 func (this *CodecCtx) SetHeight(val int) *CodecCtx {
 	this.avCodecCtx.height = C.int(val)
+	return this
+}
+
+func (this *CodecCtx) SetDimension(w, h int) *CodecCtx {
+	this.avCodecCtx.width = C.int(w)
+	this.avCodecCtx.height = C.int(h)
 	return this
 }
 
