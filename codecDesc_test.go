@@ -12,6 +12,6 @@ func TestCodecs(t *testing.T) {
 	if nbCodecs == 0 {
 		t.Fatal("No codecs found. Expected any non zero value.")
 	} else {
-		log.Println(nbCodecs, "registered")
+		log.Println(nbCodecs, "codec registered")
 	}
 }

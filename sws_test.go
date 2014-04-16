@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// @todo rewrite it
 func _TestScale(t *testing.T) {
 	srcWidth, srcHeight := 640, 480
 	dstWidth, dstHeight := 320, 200
@@ -50,8 +51,6 @@ func _TestScale(t *testing.T) {
 	}
 
 	videoStream.SetCodecCtx(dstCodecCtx)
-
-	outputCtx.SetStartTime(0)
 
 	if err := outputCtx.WriteHeader(); err != nil {
 		t.Fatal(err)

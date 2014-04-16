@@ -20,10 +20,12 @@ type Stream struct {
 }
 
 func (this *Stream) CodecCtx() *CodecCtx {
-	if this.cc != nil {
+	if this.IsCodecCtxSet() {
 		return this.cc
 	}
 
+	// stop here.
+	// check, how it's initialized in 'ist'
 	c, err := NewDecoder(int(this.avStream.codec.codec_id))
 	if err != nil {
 		panic(fmt.Sprintf("unable to initialize codec for stream '%d', error:", this.Index(), err))
@@ -48,7 +50,7 @@ func (this *Stream) GetCodecCtx() *CodecCtx {
 
 func (this *Stream) SetCodecCtx(cc *CodecCtx) {
 	if cc == nil {
-		// don't sure about it.
+		// don't sure that it should panic...
 		panic("Codec context is not initialized.")
 	}
 
@@ -57,6 +59,10 @@ func (this *Stream) SetCodecCtx(cc *CodecCtx) {
 	if this.cc != nil {
 		this.cc.avCodecCtx = cc.avCodecCtx
 	}
+}
+
+func (this *Stream) IsCodecCtxSet() bool {
+	return (this.cc != nil)
 }
 
 func (this *Stream) Index() int {

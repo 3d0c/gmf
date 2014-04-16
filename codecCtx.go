@@ -161,8 +161,7 @@ func (this *CodecCtx) SampleRate() int {
 	return int(this.avCodecCtx.sample_rate)
 }
 
-// @todo remove 'Get'
-func (this *CodecCtx) GetProfile() int {
+func (this *CodecCtx) Profile() int {
 	return int(this.avCodecCtx.profile)
 }
 

@@ -29,6 +29,10 @@ func (this AVR) AVRational() AVRational {
 	return AVRational{C.int(this.Num), C.int(this.Den)}
 }
 
+func (this AVRational) AVR() AVR {
+	return AVR{Num: int(this.num), Den: int(this.den)}
+}
+
 var (
 	AV_TIME_BASE   int        = C.AV_TIME_BASE
 	AV_TIME_BASE_Q AVRational = AVRational{1, C.int(AV_TIME_BASE)}
