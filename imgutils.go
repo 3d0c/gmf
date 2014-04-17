@@ -30,23 +30,9 @@ static void free_ptr(uint8_t **ptrs, int *lines_ptr) {
     free(lines_ptr);
 }
 
-
-FILE *fp;
-static void create_out() {
-    fp = fopen("tmp/onesome.raw", "wb");
-    if (!fp) {
-        fprintf(stderr, "Could not open destination file\n");
-        exit(0);
-    }
-}
-
-static void write_data(uint8_t **ptrs, int bufsize) {
-    fwrite(ptrs[0], 1, bufsize, fp);
-}
-
-static void close_out() {
-    fclose(fp);
-}
+// static void write_data(uint8_t **ptrs, int bufsize) {
+//    fwrite(ptrs[0], 1, bufsize, fp);
+// }
 
 static void copy_helper(uint8_t **ptrs, int *linesize, AVFrame *src, int w, int h, int pixfmt) {
     av_image_copy(ptrs, linesize, (const uint8_t **)(src->data), src->linesize,
@@ -58,7 +44,6 @@ import "C"
 
 //
 // UNFINISHED!
-// @todo remove some testing stuff from helpers
 //
 
 import (
@@ -93,25 +78,13 @@ func NewImage(w, h int, pixFmt int32, align int) (*Image, error) {
 	this.width = w
 	this.height = h
 
-	C.create_out()
-
 	return this, nil
 }
 
 func (this *Image) Copy(frame *Frame) {
-	fmt.Println("copying")
 	C.copy_helper(this.avPointers, this.avLineSize, frame.avFrame, C.int(this.width), C.int(this.height), C.int(this.pixFmt))
-	// - tmp stuff
-	fmt.Println("writing")
-	C.write_data(this.avPointers, C.int(this.bufsize))
-
 }
 
 func (this *Image) Free() {
-	fmt.Println("freeing")
-	C.close_out()
 	C.free_ptr(this.avPointers, this.avLineSize)
-
-	// - tmp stuff
-
 }

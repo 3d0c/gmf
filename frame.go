@@ -68,11 +68,6 @@ func (this *Frame) Encode(cc *CodecCtx) (*Packet, bool, error) {
 	return p, ready, nil
 }
 
-// @remove
-func (this *Frame) AvPtr() unsafe.Pointer {
-	return unsafe.Pointer(this.avFrame)
-}
-
 func (this *Frame) Pts() int {
 	return int(this.avFrame.pts)
 }
@@ -81,7 +76,6 @@ func (this *Frame) Unref() {
 	C.av_frame_unref(this.avFrame)
 }
 
-// @remove
 func (this *Frame) SetPts(val int) {
 	this.avFrame.pts = (_Ctype_int64_t)(val)
 }
@@ -90,6 +84,7 @@ func (this *Frame) SetBestPts() {
 	this.avFrame.pts = C.av_frame_get_best_effort_timestamp(this.avFrame)
 }
 
+// AVPixelFormat for video frames, AVSampleFormat for audio
 func (this *Frame) Format() int {
 	return int(this.avFrame.format)
 }
@@ -153,12 +148,11 @@ func (this *Frame) SetHeight(val int) *Frame {
 	return this
 }
 
-// @todo PIX_FMT
 func (this *Frame) ImgAlloc() error {
 	if ret := int(C.av_image_alloc(
 		(**C.uint8_t)(unsafe.Pointer(&this.avFrame.data)),
 		(*_Ctype_int)(unsafe.Pointer(&this.avFrame.linesize)),
-		C.int(this.Width()), C.int(this.Height()), C.AV_PIX_FMT_YUV420P, 32)); ret < 0 {
+		C.int(this.Width()), C.int(this.Height()), int32(this.Format()), 32)); ret < 0 {
 		return errors.New(fmt.Sprintf("Unable to allocate raw image buffer: %v", AvError(ret)))
 	}
 

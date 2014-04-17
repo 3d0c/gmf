@@ -5,12 +5,11 @@ import (
 	"testing"
 )
 
-// @todo rewrite it
-func _TestScale(t *testing.T) {
+// @todo export rescaled frame as jpeg and compare dimension.
+func TestScale(t *testing.T) {
 	srcWidth, srcHeight := 640, 480
 	dstWidth, dstHeight := 320, 200
 
-	// codec, err := NewEncoder(AV_CODEC_ID_MPEG1VIDEO)
 	codec, err := NewEncoder("mpeg4")
 	if err != nil {
 		t.Fatal(err)
@@ -31,15 +30,7 @@ func _TestScale(t *testing.T) {
 
 	dstCodecCtx.SetProfile(FF_PROFILE_MPEG4_SIMPLE)
 
-	outputCtx, err := NewOutputCtx("tmp/test-ctx.mp4")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if outputCtx.IsGlobalHeader() {
-		dstCodecCtx.SetFlag(CODEC_FLAG_GLOBAL_HEADER)
-		log.Println("AVFMT_GLOBALHEADER flag is set.")
-	}
+	outputCtx := NewCtx()
 
 	videoStream := outputCtx.NewStream(codec)
 	if videoStream == nil {
@@ -51,10 +42,6 @@ func _TestScale(t *testing.T) {
 	}
 
 	videoStream.SetCodecCtx(dstCodecCtx)
-
-	if err := outputCtx.WriteHeader(); err != nil {
-		t.Fatal(err)
-	}
 
 	swsCtx := NewSwsCtx(srcEncCtx, dstCodecCtx, SWS_BICUBIC)
 
@@ -72,42 +59,13 @@ func _TestScale(t *testing.T) {
 
 		swsCtx.Scale(frame, dstFrame)
 
-		if p, ready, err := dstFrame.Encode(videoStream.CodecCtx()); ready {
-			log.Println("pkt[orig].Pts/Dts/Size:", p.Pts(), p.Dts(), p.Size())
-
-			if p.Pts() != AV_NOPTS_VALUE {
-				p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
-			}
-
-			if p.Dts() != AV_NOPTS_VALUE {
-				p.SetDts(RescaleQ(p.Dts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
-			}
-
-			if err := outputCtx.WritePacket(p); err != nil {
-				t.Fatal(err)
-			}
-
-			log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
-
-		} else if err != nil {
-			t.Fatal(err)
-		}
-
 		i++
-	}
-
-	frame.SetPts(i)
-
-	if p, ready, _ := frame.Encode(videoStream.CodecCtx()); ready {
-		p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
-
-		p.SetDts(RescaleQ(p.Dts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
-
-		if err := outputCtx.WritePacket(p); err != nil {
-			t.Fatal(err)
+		if i >= 1 {
+			break
 		}
-		log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
 	}
 
-	outputCtx.CloseOutput()
+	outputCtx.Free()
+
+	log.Println("Swscale is OK")
 }
