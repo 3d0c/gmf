@@ -9,10 +9,6 @@ package gmf
 */
 import "C"
 
-import (
-	"fmt"
-)
-
 type Stream struct {
 	avStream *_Ctype_AVStream
 	cc       *CodecCtx
@@ -24,28 +20,12 @@ func (this *Stream) CodecCtx() *CodecCtx {
 		return this.cc
 	}
 
-	// stop here.
-	// check, how it's initialized in 'ist'
-	c, err := NewDecoder(int(this.avStream.codec.codec_id))
-	if err != nil {
-		panic(fmt.Sprintf("unable to initialize codec for stream '%d', error:", this.Index(), err))
-	}
-
 	this.cc = &CodecCtx{
-		codec:      c,
+		codec:      nil, // @todo fix it
 		avCodecCtx: this.avStream.codec,
 	}
 
-	if err := this.cc.Open(nil); err != nil {
-		panic(fmt.Sprintf("Can't open code for stream '%d', error: %v", this.Index(), err))
-	}
-
 	return this.cc
-}
-
-func (this *Stream) GetCodecCtx() *CodecCtx {
-	panic("[deprecated] deprecated method call")
-	return nil
 }
 
 func (this *Stream) SetCodecCtx(cc *CodecCtx) {

@@ -192,31 +192,6 @@ func (this *FmtCtx) Dump() {
 	C.av_dump_format(this.avCtx, 0, cfilename, 1)
 }
 
-func (this *FmtCtx) StreamsCnt() int {
-	return int(this.avCtx.nb_streams)
-}
-
-func (this *FmtCtx) GetStream(idx int) (*Stream, error) {
-	if idx > this.StreamsCnt() || this.StreamsCnt() == 0 {
-		return nil, errors.New(fmt.Sprintf("Stream index '%d' is out of range. There is only '%d' streams.", idx, this.StreamsCnt()))
-	}
-
-	if _, ok := this.streams[idx]; !ok {
-		this.streams[idx] = &Stream{avStream: C.gmf_get_stream(this.avCtx, C.int(idx))}
-	}
-
-	return this.streams[idx], nil
-}
-
-func (this *FmtCtx) GetBestStream(typ int32) (*Stream, error) {
-	idx := C.av_find_best_stream(this.avCtx, typ, -1, -1, nil, 0)
-	if int(idx) < 0 {
-		return nil, errors.New(fmt.Sprintf("stream type %d not found", typ))
-	}
-
-	return this.GetStream(int(idx))
-}
-
 func (this *FmtCtx) Packets() chan *Packet {
 	yield := make(chan *Packet)
 
@@ -247,9 +222,39 @@ func (this *FmtCtx) NewStream(c *Codec) *Stream {
 	if st := C.avformat_new_stream(this.avCtx, avCodec); st == nil {
 		return nil
 	} else {
-		return &Stream{avStream: st, Pts: 0}
+		this.streams[int(st.index)] = &Stream{avStream: st, Pts: 0}
+		return this.streams[int(st.index)]
 	}
 
+}
+
+// Original structure member is called instead of len(this.streams)
+// because there is no initialized Stream wrappers in input context.
+func (this *FmtCtx) StreamsCnt() int {
+	return int(this.avCtx.nb_streams)
+}
+
+func (this *FmtCtx) GetStream(idx int) (*Stream, error) {
+	if idx > this.StreamsCnt() || this.StreamsCnt() == 0 {
+		return nil, errors.New(fmt.Sprintf("Stream index '%d' is out of range. There is only '%d' streams.", idx, this.StreamsCnt()))
+	}
+
+	if _, ok := this.streams[idx]; !ok {
+		// create instance of Stream wrapper, when stream was initialized
+		// by demuxer. it means that this is an input context.
+		this.streams[idx] = &Stream{avStream: C.gmf_get_stream(this.avCtx, C.int(idx))}
+	}
+
+	return this.streams[idx], nil
+}
+
+func (this *FmtCtx) GetBestStream(typ int32) (*Stream, error) {
+	idx := C.av_find_best_stream(this.avCtx, typ, -1, -1, nil, 0)
+	if int(idx) < 0 {
+		return nil, errors.New(fmt.Sprintf("stream type %d not found", typ))
+	}
+
+	return this.GetStream(int(idx))
 }
 
 func (this *FmtCtx) Free() {
