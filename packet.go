@@ -85,9 +85,14 @@ func (this *Packet) Frames(cc *CodecCtx) chan *Frame {
 		defer close(yield)
 
 		for {
-			frame, ready, ret, _ := this.Decode(cc)
+			frame, ready, ret, err := this.Decode(cc)
 			if ready {
 				yield <- frame
+			}
+
+			if ret < 0 || err != nil {
+				fmt.Println("Decoding error:", err)
+				break
 			}
 
 			C.shift_data(&this.avPacket, C.int(ret))

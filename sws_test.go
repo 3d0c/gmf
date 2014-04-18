@@ -53,16 +53,12 @@ func TestScale(t *testing.T) {
 
 	var frame *Frame
 
-	i := 0
 	for frame = range GenSyntVideo(srcWidth, srcHeight, srcEncCtx.PixFmt()) {
-		frame.SetPts(i)
+		frame.SetPts(0)
 
 		swsCtx.Scale(frame, dstFrame)
 
-		i++
-		if i >= 1 {
-			break
-		}
+		break
 	}
 
 	outputCtx.Free()

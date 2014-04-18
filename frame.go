@@ -39,14 +39,22 @@ func NewFrame() *Frame {
 }
 
 func (this *Frame) Encode(cc *CodecCtx) (*Packet, bool, error) {
+	return encode(cc, this.avFrame, this.mediaType)
+}
+
+func (this *Frame) Flush(cc *CodecCtx) (*Packet, bool, error) {
+	return encode(cc, nil, this.mediaType)
+}
+
+func encode(cc *CodecCtx, avFrame *_Ctype_AVFrame, mediaType int32) (*Packet, bool, error) {
 	var gotOutput int
 	var ret int
 
 	p := NewPacket()
 
-	switch this.mediaType {
+	switch mediaType {
 	case AVMEDIA_TYPE_AUDIO:
-		ret = int(C.avcodec_encode_audio2(cc.avCodecCtx, &p.avPacket, this.avFrame, (*C.int)(unsafe.Pointer(&gotOutput))))
+		ret = int(C.avcodec_encode_audio2(cc.avCodecCtx, &p.avPacket, avFrame, (*C.int)(unsafe.Pointer(&gotOutput))))
 		if ret < 0 {
 			return nil, false, errors.New(fmt.Sprintf("Unable to encode video packet, averror: %s", AvError(int(ret))))
 		}
@@ -54,18 +62,16 @@ func (this *Frame) Encode(cc *CodecCtx) (*Packet, bool, error) {
 	case AVMEDIA_TYPE_VIDEO:
 		cc.avCodecCtx.field_order = C.AV_FIELD_PROGRESSIVE
 
-		ret = int(C.avcodec_encode_video2(cc.avCodecCtx, &p.avPacket, this.avFrame, (*C.int)(unsafe.Pointer(&gotOutput))))
+		ret = int(C.avcodec_encode_video2(cc.avCodecCtx, &p.avPacket, avFrame, (*C.int)(unsafe.Pointer(&gotOutput))))
 		if ret < 0 {
 			return nil, false, errors.New(fmt.Sprintf("Unable to encode video packet, averror: %s", AvError(int(ret))))
 		}
 
 	default:
-		return nil, false, errors.New(fmt.Sprintf("Unknown codec type: %v", this.mediaType))
+		return nil, false, errors.New(fmt.Sprintf("Unknown codec type: %v", mediaType))
 	}
 
-	// ready := (ret == 0 && gotOutput > 0 && int(p.avPacket.size) > 0)
-	ready := (gotOutput > 0)
-	return p, ready, nil
+	return p, (gotOutput > 0), nil
 }
 
 func (this *Frame) Pts() int {

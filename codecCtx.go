@@ -103,6 +103,10 @@ func (this *CodecCtx) CopyBasic(ist *Stream) *CodecCtx {
 }
 
 func (this *CodecCtx) Open(opts *Options) error {
+	if this.IsOpen() {
+		return nil
+	}
+
 	if averr := C.avcodec_open2(this.avCodecCtx, this.codec.avCodec, nil); averr < 0 {
 		return errors.New(fmt.Sprintf("Error opening codec '%s:%s', averror: %s", this.codec.Name(), this.codec.LongName(), AvError(int(averr))))
 	}
@@ -163,6 +167,10 @@ func (this *CodecCtx) SampleRate() int {
 
 func (this *CodecCtx) Profile() int {
 	return int(this.avCodecCtx.profile)
+}
+
+func (this *CodecCtx) IsOpen() bool {
+	return (int(C.avcodec_is_open(this.avCodecCtx)) > 0)
 }
 
 func (this *CodecCtx) SetProfile(profile int) *CodecCtx {

@@ -145,4 +145,7 @@ func main() {
 			ost.Pts++
 		}
 	}
+
+	// Flush encoders
+
 }
