@@ -105,7 +105,6 @@ func main() {
 
 	for packet := range inputCtx.Packets() {
 		ist := assert(inputCtx.GetStream(packet.StreamIndex())).(*Stream)
-
 		ost := assert(outputCtx.GetStream(stMap[ist.Index()])).(*Stream)
 
 		for frame := range packet.Frames(ist.CodecCtx()) {
@@ -147,5 +146,36 @@ func main() {
 	}
 
 	// Flush encoders
+	// @todo refactor it (should be a better way)
+	for i := 0; i < outputCtx.StreamsCnt(); i++ {
+		ist := assert(inputCtx.GetStream(0)).(*Stream)
+		ost := assert(outputCtx.GetStream(stMap[ist.Index()])).(*Stream)
+
+		frame := NewFrame()
+
+		for {
+			if p, ready, _ := frame.Flush(ost.CodecCtx()); ready {
+				if p.Pts() != AV_NOPTS_VALUE {
+					p.SetPts(RescaleQ(p.Pts(), ost.CodecCtx().TimeBase(), ist.TimeBase()))
+				}
+
+				if p.Dts() != AV_NOPTS_VALUE {
+					p.SetDts(RescaleQ(p.Dts(), ost.CodecCtx().TimeBase(), ist.TimeBase()))
+				}
+
+				p.SetStreamIndex(ost.Index())
+
+				if err := outputCtx.WritePacket(p); err != nil {
+					fatal(err)
+				}
+			} else {
+				break
+			}
+
+			ost.Pts++
+		}
+
+		frame.Free()
+	}
 
 }

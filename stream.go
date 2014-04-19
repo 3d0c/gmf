@@ -25,8 +25,8 @@ func (this *Stream) CodecCtx() *CodecCtx {
 	}
 
 	// @todo make explicit decoder/encoder definition
-	// If the codec context wasn't set, means that it's called from InputCtx
-	// and it should be decoder only.
+	// If the codec context wasn't set, it means that it's called from InputCtx
+	// and it should be decoder.
 	c, err := NewDecoder(int(this.avStream.codec.codec_id))
 	if err != nil {
 		panic(fmt.Sprintf("unable to initialize codec for stream '%d', error:", this.Index(), err))
