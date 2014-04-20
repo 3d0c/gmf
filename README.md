@@ -1,5 +1,9 @@
 ### Go Media Framework 
-This is a FFmpeg libav* Go bindings.
+It is a FFmpeg libav* Go bindings. It's just a wrapper, so you will call the same sequence of methods as in C, but in Go. It doesn't make usage of `av` libraries easier. 
+Surely, in Go you will write less code and in general it's easy to manipulate with data, but no magic, sorry.  
+The main goal is make more higher level api on top of it.  
+  
+Hope it will be usefull.
 
 #### Status: `beta`
 It covers very basic avformat, avcodec and swscale features.    
@@ -25,6 +29,9 @@ go get github.com/3d0c/gmf
 
 #### Usage
 Please see [examples](examples/) and tests. 
+
+#### If something doesn't work...
+Just fix it. Do not hesitate to pull request.
 
 #### Credits
 I borrowed the name from project, abandoned on code.google.com/p/gmf. Original code is available here in intitial commit from 03 Apr 2013.

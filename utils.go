@@ -8,6 +8,7 @@ package gmf
 #include "libavutil/error.h"
 #include "libavutil/mathematics.h"
 #include "libavutil/rational.h"
+#include "libavutil/samplefmt.h"
 
 */
 import "C"
@@ -53,6 +54,10 @@ func RescaleQ(a int, encBase AVRational, stBase AVRational) int {
 
 func RescaleDelta(inTb AVRational, inTs int, fsTb AVRational, duration int, last *int, outTb AVRational) int {
 	return int(C.av_rescale_delta(_Ctype_AVRational(inTb), C.int64_t(inTs), _Ctype_AVRational(fsTb), C.int(duration), (*C.int64_t)(unsafe.Pointer(&last)), _Ctype_AVRational(outTb)))
+}
+
+func GetSampleFmtName(fmt int32) string {
+	return C.GoString(C.av_get_sample_fmt_name(fmt))
 }
 
 // Synthetic video generator. It produces 25 iteratable frames.

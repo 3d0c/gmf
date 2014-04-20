@@ -12,6 +12,56 @@ package gmf
 #include "libavutil/opt.h"
 #include "libavutil/mem.h"
 
+static int check_sample_fmt(AVCodec *codec, enum AVSampleFormat sample_fmt)
+{
+    const enum AVSampleFormat *p = codec->sample_fmts;
+
+    while (*p != AV_SAMPLE_FMT_NONE) {
+        if (*p == sample_fmt)
+            return 1;
+        p++;
+    }
+    return 0;
+}
+
+static int select_sample_rate(AVCodec *codec)
+{
+    const int *p;
+    int best_samplerate = 0;
+
+    if (!codec->supported_samplerates)
+        return 44100;
+
+    p = codec->supported_samplerates;
+    while (*p) {
+        best_samplerate = FFMAX(*p, best_samplerate);
+        p++;
+    }
+    return best_samplerate;
+}
+
+static int select_channel_layout(AVCodec *codec)
+{
+    const uint64_t *p;
+    uint64_t best_ch_layout = 0;
+    int best_nb_channels    = 0;
+
+    if (!codec->channel_layouts)
+        return AV_CH_LAYOUT_STEREO;
+
+    p = codec->channel_layouts;
+    while (*p) {
+        int nb_channels = av_get_channel_layout_nb_channels(*p);
+
+        if (nb_channels > best_nb_channels) {
+            best_ch_layout   = *p;
+            best_nb_channels = nb_channels;
+        }
+        p++;
+    }
+    return best_ch_layout;
+}
+
 */
 import "C"
 
@@ -239,6 +289,10 @@ func (this *CodecCtx) SetMbDecision(val int) *CodecCtx {
 }
 
 func (this *CodecCtx) SetSampleFmt(val int32) *CodecCtx {
+	if int(C.check_sample_fmt(this.codec.avCodec, val)) == 0 {
+		panic(fmt.Sprintf("encoder doesn't support sample format %s", GetSampleFmtName(val)))
+	}
+
 	this.avCodecCtx.sample_fmt = val
 	return this
 }
@@ -251,4 +305,12 @@ func (this *CodecCtx) SetSampleRate(val int) *CodecCtx {
 func (this *CodecCtx) SetStrictCompliance(val int) *CodecCtx {
 	this.avCodecCtx.strict_std_compliance = C.int(val)
 	return this
+}
+
+func (this *CodecCtx) SelectSampleRate() int {
+	return int(C.select_sample_rate(this.codec.avCodec))
+}
+
+func (this *CodecCtx) SelectChannelLayout() int {
+	return int(C.select_channel_layout(this.codec.avCodec))
 }

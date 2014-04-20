@@ -50,6 +50,7 @@ func addStream(codecName string, oc *FmtCtx, ist *Stream) (int, int) {
 
 	if cc.Type() == AVMEDIA_TYPE_AUDIO {
 		// cc.SetSampleFmt(AV_SAMPLE_FMT_S16).SetBitRate(64000)
+		cc.SelectSampleRate()
 	}
 
 	if err := cc.Open(nil); err != nil {
