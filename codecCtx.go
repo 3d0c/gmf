@@ -83,6 +83,8 @@ var (
 	AV_SAMPLE_FMT_S16        int32 = C.AV_SAMPLE_FMT_S16
 )
 
+type SampleFmt int
+
 type CodecCtx struct {
 	codec      *Codec
 	avCodecCtx *_Ctype_AVCodecContext

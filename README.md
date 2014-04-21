@@ -1,9 +1,5 @@
 ### Go Media Framework 
-It is a FFmpeg libav* Go bindings. It's just a wrapper, so you will call the same sequence of methods as in C, but in Go. It doesn't make usage of `av` libraries easier. 
-Surely, in Go you will write less code and in general it's easy to manipulate with data, but no magic, sorry.  
-The main goal is make more higher level api on top of it.  
-  
-Hope it will be usefull.
+It is a FFmpeg libav* Go bindings (just a wrapper).  
 
 #### Status: `beta`
 It covers very basic avformat, avcodec and swscale features.    
