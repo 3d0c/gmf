@@ -139,6 +139,10 @@ func (this *Frame) NbSamples() int {
 	return int(this.avFrame.nb_samples)
 }
 
+func (this *Frame) Channels() int {
+	return int(this.avFrame.channels)
+}
+
 func (this *Frame) SetFormat(val int32) *Frame {
 	this.avFrame.format = C.int(val)
 	return this
@@ -190,5 +194,10 @@ func (this *Frame) SetNbSamples(val int) *Frame {
 
 func (this *Frame) SetChannelLayout(val int) *Frame {
 	this.avFrame.channel_layout = (_Ctype_uint64_t)(val)
+	return this
+}
+
+func (this *Frame) SetChannels(val int) *Frame {
+	this.avFrame.channels = C.int(val)
 	return this
 }

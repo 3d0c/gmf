@@ -15,7 +15,7 @@ func TestSwrInit(t *testing.T) {
 		{"out_sample_fmt", AV_SAMPLE_FMT_S16},
 	}
 
-	swrCtx := NewSwrCtx(options)
+	swrCtx := NewSwrCtx(options, nil)
 	if swrCtx == nil {
 		t.Fatal("unable to create Swr Context")
 	} else {
