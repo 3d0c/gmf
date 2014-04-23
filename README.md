@@ -6,7 +6,16 @@ It covers very basic avformat, avcodec and swscale features.
 More bindings and cool features are coming soon.
 
 #### Install
-You have to build ffmpeg with option `--enable-shared` or install shared libraries with your package manager (if it has them).
+##### Recommended way:  
+build the lastest version of ffmpeg, obtained from [https://github.com/FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg)  
+There is one required option, which is disabled by default, you should turn on: `--enable-shared`  
+E.g.
+
+```sh
+./configure --prefix=/usr/local/ffmpeg --enable-shared
+make
+make install
+```
 
 Ensure that PKG_CONFIG_PATH contains path to ffmpeg's pkgconfig folder.
 
@@ -16,6 +25,12 @@ pkg-config --libs libavformat
 ```
 
 It should print valid path to the avformat library.  
+
+Add it, if needed:
+
+```sh
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/ffmpeg/lib/pkgconfig/
+```
 
 Now, just run
 
