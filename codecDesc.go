@@ -64,7 +64,7 @@ func (this *CodecDescriptor) Name() string {
 }
 
 func (this *CodecDescriptor) LongName() string {
-	return C.GoString(this.avDesc.name)
+	return C.GoString(this.avDesc.long_name)
 }
 
 func (this *CodecDescriptor) Props() int {
