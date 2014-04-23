@@ -25,7 +25,7 @@ func assert(i interface{}, err error) interface{} {
 var i int = 0
 
 func writeFile(b []byte) {
-	name := "../tmp/" + strconv.Itoa(i) + ".jpg"
+	name := "./tmp/" + strconv.Itoa(i) + ".jpg"
 
 	fp, err := os.Create(name)
 	if err != nil {
@@ -48,6 +48,8 @@ func writeFile(b []byte) {
 
 func main() {
 	srcFileName := "tests-sample.mp4"
+
+	os.Mkdir("./tmp", 0755)
 
 	if len(os.Args) > 1 {
 		srcFileName = os.Args[1]

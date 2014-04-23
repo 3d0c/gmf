@@ -29,5 +29,14 @@ go run video-to-jpeg.go [input_video]
 ```
 
 #### video-to-jpeg-p.go
-a bit faster parallel version.
+faster parallel version.
+
+```sh
+# available options:
+# -wnum=  number of workers
+# -input= input video file
+
+go run video-to-jpeg.go
+
+```
   

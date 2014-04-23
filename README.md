@@ -5,16 +5,23 @@ It is a FFmpeg libav* Go bindings. Just a wrapper.
 It covers very basic avformat, avcodec and swscale features.    
 More bindings and cool features are coming soon.
 
-#### Install
+#### Installation
 ##### Recommended way:  
-build the lastest version of ffmpeg, obtained from [https://github.com/FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg)  
+build lastest version of ffmpeg, obtained from [https://github.com/FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg)  
 There is one required option, which is disabled by default, you should turn on: `--enable-shared`  
-E.g.
+
+E.g.:
 
 ```sh
 ./configure --prefix=/usr/local/ffmpeg --enable-shared
 make
 make install
+```
+
+Add pkgconfig path:
+
+```sh
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/ffmpeg/lib/pkgconfig/
 ```
 
 Ensure that PKG_CONFIG_PATH contains path to ffmpeg's pkgconfig folder.
@@ -26,17 +33,15 @@ pkg-config --libs libavformat
 
 It should print valid path to the avformat library.  
 
-Add it, if needed:
-
-```sh
-export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/ffmpeg/lib/pkgconfig/
-```
 
 Now, just run
 
 ```sh
 go get github.com/3d0c/gmf
 ```
+
+##### Other methods
+This package uses pkg-config way to obtain flags, includes and libraries path, so if you have ffmpeg installed, just ensure, that your installation has them (pkgconfig/ folder with proper `pc` files).
 
 #### Usage
 Please see [examples](examples/) and tests. 

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	. "github.com/3d0c/gmf"
 	"log"
 	"os"
@@ -27,7 +29,7 @@ func assert(i interface{}, err error) interface{} {
 var i int = 0
 
 func writeFile(b []byte) {
-	name := "../tmp/" + strconv.Itoa(i) + ".jpg"
+	name := "./tmp/" + strconv.Itoa(i) + ".jpg"
 
 	fp, err := os.Create(name)
 	if err != nil {
@@ -94,18 +96,26 @@ func encodeWorker(data chan *Frame, wg *sync.WaitGroup, srcCtx *CodecCtx) {
 			writeFile(p.Data())
 		}
 	}
+
+	dstFrame.Free()
 }
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	srcFileName := "tests-sample.mp4"
+	os.Mkdir("./tmp", 0755)
 
-	if len(os.Args) > 1 {
-		srcFileName = os.Args[1]
+	wnum := flag.Int("wnum", 10, "number of workers")
+	srcFileName := flag.String("input", "tests-sample.mp4", "input file")
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stdout, "Usage: %s [OPTIONS]\n", os.Args[0])
+		flag.PrintDefaults()
 	}
 
-	inputCtx := assert(NewInputCtx(srcFileName)).(*FmtCtx)
+	flag.Parse()
+
+	inputCtx := assert(NewInputCtx(*srcFileName)).(*FmtCtx)
 	defer inputCtx.CloseInput()
 
 	srcVideoStream, err := inputCtx.GetBestStream(AVMEDIA_TYPE_VIDEO)
@@ -117,7 +127,7 @@ func main() {
 
 	dataChan := make(chan *Frame)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < *wnum; i++ {
 		wg.Add(1)
 		go encodeWorker(dataChan, wg, srcVideoStream.CodecCtx())
 	}

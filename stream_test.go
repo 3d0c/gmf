@@ -13,11 +13,6 @@ func TestStream(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ac, err := NewEncoder("mp2")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	cc := NewCodecCtx(vc)
 	if cc == nil {
 		t.Fatal("Unable to allocate codec context")
@@ -25,18 +20,6 @@ func TestStream(t *testing.T) {
 
 	if ctx.NewStream(vc) == nil {
 		t.Fatal("Unable to create new stream")
-	}
-
-	if ctx.NewStream(ac) == nil {
-		t.Fatal("Unable to create new stream")
-	}
-
-	if !assert(ctx.GetStream(0)).(*Stream).IsVideo() {
-		t.Fatal("Expected type is video")
-	}
-
-	if !assert(ctx.GetStream(1)).(*Stream).IsAudio() {
-		t.Fatal("Expected type id audio")
 	}
 
 	td := CodecCtxTestData
