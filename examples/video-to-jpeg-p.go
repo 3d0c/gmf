@@ -4,8 +4,10 @@ import (
 	. "github.com/3d0c/gmf"
 	"log"
 	"os"
+	"runtime"
 	"runtime/debug"
 	"strconv"
+	"sync"
 )
 
 func fatal(err error) {
@@ -46,7 +48,57 @@ func writeFile(b []byte) {
 	}
 }
 
+func encodeWorker(data chan *Frame, wg *sync.WaitGroup, srcCtx *CodecCtx) {
+	defer wg.Done()
+	log.Println("worker started")
+	codec, err := NewEncoder(AV_CODEC_ID_JPEG2000)
+	if err != nil {
+		fatal(err)
+	}
+
+	cc := NewCodecCtx(codec)
+
+	w, h := srcCtx.Width(), srcCtx.Height()
+
+	cc.SetPixFmt(AV_PIX_FMT_RGB24).SetWidth(w).SetHeight(h)
+
+	if codec.IsExperimental() {
+		cc.SetStrictCompliance(-2)
+	}
+
+	if err := cc.Open(nil); err != nil {
+		fatal(err)
+	}
+
+	swsCtx := NewSwsCtx(srcCtx, cc, SWS_BICUBIC)
+
+	// convert to RGB, optionally resize could be here
+	dstFrame := NewFrame().
+		SetWidth(w).
+		SetHeight(h).
+		SetFormat(AV_PIX_FMT_RGB24)
+
+	if err := dstFrame.ImgAlloc(); err != nil {
+		fatal(err)
+	}
+
+	for {
+		srcFrame, ok := <-data
+		if !ok {
+			break
+		}
+
+		swsCtx.Scale(srcFrame, dstFrame)
+
+		if p, ready, _ := dstFrame.Encode(cc); ready {
+			writeFile(p.Data())
+		}
+	}
+}
+
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	srcFileName := "tests-sample.mp4"
 
 	if len(os.Args) > 1 {
@@ -61,32 +113,13 @@ func main() {
 		log.Println("No video stream found in", srcFileName)
 	}
 
-	codec, err := NewEncoder(AV_CODEC_ID_JPEG2000)
-	if err != nil {
-		fatal(err)
-	}
+	wg := new(sync.WaitGroup)
 
-	cc := NewCodecCtx(codec)
+	dataChan := make(chan *Frame)
 
-	cc.SetPixFmt(AV_PIX_FMT_RGB24).SetWidth(srcVideoStream.CodecCtx().Width()).SetHeight(srcVideoStream.CodecCtx().Height())
-
-	if codec.IsExperimental() {
-		cc.SetStrictCompliance(-2)
-	}
-
-	if err := cc.Open(nil); err != nil {
-		fatal(err)
-	}
-
-	swsCtx := NewSwsCtx(srcVideoStream.CodecCtx(), cc, SWS_BICUBIC)
-
-	dstFrame := NewFrame().
-		SetWidth(srcVideoStream.CodecCtx().Width()).
-		SetHeight(srcVideoStream.CodecCtx().Height()).
-		SetFormat(AV_PIX_FMT_RGB24)
-
-	if err := dstFrame.ImgAlloc(); err != nil {
-		fatal(err)
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go encodeWorker(dataChan, wg, srcVideoStream.CodecCtx())
 	}
 
 	for packet := range inputCtx.Packets() {
@@ -94,15 +127,15 @@ func main() {
 			// skip non video streams
 			continue
 		}
+
 		ist := assert(inputCtx.GetStream(packet.StreamIndex())).(*Stream)
 
 		for frame := range packet.Frames(ist.CodecCtx()) {
-			swsCtx.Scale(frame, dstFrame)
-
-			if p, ready, _ := dstFrame.Encode(cc); ready {
-				writeFile(p.Data())
-			}
+			dataChan <- frame
 		}
 	}
 
+	close(dataChan)
+
+	wg.Wait()
 }

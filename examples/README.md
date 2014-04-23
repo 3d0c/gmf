@@ -19,4 +19,15 @@ is a simple transcoder. It gets two best streams (video and audio) from input an
 ```sh
 go run transcode [input] [output.mp4]
 ```
+
+#### video-to-jpeg.go
+extracts frames and encodes them to jpeg files. 
+
+```sh
+# if no args specified, default test-sample.mp4 will be used
+go run video-to-jpeg.go [input_video]
+```
+
+#### video-to-jpeg-p.go
+a bit faster parallel version.
   
