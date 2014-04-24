@@ -138,6 +138,10 @@ func (this *Packet) Size() int {
 	return int(this.avPacket.size)
 }
 
+func (this *Packet) Pos() int {
+	return int(this.avPacket.pos)
+}
+
 func (this *Packet) Data() []byte {
 	return C.GoBytes(unsafe.Pointer(this.avPacket.data), C.int(this.avPacket.size))
 }

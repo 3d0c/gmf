@@ -281,6 +281,31 @@ func (this *FmtCtx) TsOffset(stime int) int {
 	return (0 - stime)
 }
 
+func (this *FmtCtx) SeekFile(ist *Stream, minTs, maxTs int, flag int) error {
+	if ret := int(C.avformat_seek_file(this.avCtx, C.int(ist.Index()), C.int64_t(0), C.int64_t(minTs), C.int64_t(maxTs), C.int(flag))); ret < 0 {
+		return errors.New(fmt.Sprintf("Error creating output context: %s", AvError(ret)))
+	}
+
+	return nil
+}
+
+func (this *FmtCtx) SeekFrameAt(sec int, streamIndex int) error {
+	ist, err := this.GetStream(streamIndex)
+	if err != nil {
+		return err
+	}
+
+	frameTs := Rescale(sec*1000, ist.TimeBase().AVR().Den, ist.TimeBase().AVR().Num) / 1000
+
+	if err := this.SeekFile(ist, frameTs, frameTs, C.AVSEEK_FLAG_FRAME); err != nil {
+		return err
+	}
+
+	ist.CodecCtx().FlushBuffers()
+
+	return nil
+}
+
 type OutputFmt struct {
 	Filename    string
 	avOutputFmt *_Ctype_AVOutputFormat

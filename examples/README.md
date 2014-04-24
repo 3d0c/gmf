@@ -34,7 +34,7 @@ faster parallel version.
 ```sh
 # available options:
 # -wnum=  number of workers
-# -input= input video file
+# -input= input video  file
 
 go run video-to-jpeg.go
 

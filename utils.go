@@ -56,6 +56,10 @@ func RescaleDelta(inTb AVRational, inTs int, fsTb AVRational, duration int, last
 	return int(C.av_rescale_delta(_Ctype_AVRational(inTb), C.int64_t(inTs), _Ctype_AVRational(fsTb), C.int(duration), (*C.int64_t)(unsafe.Pointer(&last)), _Ctype_AVRational(outTb)))
 }
 
+func Rescale(a, b, c int) int {
+	return int(C.av_rescale(C.int64_t(a), C.int64_t(b), C.int64_t(c)))
+}
+
 func GetSampleFmtName(fmt int32) string {
 	return C.GoString(C.av_get_sample_fmt_name(fmt))
 }

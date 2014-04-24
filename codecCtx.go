@@ -317,3 +317,7 @@ func (this *CodecCtx) SelectSampleRate() int {
 func (this *CodecCtx) SelectChannelLayout() int {
 	return int(C.select_channel_layout(this.codec.avCodec))
 }
+
+func (this *CodecCtx) FlushBuffers() {
+	C.avcodec_flush_buffers(this.avCodecCtx)
+}
