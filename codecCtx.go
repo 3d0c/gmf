@@ -239,6 +239,14 @@ func (this *CodecCtx) ChannelLayout() int {
 	return int(this.avCodecCtx.channel_layout)
 }
 
+func (this *CodecCtx) BitRate() int {
+	return int(this.avCodecCtx.bit_rate)
+}
+
+func (this *CodecCtx) Channels() int {
+	return int(this.avCodecCtx.channels)
+}
+
 func (this *CodecCtx) SetBitRate(val int) *CodecCtx {
 	this.avCodecCtx.bit_rate = C.int(val)
 	return this
@@ -310,6 +318,16 @@ func (this *CodecCtx) SetStrictCompliance(val int) *CodecCtx {
 	return this
 }
 
+func (this *CodecCtx) SetHasBframes(val int) *CodecCtx {
+	this.avCodecCtx.has_b_frames = C.int(val)
+	return this
+}
+
+func (this *CodecCtx) SetChannels(val int) *CodecCtx {
+	this.avCodecCtx.channels = C.int(val)
+	return this
+}
+
 func (this *CodecCtx) SelectSampleRate() int {
 	return int(C.select_sample_rate(this.codec.avCodec))
 }
@@ -320,4 +338,8 @@ func (this *CodecCtx) SelectChannelLayout() int {
 
 func (this *CodecCtx) FlushBuffers() {
 	C.avcodec_flush_buffers(this.avCodecCtx)
+}
+
+func (this *CodecCtx) Dump() {
+	fmt.Println(this.avCodecCtx)
 }

@@ -38,8 +38,6 @@ func addStream(codecName string, oc *FmtCtx, ist *Stream) (int, int) {
 		fatal(errors.New("unable to create codec context"))
 	}
 
-	cc.CopyBasic(ist)
-
 	if oc.IsGlobalHeader() {
 		cc.SetFlag(CODEC_FLAG_GLOBAL_HEADER)
 	}
@@ -49,8 +47,19 @@ func addStream(codecName string, oc *FmtCtx, ist *Stream) (int, int) {
 	}
 
 	if cc.Type() == AVMEDIA_TYPE_AUDIO {
-		// cc.SetSampleFmt(AV_SAMPLE_FMT_S16).SetBitRate(64000)
+		cc.SetSampleFmt(ist.CodecCtx().SampleFmt())
+		cc.SetSampleRate(ist.CodecCtx().SampleRate())
+		cc.SetChannels(ist.CodecCtx().Channels())
+		cc.SelectChannelLayout()
 		cc.SelectSampleRate()
+
+	}
+
+	if cc.Type() == AVMEDIA_TYPE_VIDEO {
+		cc.SetTimeBase(AVR{1, 25})
+		cc.SetProfile(FF_PROFILE_MPEG4_SIMPLE)
+		cc.SetDimension(ist.CodecCtx().Width(), ist.CodecCtx().Height())
+		cc.SetPixFmt(ist.CodecCtx().PixFmt())
 	}
 
 	if err := cc.Open(nil); err != nil {
@@ -128,11 +137,11 @@ func main() {
 
 			if p, ready, _ := frame.Encode(ost.CodecCtx()); ready {
 				if p.Pts() != AV_NOPTS_VALUE {
-					p.SetPts(RescaleQ(p.Pts(), ost.CodecCtx().TimeBase(), ist.TimeBase()))
+					p.SetPts(RescaleQ(p.Pts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
 				}
 
 				if p.Dts() != AV_NOPTS_VALUE {
-					p.SetDts(RescaleQ(p.Dts(), ost.CodecCtx().TimeBase(), ist.TimeBase()))
+					p.SetDts(RescaleQ(p.Dts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
 				}
 
 				p.SetStreamIndex(ost.Index())
@@ -157,11 +166,11 @@ func main() {
 		for {
 			if p, ready, _ := frame.Flush(ost.CodecCtx()); ready {
 				if p.Pts() != AV_NOPTS_VALUE {
-					p.SetPts(RescaleQ(p.Pts(), ost.CodecCtx().TimeBase(), ist.TimeBase()))
+					p.SetPts(RescaleQ(p.Pts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
 				}
 
 				if p.Dts() != AV_NOPTS_VALUE {
-					p.SetDts(RescaleQ(p.Dts(), ost.CodecCtx().TimeBase(), ist.TimeBase()))
+					p.SetDts(RescaleQ(p.Dts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
 				}
 
 				p.SetStreamIndex(ost.Index())
@@ -178,5 +187,4 @@ func main() {
 
 		frame.Free()
 	}
-
 }
