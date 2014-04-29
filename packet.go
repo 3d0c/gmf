@@ -155,3 +155,7 @@ func (this *Packet) SetStreamIndex(val int) *Packet {
 	this.avPacket.stream_index = C.int(val)
 	return this
 }
+
+func (this *Packet) Free() {
+	C.av_free_packet(&this.avPacket)
+}

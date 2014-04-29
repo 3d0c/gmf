@@ -91,7 +91,7 @@ type CodecCtx struct {
 	avCodecCtx *_Ctype_AVCodecContext
 }
 
-func NewCodecCtx(codec *Codec) *CodecCtx {
+func NewCodecCtx(codec *Codec, options ...[]*Option) *CodecCtx {
 	result := &CodecCtx{codec: codec}
 
 	codecctx := C.avcodec_alloc_context3(codec.avCodec)
@@ -102,6 +102,14 @@ func NewCodecCtx(codec *Codec) *CodecCtx {
 	C.avcodec_get_context_defaults3(codecctx, codec.avCodec)
 
 	result.avCodecCtx = codecctx
+
+	// we're really expecting only one options-array —
+	// variadic arg is used for backward compatibility
+	if len(options) == 1 {
+		for _, option := range options[0] {
+			option.Set(result.avCodecCtx)
+		}
+	}
 
 	return result
 }
@@ -155,12 +163,17 @@ func (this *CodecCtx) CopyBasic(ist *Stream) *CodecCtx {
 	return this
 }
 
-func (this *CodecCtx) Open(opts *Options) error {
+func (this *CodecCtx) Open(dict *Dict) error {
 	if this.IsOpen() {
 		return nil
 	}
 
-	if averr := C.avcodec_open2(this.avCodecCtx, this.codec.avCodec, nil); averr < 0 {
+	var avDict *C.struct_AVDictionary
+	if dict != nil {
+		avDict = dict.avDict
+	}
+
+	if averr := C.avcodec_open2(this.avCodecCtx, this.codec.avCodec, &avDict); averr < 0 {
 		return errors.New(fmt.Sprintf("Error opening codec '%s:%s', averror: %s", this.codec.Name(), this.codec.LongName(), AvError(int(averr))))
 	}
 

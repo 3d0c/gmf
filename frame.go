@@ -201,3 +201,8 @@ func (this *Frame) SetChannels(val int) *Frame {
 	this.avFrame.channels = C.int(val)
 	return this
 }
+
+func (this *Frame) SetQuality(val int) *Frame {
+	this.avFrame.quality = C.int(val)
+	return this
+}
