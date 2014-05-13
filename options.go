@@ -4,6 +4,7 @@ package gmf
 
 #cgo pkg-config: libavutil
 
+#include <stdlib.h>
 #include "libavutil/opt.h"
 
 */

@@ -4,10 +4,36 @@ package gmf
 
 #cgo pkg-config: libavformat
 
+#include <stdlib.h>
 #include "libavformat/avformat.h"
+#include "libavutil/opt.h"
 
 static AVStream* gmf_get_stream(AVFormatContext *ctx, int idx) {
-    return ctx->streams[idx];
+	return ctx->streams[idx];
+}
+
+static int gmf_alloc_priv_data(AVFormatContext *s, AVDictionary **options) {
+	AVDictionary *tmp = NULL;
+
+    if (options)
+        av_dict_copy(&tmp, *options, 0);
+
+	if (s->iformat->priv_data_size > 0) {
+		if (!(s->priv_data = av_mallocz(s->iformat->priv_data_size))) {
+			return -1;
+		 }
+
+		 if (s->iformat->priv_class) {
+			*(const AVClass**)s->priv_data = s->iformat->priv_class;
+			av_opt_set_defaults(s->priv_data);
+			if (av_opt_set_dict(s->priv_data, &tmp) < 0)
+				return -1;
+		}
+
+		return (s->iformat->priv_data_size);
+	}
+
+	return 0;
 }
 
 */
@@ -19,7 +45,10 @@ import (
 	"unsafe"
 )
 
-var ()
+var (
+	AVFMT_FLAG_GENPTS int = C.AVFMT_FLAG_GENPTS
+	AVFMTCTX_NOHEADER int = C.AVFMTCTX_NOHEADER
+)
 
 type FmtCtx struct {
 	avCtx   *_Ctype_AVFormatContext
@@ -89,8 +118,14 @@ func NewInputCtx(filename string) (*FmtCtx, error) {
 }
 
 func (this *FmtCtx) OpenInput(filename string) error {
-	cfilename := C.CString(filename)
-	defer C.free(unsafe.Pointer(cfilename))
+	var cfilename *_Ctype_char
+
+	if filename == "" {
+		cfilename = nil
+	} else {
+		cfilename = C.CString(filename)
+		defer C.free(unsafe.Pointer(cfilename))
+	}
 
 	if averr := C.avformat_open_input(&this.avCtx, cfilename, nil, nil); averr < 0 {
 		return errors.New(fmt.Sprintf("Error opening input '%s': %s", filename, AvError(int(averr))))
@@ -99,7 +134,7 @@ func (this *FmtCtx) OpenInput(filename string) error {
 	if averr := C.avformat_find_stream_info(this.avCtx, nil); averr < 0 {
 		return errors.New(fmt.Sprintf("Unable to find stream info: %s", AvError(int(averr))))
 	}
-
+	// fmt.Println(this.avCtx.pb)
 	// C.av_opt_set_int(this.avCtx.codec, "refcounted_frames", 1, 0)
 
 	return nil
@@ -192,6 +227,13 @@ func (this *FmtCtx) Dump() {
 	C.av_dump_format(this.avCtx, 0, cfilename, 1)
 }
 
+func (this *FmtCtx) DumpAv() {
+	fmt.Println("AVCTX:\n", this.avCtx, "\niformat:\n", this.avCtx.iformat)
+	fmt.Println("raw_packet_buffer:", this.avCtx.raw_packet_buffer)
+	fmt.Println("flags:", this.avCtx.flags)
+	fmt.Println("packet_buffer:", this.avCtx.packet_buffer)
+}
+
 func (this *FmtCtx) Packets() chan *Packet {
 	yield := make(chan *Packet)
 
@@ -257,6 +299,29 @@ func (this *FmtCtx) GetBestStream(typ int32) (*Stream, error) {
 	return this.GetStream(int(idx))
 }
 
+func (this *FmtCtx) FindStreamInfo() error {
+	if averr := C.avformat_find_stream_info(this.avCtx, nil); averr < 0 {
+		return errors.New(fmt.Sprintf("unable to find stream info: %s", AvError(int(averr))))
+	}
+
+	return nil
+}
+
+func (this *FmtCtx) SetInputFormat(name string) error {
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+
+	if this.avCtx.iformat = (*_Ctype_struct_AVInputFormat)(C.av_find_input_format(cname)); this.avCtx.iformat == nil {
+		return errors.New("unable to find format for name: " + name)
+	}
+
+	if int(C.gmf_alloc_priv_data(this.avCtx, nil)) < 0 {
+		return errors.New("unable to allocate priv_data")
+	}
+
+	return nil
+}
+
 func (this *FmtCtx) Free() {
 	if this.avCtx != nil {
 		C.avformat_free_context(this.avCtx)
@@ -279,6 +344,16 @@ func (this *FmtCtx) SetStartTime(val int) *FmtCtx {
 func (this *FmtCtx) TsOffset(stime int) int {
 	// temp solution. see ffmpeg_opt.c:899
 	return (0 - stime)
+}
+
+func (this *FmtCtx) SetDebug(val int) *FmtCtx {
+	this.avCtx.debug = C.int(val)
+	return this
+}
+
+func (this *FmtCtx) SetFlag(flag int) *FmtCtx {
+	this.avCtx.flags |= C.int(flag)
+	return this
 }
 
 func (this *FmtCtx) SeekFile(ist *Stream, minTs, maxTs int, flag int) error {
@@ -304,6 +379,11 @@ func (this *FmtCtx) SeekFrameAt(sec int, streamIndex int) error {
 	ist.CodecCtx().FlushBuffers()
 
 	return nil
+}
+
+func (this *FmtCtx) SetPb(val *AVIOContext) *FmtCtx {
+	this.avCtx.pb = val.avAVIOContext
+	return this
 }
 
 type OutputFmt struct {

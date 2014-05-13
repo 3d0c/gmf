@@ -133,3 +133,25 @@ func TestPacketsIterator(t *testing.T) {
 		break
 	}
 }
+
+func TestCtxPb(t *testing.T) {
+	ctx := NewCtx()
+	ctx.SetDebug(1)
+
+	if err := ctx.SetInputFormat("mov"); err != nil {
+		t.Fatal(err)
+	}
+
+	avioCtx, err := NewAVIOContext(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx.SetPb(avioCtx).SetFlag(AV_NOPTS_VALUE).SetFlag(AVFMTCTX_NOHEADER)
+
+	ctx.OpenInput("")
+
+	for p := range ctx.Packets() {
+		p.Dump()
+	}
+}
