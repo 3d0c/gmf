@@ -86,3 +86,7 @@ func (this *Stream) IsAudio() bool {
 func (this *Stream) IsVideo() bool {
 	return (this.Type() == AVMEDIA_TYPE_VIDEO)
 }
+
+func (this *Stream) Duration() int64 {
+	return int64(this.avStream.duration)
+}
