@@ -90,3 +90,7 @@ func (this *Stream) IsVideo() bool {
 func (this *Stream) DumpAv() {
 	fmt.Printf("stream[%d]: %v\n", this.Index(), this.avStream)
 }
+
+func (this *Stream) Duration() int64 {
+	return int64(this.avStream.duration)
+}
