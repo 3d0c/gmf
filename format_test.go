@@ -153,5 +153,6 @@ func TestCtxPb(t *testing.T) {
 
 	for p := range ctx.Packets() {
 		p.Dump()
+		os.Exit(0)
 	}
 }
