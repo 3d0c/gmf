@@ -13,18 +13,8 @@ package gmf
 
 extern int readCallBack(void*, uint8_t*, int);
 
-static int wrap(void *o, uint8_t *buf, int buf_size) {
-	fprintf(stderr, "buf_size:%d\n", buf_size);
-	buf = av_malloc(buf_size);
-
-	int ret = readCallBack(o, buf, buf_size);
-
-	fprintf(stderr, "len:%d\n", ret);
-
-	return ret;
-}
-
 static AVIOContext *gmf_avio_alloc_context(unsigned char *buffer, int buf_size, void *opaque) {
+	fprintf(stderr, "buffer: %p\n", buffer);
     return avio_alloc_context(buffer, buf_size, 0, opaque, readCallBack, NULL, NULL);
 }
 
@@ -40,7 +30,7 @@ import (
 )
 
 var (
-	IO_BUFFER_SIZE int = 1024
+	IO_BUFFER_SIZE int = 32768
 )
 
 var ReaderHandler func()
@@ -50,10 +40,12 @@ type AVIOContext struct {
 	buffer        *C.uchar
 }
 
+// @todo memory management
 func NewAVIOContext(ctx *FmtCtx) (*AVIOContext, error) {
 	this := &AVIOContext{}
 
 	this.buffer = (*C.uchar)(C.av_malloc(C.size_t(IO_BUFFER_SIZE)))
+	fmt.Println(this.buffer)
 	if this.buffer == nil {
 		return nil, errors.New("unable to allocate buffer")
 	}
@@ -71,19 +63,22 @@ var section *io.SectionReader
 
 //export readCallBack
 func readCallBack(opaque unsafe.Pointer, buf *C.uint8_t, buf_size C.int) C.int {
-	// b, n := reader()
-	// fmt.Println((*_Ctype_AVIOContext)(opaque).buffer)
 	var file *os.File
 	var err error
+	// fmt.Println("readCallBack,buf:", buf, "data:", C.GoBytes(unsafe.Pointer(buf), C.int(buf_size))[:10])
 
 	if section == nil {
 		file, err = os.Open("tmp/ref.mp4")
-		// file, err := os.Open("./avio.go")
 		if err != nil {
 			panic(err)
 		}
 
-		section = io.NewSectionReader(file, 0, int64(buf_size))
+		fi, err := file.Stat()
+		if err != nil {
+			panic(err)
+		}
+
+		section = io.NewSectionReader(file, 0, fi.Size())
 	}
 
 	b := make([]byte, int(buf_size))
@@ -94,13 +89,9 @@ func readCallBack(opaque unsafe.Pointer, buf *C.uint8_t, buf_size C.int) C.int {
 		file.Close()
 	}
 
-	fmt.Println(n, "bytes, [0-10]:", b[0:10])
-
-	buf = (*C.uint8_t)(unsafe.Pointer(C.av_malloc(C.size_t(n))))
 	C.memcpy(unsafe.Pointer(buf), unsafe.Pointer(&b[0]), C.size_t(n))
 
 	return C.int(n)
-
 }
 
 func reader() {

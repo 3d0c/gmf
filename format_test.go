@@ -147,12 +147,14 @@ func TestCtxPb(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx.SetPb(avioCtx).SetFlag(AV_NOPTS_VALUE).SetFlag(AVFMTCTX_NOHEADER)
+	ctx.SetPb(avioCtx).SetFlag(AV_NOPTS_VALUE) //.SetFlag(AVFMTCTX_NOHEADER)
 
 	ctx.OpenInput("")
 
 	for p := range ctx.Packets() {
 		p.Dump()
-		os.Exit(0)
+
 	}
 }
+
+// buf = (*C.uint8_t)(unsafe.Pointer(C.av_malloc(C.size_t(n))))
