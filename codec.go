@@ -4,6 +4,7 @@ package gmf
 
 #cgo pkg-config: libavcodec
 
+#include <stdlib.h>
 #include "libavcodec/avcodec.h"
 #include "libavutil/pixfmt.h"
 

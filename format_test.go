@@ -3,6 +3,7 @@ package gmf
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"testing"
@@ -131,5 +132,60 @@ func TestPacketsIterator(t *testing.T) {
 		}
 
 		break
+	}
+}
+
+var section *io.SectionReader
+
+func customReader() ([]byte, int) {
+	var file *os.File
+	var err error
+
+	if section == nil {
+		file, err = os.Open("tmp/ref.mp4")
+		if err != nil {
+			panic(err)
+		}
+
+		fi, err := file.Stat()
+		if err != nil {
+			panic(err)
+		}
+
+		section = io.NewSectionReader(file, 0, fi.Size())
+	}
+
+	b := make([]byte, IO_BUFFER_SIZE)
+
+	n, err := section.Read(b)
+	if err != nil {
+		fmt.Println("section.Read():", err)
+		file.Close()
+	}
+
+	return b, n
+}
+
+func TestCtxPb(t *testing.T) {
+	ctx := NewCtx()
+	ctx.SetDebug(1)
+
+	if err := ctx.SetInputFormat("mov"); err != nil {
+		t.Fatal(err)
+	}
+
+	ReadHandler = &DataHandler{Reader: customReader}
+
+	avioCtx, err := NewAVIOContext(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx.SetPb(avioCtx).SetFlag(AV_NOPTS_VALUE) //.SetFlag(AVFMTCTX_NOHEADER)
+
+	ctx.OpenInput("")
+
+	for p := range ctx.Packets() {
+		_ = p
 	}
 }

@@ -12,8 +12,7 @@ package gmf
 #include "libavutil/opt.h"
 #include "libavutil/mem.h"
 
-static int check_sample_fmt(AVCodec *codec, enum AVSampleFormat sample_fmt)
-{
+static int check_sample_fmt(AVCodec *codec, enum AVSampleFormat sample_fmt) {
     const enum AVSampleFormat *p = codec->sample_fmts;
 
     while (*p != AV_SAMPLE_FMT_NONE) {
@@ -24,8 +23,7 @@ static int check_sample_fmt(AVCodec *codec, enum AVSampleFormat sample_fmt)
     return 0;
 }
 
-static int select_sample_rate(AVCodec *codec)
-{
+static int select_sample_rate(AVCodec *codec) {
     const int *p;
     int best_samplerate = 0;
 
@@ -40,8 +38,7 @@ static int select_sample_rate(AVCodec *codec)
     return best_samplerate;
 }
 
-static int select_channel_layout(AVCodec *codec)
-{
+static int select_channel_layout(AVCodec *codec) {
     const uint64_t *p;
     uint64_t best_ch_layout = 0;
     int best_nb_channels    = 0;
