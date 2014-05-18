@@ -14,16 +14,11 @@ package gmf
 
 extern int readCallBack(void*, uint8_t*, int);
 
-static AVIOContext *gmf_avio_alloc_context(unsigned char *buffer, int buf_size, void *opaque) {
-    return avio_alloc_context(buffer, buf_size, 0, opaque, readCallBack, NULL, NULL);
-}
-
 */
 import "C"
 
 import (
 	"errors"
-	// "fmt"
 	"unsafe"
 )
 
@@ -52,7 +47,7 @@ func NewAVIOContext(ctx *FmtCtx) (*AVIOContext, error) {
 		return nil, errors.New("unable to allocate buffer")
 	}
 
-	if this.avAVIOContext = C.gmf_avio_alloc_context(this.buffer, C.int(IO_BUFFER_SIZE), unsafe.Pointer(ctx.avCtx)); this.avAVIOContext == nil {
+	if this.avAVIOContext = C.avio_alloc_context(this.buffer, C.int(IO_BUFFER_SIZE), 0, unsafe.Pointer(ctx.avCtx), (*[0]byte)(C.readCallBack), nil, nil); this.avAVIOContext == nil {
 		return nil, errors.New("unable to initialize avio context")
 	}
 
@@ -73,14 +68,6 @@ func readCallBack(opaque unsafe.Pointer, buf *C.uint8_t, buf_size C.int) C.int {
 	return C.int(n)
 }
 
-// Unfortunately, there is no way to use per instance reader, e.g.:
-// >> NewAVIOContext(ctx, &DataHandler{Reader: customReader})
-// because it looks, that there is no place to store user specific
-// information. So we have to use some global variables, to store it.
-//
-// @todo search more
-//
-// Some way it could look like:
 //
 /*
 
