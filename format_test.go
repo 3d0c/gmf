@@ -166,26 +166,56 @@ func customReader() ([]byte, int) {
 	return b, n
 }
 
-func TestCtxPb(t *testing.T) {
+func TestAVIOContext(t *testing.T) {
 	ctx := NewCtx()
-	ctx.SetDebug(1)
 
 	if err := ctx.SetInputFormat("mov"); err != nil {
 		t.Fatal(err)
 	}
 
-	ReadHandler = &DataHandler{Reader: customReader}
+	CustomHandlers = &AVIOHandlers{ReadPacket: customReader}
 
 	avioCtx, err := NewAVIOContext(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ctx.SetPb(avioCtx).SetFlag(AV_NOPTS_VALUE) //.SetFlag(AVFMTCTX_NOHEADER)
+	ctx.SetPb(avioCtx).SetFlag(AV_NOPTS_VALUE)
 
 	ctx.OpenInput("")
 
 	for p := range ctx.Packets() {
 		_ = p
 	}
+}
+
+func ExampleNewAVIOContext(t *testing.T) {
+	ctx := NewCtx()
+
+	// In this example, we're using custom reader implementation,
+	// so we should specify format manually.
+	if err := ctx.SetInputFormat("mov"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Initialize CustomHandlers global pointer.
+	// customReader is a user defined function, which implementes
+	// ReadPacket prototype in AVIOHandlers.
+	CustomHandlers = &AVIOHandlers{ReadPacket: customReader}
+
+	avioCtx, err := NewAVIOContext(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Setting up AVFormatContext.pb
+	ctx.SetPb(avioCtx).SetFlag(AV_NOPTS_VALUE)
+
+	// Calling OpenInput with empty arg, because all files stuff we're doing in custom reader.
+	ctx.OpenInput("")
+
+	for p := range ctx.Packets() {
+		_ = p
+	}
+
 }
