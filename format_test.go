@@ -167,27 +167,65 @@ func customReader() ([]byte, int) {
 }
 
 func TestAVIOContext(t *testing.T) {
-	ctx := NewCtx()
+	ictx := NewCtx()
 
-	if err := ctx.SetInputFormat("mov"); err != nil {
+	if err := ictx.SetInputFormat("mov"); err != nil {
 		t.Fatal(err)
 	}
 
 	CustomHandlers = &AVIOHandlers{ReadPacket: customReader}
 
-	avioCtx, err := NewAVIOContext(ctx)
+	avioCtx, err := NewAVIOContext(ictx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ctx.SetPb(avioCtx).SetFlag(AV_NOPTS_VALUE)
+	ictx.SetPb(avioCtx).SetFlag(AV_NOPTS_VALUE).OpenInput("")
 
-	ctx.OpenInput("")
-
-	for p := range ctx.Packets() {
+	for p := range ictx.Packets() {
 		_ = p
 	}
+
+	ictx.CloseInput()
 }
+
+/*
+func _TestAVIOContext2(t *testing.T) {
+	ictx := NewCtx()
+	octx := NewCtx()
+
+	octx.OpenOutput(NewOutputFmt("mov", "", ""))
+
+	if err := ictx.SetInputFormat("mov"); err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("TESTAVIOCTX")
+	CustomHandlers = &AVIOHandlers{ReadPacket: customReader, WritePacket: customWriter}
+
+	avioCtx, err := NewAVIOContext(ictx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	avioCtxOutput, err := NewAVIOContext(octx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ictx.SetPb(avioCtx).SetFlag(AV_NOPTS_VALUE).OpenInput("")
+	octx.SetPb(avioCtxOutput).WriteHeader()
+
+	for p := range ictx.Packets() {
+		p.Dump()
+		if err := octx.WritePacket(p); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	ictx.CloseInput()
+	octx.CloseOutput()
+}
+*/
 
 func ExampleNewAVIOContext(t *testing.T) {
 	ctx := NewCtx()

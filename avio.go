@@ -68,7 +68,7 @@ func NewAVIOContext(ctx *FmtCtx) (*AVIOContext, error) {
 	}
 
 	if CustomHandlers.WritePacket != nil {
-		ptrRead = (*[0]byte)(C.writeCallBack)
+		ptrWrite = (*[0]byte)(C.writeCallBack)
 	}
 
 	if CustomHandlers.Seek != nil {
@@ -106,7 +106,7 @@ func writeCallBack(opaque unsafe.Pointer, buf *C.uint8_t, buf_size C.int) C.int 
 	if CustomHandlers.WritePacket == nil {
 		panic("No writer handler initialized.")
 	}
-
+	println("we're here")
 	CustomHandlers.WritePacket(C.GoBytes(unsafe.Pointer(buf), buf_size))
 	return 0
 }
