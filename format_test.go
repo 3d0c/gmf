@@ -173,9 +173,7 @@ func TestAVIOContext(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	CustomHandlers = &AVIOHandlers{ReadPacket: customReader}
-
-	avioCtx, err := NewAVIOContext(ictx)
+	avioCtx, err := NewAVIOContext(ictx, &AVIOHandlers{ReadPacket: customReader})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,44 +186,6 @@ func TestAVIOContext(t *testing.T) {
 
 	ictx.CloseInput()
 }
-
-/*
-func _TestAVIOContext2(t *testing.T) {
-	ictx := NewCtx()
-	octx := NewCtx()
-
-	octx.OpenOutput(NewOutputFmt("mov", "", ""))
-
-	if err := ictx.SetInputFormat("mov"); err != nil {
-		t.Fatal(err)
-	}
-	fmt.Println("TESTAVIOCTX")
-	CustomHandlers = &AVIOHandlers{ReadPacket: customReader, WritePacket: customWriter}
-
-	avioCtx, err := NewAVIOContext(ictx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	avioCtxOutput, err := NewAVIOContext(octx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ictx.SetPb(avioCtx).SetFlag(AV_NOPTS_VALUE).OpenInput("")
-	octx.SetPb(avioCtxOutput).WriteHeader()
-
-	for p := range ictx.Packets() {
-		p.Dump()
-		if err := octx.WritePacket(p); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	ictx.CloseInput()
-	octx.CloseOutput()
-}
-*/
 
 func ExampleNewAVIOContext(t *testing.T) {
 	ctx := NewCtx()
@@ -236,12 +196,7 @@ func ExampleNewAVIOContext(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Initialize CustomHandlers global pointer.
-	// customReader is a user defined function, which implementes
-	// ReadPacket prototype in AVIOHandlers.
-	CustomHandlers = &AVIOHandlers{ReadPacket: customReader}
-
-	avioCtx, err := NewAVIOContext(ctx)
+	avioCtx, err := NewAVIOContext(ctx, &AVIOHandlers{ReadPacket: customReader})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -250,10 +205,10 @@ func ExampleNewAVIOContext(t *testing.T) {
 	ctx.SetPb(avioCtx).SetFlag(AV_NOPTS_VALUE)
 
 	// Calling OpenInput with empty arg, because all files stuff we're doing in custom reader.
+	// But the library have to initialize some stuff, so we call it anyway.
 	ctx.OpenInput("")
 
 	for p := range ctx.Packets() {
 		_ = p
 	}
-
 }

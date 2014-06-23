@@ -52,9 +52,10 @@ var (
 )
 
 type FmtCtx struct {
-	avCtx   *_Ctype_AVFormatContext
-	ofmt    *OutputFmt
-	streams map[int]*Stream
+	avCtx    *_Ctype_AVFormatContext
+	ofmt     *OutputFmt
+	streams  map[int]*Stream
+	customPb bool
 }
 
 func init() {
@@ -65,8 +66,9 @@ func init() {
 // @todo start_time is it needed?
 func NewCtx() *FmtCtx {
 	ctx := &FmtCtx{
-		avCtx:   C.avformat_alloc_context(),
-		streams: make(map[int]*Stream),
+		avCtx:    C.avformat_alloc_context(),
+		streams:  make(map[int]*Stream),
+		customPb: false,
 	}
 
 	ctx.avCtx.start_time = 0
@@ -163,12 +165,16 @@ func (this *FmtCtx) CloseOutput() {
 		return
 	}
 
-	if this.avCtx.pb != nil {
-		C.av_write_trailer(this.avCtx)
+	if this.avCtx.pb != nil && !this.customPb {
 		C.avio_close(this.avCtx.pb)
 	}
 
+	C.av_write_trailer(this.avCtx)
 	this.Free()
+}
+
+func (this *FmtCtx) WriteTrailer() {
+	C.av_write_trailer(this.avCtx)
 }
 
 func (this *FmtCtx) CloseInput() {
@@ -188,7 +194,7 @@ func (this *FmtCtx) WriteHeader() error {
 	cfilename := C.CString(this.ofmt.Filename)
 	defer C.free(unsafe.Pointer(cfilename))
 
-	if !this.IsNoFile() {
+	if !this.IsNoFile() && !this.customPb {
 		if averr := C.avio_open(&this.avCtx.pb, cfilename, C.AVIO_FLAG_WRITE); averr < 0 {
 			return errors.New(fmt.Sprintf("Unable to open '%s': %s", this.ofmt.Filename, AvError(int(averr))))
 		}
@@ -384,6 +390,7 @@ func (this *FmtCtx) SeekFrameAt(sec int, streamIndex int) error {
 
 func (this *FmtCtx) SetPb(val *AVIOContext) *FmtCtx {
 	this.avCtx.pb = val.avAVIOContext
+	this.customPb = true
 	return this
 }
 

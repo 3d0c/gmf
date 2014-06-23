@@ -1,5 +1,4 @@
-### Go Media Framework 
-It is a FFmpeg libav* Go bindings. Just a wrapper.  
+### Go FFmpeg Bindings 
 
 #### Status: `beta`
 It covers very basic avformat, avcodec and swscale features.    

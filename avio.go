@@ -21,6 +21,7 @@ import "C"
 
 import (
 	"errors"
+	"fmt"
 	"unsafe"
 )
 
@@ -28,7 +29,7 @@ var (
 	IO_BUFFER_SIZE int = 32768
 )
 
-// Function prototypes for custom IO. Handlers should implement these prototypes, then instance should be assigned to CustomHandlers global pointer.
+// Functions prototypes for custom IO. Implement necessary prototypes and pass instance pointer to NewAVIOContext.
 //
 // E.g.:
 // 	func gridFsReader() ([]byte, int) {
@@ -36,15 +37,16 @@ var (
 //		return data, length
 //	}
 //
-//	CustomHandlers = &AVIOHandlers{ReadPacket: gridFsReader}
+//	avoictx := NewAVIOContext(ctx, &AVIOHandlers{ReadPacket: gridFsReader})
 type AVIOHandlers struct {
 	ReadPacket  func() ([]byte, int)
 	WritePacket func([]byte)
 	Seek        func(int64, int) int64
 }
 
-// This is a global pointer to AVIOHandler.
-var CustomHandlers *AVIOHandlers
+// Global map of AVIOHandlers
+// one handlers struct per format context. Using ctx.avCtx pointer address as a key.
+var handlersMap map[uintptr]*AVIOHandlers
 
 type AVIOContext struct {
 	avAVIOContext *_Ctype_AVIOContext
@@ -52,7 +54,7 @@ type AVIOContext struct {
 }
 
 // AVIOContext constructor. Use it only if You need custom IO behaviour!
-func NewAVIOContext(ctx *FmtCtx) (*AVIOContext, error) {
+func NewAVIOContext(ctx *FmtCtx, handlers *AVIOHandlers) (*AVIOContext, error) {
 	this := &AVIOContext{}
 
 	this.buffer = (*C.uchar)(C.av_malloc(C.size_t(IO_BUFFER_SIZE)))
@@ -61,17 +63,26 @@ func NewAVIOContext(ctx *FmtCtx) (*AVIOContext, error) {
 		return nil, errors.New("unable to allocate buffer")
 	}
 
+	// we have to explicitly set it to nil, to force library using default handlers
 	var ptrRead, ptrWrite, ptrSeek *[0]byte = nil, nil, nil
 
-	if CustomHandlers.ReadPacket != nil {
+	if handlers != nil {
+		if handlersMap == nil {
+			handlersMap = make(map[uintptr]*AVIOHandlers)
+		}
+
+		handlersMap[uintptr(unsafe.Pointer(ctx.avCtx))] = handlers
+	}
+
+	if handlers.ReadPacket != nil {
 		ptrRead = (*[0]byte)(C.readCallBack)
 	}
 
-	if CustomHandlers.WritePacket != nil {
+	if handlers.WritePacket != nil {
 		ptrWrite = (*[0]byte)(C.writeCallBack)
 	}
 
-	if CustomHandlers.Seek != nil {
+	if handlers.Seek != nil {
 		ptrSeek = (*[0]byte)(C.seekCallBack)
 	}
 
@@ -89,11 +100,16 @@ func (this *AVIOContext) Free() {
 
 //export readCallBack
 func readCallBack(opaque unsafe.Pointer, buf *C.uint8_t, buf_size C.int) C.int {
-	if CustomHandlers.ReadPacket == nil {
+	handlers, found := handlersMap[uintptr(opaque)]
+	if !found {
+		panic(fmt.Sprintf("No handlers instance found, according pointer: %v", opaque))
+	}
+
+	if handlers.ReadPacket == nil {
 		panic("No reader handler initialized")
 	}
 
-	b, n := CustomHandlers.ReadPacket()
+	b, n := handlers.ReadPacket()
 	if n >= 0 {
 		C.memcpy(unsafe.Pointer(buf), unsafe.Pointer(&b[0]), C.size_t(n))
 	}
@@ -103,19 +119,29 @@ func readCallBack(opaque unsafe.Pointer, buf *C.uint8_t, buf_size C.int) C.int {
 
 //export writeCallBack
 func writeCallBack(opaque unsafe.Pointer, buf *C.uint8_t, buf_size C.int) C.int {
-	if CustomHandlers.WritePacket == nil {
+	handlers, found := handlersMap[uintptr(opaque)]
+	if !found {
+		panic(fmt.Sprintf("No handlers instance found, according pointer: %v", opaque))
+	}
+
+	if handlers.WritePacket == nil {
 		panic("No writer handler initialized.")
 	}
-	println("we're here")
-	CustomHandlers.WritePacket(C.GoBytes(unsafe.Pointer(buf), buf_size))
+
+	handlers.WritePacket(C.GoBytes(unsafe.Pointer(buf), buf_size))
 	return 0
 }
 
 //export seekCallBack
 func seekCallBack(opaque unsafe.Pointer, offset C.int64_t, whence C.int) C.int64_t {
-	if CustomHandlers.Seek == nil {
+	handlers, found := handlersMap[uintptr(opaque)]
+	if !found {
+		panic(fmt.Sprintf("No handlers instance found, according pointer: %v", opaque))
+	}
+
+	if handlers.Seek == nil {
 		panic("No seek handler initialized.")
 	}
 
-	return C.int64_t(CustomHandlers.Seek(int64(offset), int(whence)))
+	return C.int64_t(handlers.Seek(int64(offset), int(whence)))
 }
