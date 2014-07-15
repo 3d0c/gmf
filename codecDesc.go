@@ -14,15 +14,15 @@ import (
 )
 
 type CodecDescriptor struct {
-	avDesc    *_Ctype_AVCodecDescriptor
+	avDesc    *C.struct_AVCodecDescriptor
 	IsEncoder bool
 }
 
 var Codecs []*CodecDescriptor
 
 func InitDesc() {
-	var desc *_Ctype_AVCodecDescriptor = nil
-	var c *_Ctype_AVCodec
+	var desc *C.struct_AVCodecDescriptor = nil
+	var c *C.struct_AVCodec
 
 	if Codecs != nil {
 		log.Println("Wrong method call. Map 'Codecs' is already initialized. Ignoring...")

@@ -35,11 +35,11 @@ func init() {
 }
 
 type Codec struct {
-	avCodec *_Ctype_AVCodec
+	avCodec *C.struct_AVCodec
 }
 
 func NewDecoder(i interface{}) (*Codec, error) {
-	var avc *_Ctype_AVCodec
+	var avc *C.struct_AVCodec
 
 	switch t := i.(type) {
 	case string:
@@ -65,7 +65,7 @@ func NewDecoder(i interface{}) (*Codec, error) {
 }
 
 func NewEncoder(i interface{}) (*Codec, error) {
-	var avc *_Ctype_AVCodec
+	var avc *C.struct_AVCodec
 
 	switch t := i.(type) {
 	case string:

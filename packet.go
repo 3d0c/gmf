@@ -31,7 +31,7 @@ import (
 var frames map[int32]*Frame = make(map[int32]*Frame, 0)
 
 type Packet struct {
-	avPacket _Ctype_AVPacket
+	avPacket C.struct_AVPacket
 }
 
 func NewPacket() *Packet {

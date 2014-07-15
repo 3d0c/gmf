@@ -30,7 +30,7 @@ import (
 )
 
 type Frame struct {
-	avFrame   *_Ctype_AVFrame
+	avFrame   *C.struct_AVFrame
 	mediaType int32
 }
 
@@ -46,7 +46,7 @@ func (this *Frame) Flush(cc *CodecCtx) (*Packet, bool, error) {
 	return encode(cc, nil, this.mediaType)
 }
 
-func encode(cc *CodecCtx, avFrame *_Ctype_AVFrame, mediaType int32) (*Packet, bool, error) {
+func encode(cc *CodecCtx, avFrame *C.struct_AVFrame, mediaType int32) (*Packet, bool, error) {
 	var gotOutput int
 	var ret int
 

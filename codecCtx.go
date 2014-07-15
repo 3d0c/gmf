@@ -85,7 +85,7 @@ type SampleFmt int
 
 type CodecCtx struct {
 	codec      *Codec
-	avCodecCtx *_Ctype_AVCodecContext
+	avCodecCtx *C.struct_AVCodecContext
 }
 
 func NewCodecCtx(codec *Codec, options ...[]*Option) *CodecCtx {
