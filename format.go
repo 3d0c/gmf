@@ -143,33 +143,16 @@ func (this *FmtCtx) OpenInput(filename string) error {
 	return nil
 }
 
-func (this *FmtCtx) OpenOutput(ofmt *OutputFmt) error {
-	if ofmt == nil {
-		return errors.New("Error opening output. OutputFmt is empty.")
-	}
-
-	this.ofmt = ofmt
-
-	cfilename := C.CString(ofmt.Filename)
-	defer C.free(unsafe.Pointer(cfilename))
-
-	if averr := C.avformat_alloc_output_context2(&this.avCtx, ofmt.avOutputFmt, nil, cfilename); averr < 0 {
-		return errors.New(fmt.Sprintf("Error opening output '%s': %s", ofmt.Filename, AvError(int(averr))))
-	}
-
-	return nil
-}
-
 func (this *FmtCtx) CloseOutput() {
-	if this.avCtx == nil {
+	if this.avCtx == nil || this.IsNoFile() {
 		return
 	}
 
 	if this.avCtx.pb != nil && !this.customPb {
+		this.WriteTrailer()
 		C.avio_close(this.avCtx.pb)
 	}
 
-	C.av_write_trailer(this.avCtx)
 	this.Free()
 }
 
@@ -194,6 +177,7 @@ func (this *FmtCtx) WriteHeader() error {
 	cfilename := C.CString(this.ofmt.Filename)
 	defer C.free(unsafe.Pointer(cfilename))
 
+	// If NOFILE flag isn't set and we don't use custom IO, open it
 	if !this.IsNoFile() && !this.customPb {
 		if averr := C.avio_open(&this.avCtx.pb, cfilename, C.AVIO_FLAG_WRITE); averr < 0 {
 			return errors.New(fmt.Sprintf("Unable to open '%s': %s", this.ofmt.Filename, AvError(int(averr))))
