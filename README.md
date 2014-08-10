@@ -5,7 +5,10 @@ It covers very basic avformat, avcodec and swscale features.
 More bindings and cool features are coming soon.
 
 #### Installation
-##### Recommended way:  
+##### Prerequisites
+Current master branch requires `go 1.3`. If you use older version of `go`, checkout `go1.2` branch. (It's not recommended, because this version won't be supported)
+
+##### Build
 build lastest version of ffmpeg, obtained from [https://github.com/FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg)  
 There is one required option, which is disabled by default, you should turn on: `--enable-shared`  
 
@@ -23,7 +26,7 @@ Add pkgconfig path:
 export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/ffmpeg/lib/pkgconfig/
 ```
 
-Ensure that PKG_CONFIG_PATH contains path to ffmpeg's pkgconfig folder.
+Ensure, that `PKG_CONFIG_PATH` contains path to ffmpeg's pkgconfig folder.
 
 ```sh
 # check it by running
@@ -31,7 +34,6 @@ pkg-config --libs libavformat
 ```
 
 It should print valid path to the avformat library.  
-
 
 Now, just run
 
