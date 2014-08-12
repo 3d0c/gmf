@@ -102,6 +102,8 @@ func main() {
 		if err := outputCtx.WritePacket(p); err != nil {
 			fatal(err)
 		}
+		p.Free()
+
 		log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
 	}
 
