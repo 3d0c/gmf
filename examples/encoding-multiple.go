@@ -107,6 +107,7 @@ func encodeWorker(o output, wg *sync.WaitGroup) {
 			} else {
 				w++
 			}
+			p.Free()
 		} else if err != nil {
 			fatal(err)
 		}
@@ -150,4 +151,6 @@ func main() {
 	}
 
 	wg.Wait()
+
+	srcFrame.Free()
 }
