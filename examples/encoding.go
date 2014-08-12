@@ -83,6 +83,8 @@ func main() {
 
 			log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
 
+			p.Free();
+
 		} else if err != nil {
 			fatal(err)
 		}
@@ -102,6 +104,8 @@ func main() {
 		}
 		log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
 	}
+
+	frame.Free();
 
 	outputCtx.CloseOutput()
 
