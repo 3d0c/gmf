@@ -85,15 +85,12 @@ func encodeWorker(o output, wg *sync.WaitGroup) {
 	i, w := 0, 0
 
 	for {
-		srcFrame, ok := <-o.data
+		frame, ok := <-o.data
 		if !ok {
 			break
 		}
 
-		frame := srcFrame.Clone()
-		frame.SetPts(i)
-
-		if p, ready, err := frame.Encode(videoStream.CodecCtx()); ready {
+		if p, ready, err := frame.EncodeNewPacket(videoStream.CodecCtx()); ready {
 			if p.Pts() != AV_NOPTS_VALUE {
 				p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 			}
@@ -107,13 +104,12 @@ func encodeWorker(o output, wg *sync.WaitGroup) {
 			} else {
 				w++
 			}
-			p.Free()
+			Release(p)
 		} else if err != nil {
 			fatal(err)
 		}
 
-		frame.Free()
-
+		Release(frame)
 		i++
 	}
 
@@ -139,11 +135,16 @@ func main() {
 	}
 
 	var srcFrame *Frame
+	j := 0
 
-	for srcFrame = range GenSyntVideo(320, 200, AV_PIX_FMT_YUV420P) {
+	for srcFrame = range GenSyntVideoNewFrame(320, 200, AV_PIX_FMT_YUV420P) {
+		srcFrame.SetPts(j)
 		for i := 0; i < wCount; i++ {
+			Retain(srcFrame)
 			o[i].data <- srcFrame
 		}
+		j += 1
+		Release(srcFrame)
 	}
 
 	for _, item := range o {
@@ -151,6 +152,4 @@ func main() {
 	}
 
 	wg.Wait()
-
-	srcFrame.Free()
 }
