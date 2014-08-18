@@ -113,7 +113,7 @@ func main() {
 		fatal(err)
 	}
 
-	for packet := range inputCtx.Packets() {
+	for packet := range inputCtx.GetNewPackets() {
 		ist := assert(inputCtx.GetStream(packet.StreamIndex())).(*Stream)
 		ost := assert(outputCtx.GetStream(stMap[ist.Index()])).(*Stream)
 
@@ -135,7 +135,7 @@ func main() {
 				frame.SetPts(ost.Pts)
 			}
 
-			if p, ready, _ := frame.Encode(ost.CodecCtx()); ready {
+			if p, ready, _ := frame.EncodeNewPacket(ost.CodecCtx()); ready {
 				if p.Pts() != AV_NOPTS_VALUE {
 					p.SetPts(RescaleQ(p.Pts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
 				}
@@ -149,10 +149,12 @@ func main() {
 				if err := outputCtx.WritePacket(p); err != nil {
 					fatal(err)
 				}
+				Release(p)
 			}
 
 			ost.Pts++
 		}
+		Release(packet)
 	}
 
 	// Flush encoders
@@ -164,7 +166,7 @@ func main() {
 		frame := NewFrame()
 
 		for {
-			if p, ready, _ := frame.Flush(ost.CodecCtx()); ready {
+			if p, ready, _ := frame.FlushNewPacket(ost.CodecCtx()); ready {
 				if p.Pts() != AV_NOPTS_VALUE {
 					p.SetPts(RescaleQ(p.Pts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
 				}
@@ -178,13 +180,16 @@ func main() {
 				if err := outputCtx.WritePacket(p); err != nil {
 					fatal(err)
 				}
+				Release(p)
 			} else {
+				Release(p)
 				break
 			}
+
 
 			ost.Pts++
 		}
 
-		frame.Free()
+		Release(frame)
 	}
 }

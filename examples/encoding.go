@@ -65,10 +65,10 @@ func main() {
 	var frame *Frame
 	i := 0
 
-	for frame = range GenSyntVideo(videoEncCtx.Width(), videoEncCtx.Height(), videoEncCtx.PixFmt()) {
+	for frame = range GenSyntVideoNewFrame(videoEncCtx.Width(), videoEncCtx.Height(), videoEncCtx.PixFmt()) {
 		frame.SetPts(i)
 
-		if p, ready, err := frame.Encode(videoStream.CodecCtx()); ready {
+		if p, ready, err := frame.EncodeNewPacket(videoStream.CodecCtx()); ready {
 			if p.Pts() != AV_NOPTS_VALUE {
 				p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 			}
@@ -81,33 +81,21 @@ func main() {
 				fatal(err)
 			}
 
-			log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
+			log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", frame.Pts(), p.Size(), p.Pts(), p.Dts())
 
-			p.Free();
+			Release(p)
 
 		} else if err != nil {
 			fatal(err)
+		} else {
+			log.Printf("Write frame=%d frame=%d is not ready", i, frame.Pts())
 		}
+
 
 		i++
+		Release(frame)
 	}
 
-	frame.SetPts(i)
-
-	if p, ready, _ := frame.Encode(videoStream.CodecCtx()); ready {
-		p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
-
-		p.SetDts(RescaleQ(p.Dts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
-
-		if err := outputCtx.WritePacket(p); err != nil {
-			fatal(err)
-		}
-		p.Free()
-
-		log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
-	}
-
-	frame.Free();
 
 	outputCtx.CloseOutput()
 

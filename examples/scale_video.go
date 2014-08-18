@@ -83,7 +83,7 @@ func main() {
 
 		swsCtx.Scale(frame, dstFrame)
 
-		if p, ready, err := dstFrame.Encode(videoStream.CodecCtx()); ready {
+		if p, ready, err := dstFrame.EncodeNewPacket(videoStream.CodecCtx()); ready {
 			if p.Pts() != AV_NOPTS_VALUE {
 				p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 			}
@@ -96,7 +96,7 @@ func main() {
 				fatal(err)
 			}
 
-			p.Free()
+			Release(p)
 
 			log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
 
@@ -109,7 +109,7 @@ func main() {
 
 	frame.SetPts(i)
 
-	if p, ready, _ := frame.Encode(videoStream.CodecCtx()); ready {
+	if p, ready, _ := frame.EncodeNewPacket(videoStream.CodecCtx()); ready {
 		p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 
 		p.SetDts(RescaleQ(p.Dts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
@@ -117,13 +117,13 @@ func main() {
 		if err := outputCtx.WritePacket(p); err != nil {
 			fatal(err)
 		}
-		p.Free()
+		Release(p)
 
 		log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
 	}
 
-	dstFrame.Free()
-	frame.Free()
+	Release(dstFrame)
+	Release(frame)
 
 	outputCtx.CloseOutput()
 

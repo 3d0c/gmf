@@ -225,7 +225,7 @@ func (this *FmtCtx) DumpAv() {
 	fmt.Println("packet_buffer:", this.avCtx.packet_buffer)
 }
 
-func (this *FmtCtx) Packets() chan *Packet {
+func (this *FmtCtx) GetNewPackets() chan *Packet {
 	yield := make(chan *Packet)
 
 	go func() {
