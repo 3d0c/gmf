@@ -175,6 +175,7 @@ func TestAVIOContext(t *testing.T) {
 	}
 
 	avioCtx, err := NewAVIOContext(ictx, &AVIOHandlers{ReadPacket: customReader})
+	defer Release(avioCtx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,6 +200,7 @@ func ExampleNewAVIOContext(t *testing.T) {
 	}
 
 	avioCtx, err := NewAVIOContext(ctx, &AVIOHandlers{ReadPacket: customReader})
+	defer Release(avioCtx)
 	if err != nil {
 		t.Fatal(err)
 	}

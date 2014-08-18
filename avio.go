@@ -52,6 +52,7 @@ type AVIOContext struct {
 	// avAVIOContext *_Ctype_AVIOContext
 	avAVIOContext *C.struct_AVIOContext
 	buffer        *C.uchar
+	CgoMemoryManage
 }
 
 // AVIOContext constructor. Use it only if You need custom IO behaviour!
