@@ -39,6 +39,7 @@ func (this *Stream) CodecCtx() *CodecCtx {
 
 	this.cc.Open(nil)
 
+	Release(c)
 	return this.cc
 }
 

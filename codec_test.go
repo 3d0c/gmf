@@ -49,6 +49,8 @@ func TestCodec(t *testing.T) {
 			}
 
 			dec++
+			Release(decById)
+			Release(decByName)
 		}
 	}
 

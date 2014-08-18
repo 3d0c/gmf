@@ -36,6 +36,7 @@ func init() {
 
 type Codec struct {
 	avCodec *C.struct_AVCodec
+	CgoMemoryManage
 }
 
 func NewDecoder(i interface{}) (*Codec, error) {
