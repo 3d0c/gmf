@@ -124,12 +124,13 @@ func TestPacketsIterator(t *testing.T) {
 
 	defer inputCtx.CloseInput()
 
-	for packet := range inputCtx.Packets() {
+	for packet := range inputCtx.GetNewPackets() {
 		if packet.Size() <= 0 {
 			t.Fatal("Expected size > 0")
 		} else {
 			log.Printf("One packet has been read. size: %v, pts: %v\n", packet.Size(), packet.Pts())
 		}
+		Release(packet)
 
 		break
 	}
@@ -142,7 +143,7 @@ func customReader() ([]byte, int) {
 	var err error
 
 	if section == nil {
-		file, err = os.Open("tmp/ref.mp4")
+		file, err = os.Open("examples/sample-enc-mpeg4.mp4")
 		if err != nil {
 			panic(err)
 		}
@@ -180,8 +181,9 @@ func TestAVIOContext(t *testing.T) {
 
 	ictx.SetPb(avioCtx).SetFlag(AV_NOPTS_VALUE).OpenInput("")
 
-	for p := range ictx.Packets() {
+	for p := range ictx.GetNewPackets() {
 		_ = p
+		Release(p)
 	}
 
 	ictx.CloseInput()
@@ -208,7 +210,8 @@ func ExampleNewAVIOContext(t *testing.T) {
 	// But the library have to initialize some stuff, so we call it anyway.
 	ctx.OpenInput("")
 
-	for p := range ctx.Packets() {
+	for p := range ctx.GetNewPackets() {
 		_ = p
+		Release(p)
 	}
 }

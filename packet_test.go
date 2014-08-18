@@ -13,7 +13,7 @@ func TestFramesIterator(t *testing.T) {
 
 	defer inputCtx.CloseInput()
 
-	for packet := range inputCtx.Packets() {
+	for packet := range inputCtx.GetNewPackets() {
 		if packet.Size() <= 0 {
 			t.Fatal("Expected size > 0")
 		}
@@ -30,6 +30,8 @@ func TestFramesIterator(t *testing.T) {
 			log.Println(f, "frames decode.")
 			break
 		}
+
+		Release(packet)
 	}
 
 }
