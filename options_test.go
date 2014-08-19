@@ -7,11 +7,10 @@ import (
 
 // @todo write good test
 func TestOptionSet(t *testing.T) {
-	codec, err := NewEncoder("mpeg4")
+	codec, err := FindEncoder("mpeg4")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer Release(codec)
 
 	cc := NewCodecCtx(codec, []*Option{{"refcounted_frames", 1}})
 	if cc == nil {

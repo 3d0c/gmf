@@ -17,7 +17,7 @@ func main() {
 	outputfilename := "sample-encoding.mpg"
 	dstWidth, dstHeight := 640, 480
 
-	codec, err := NewEncoder(AV_CODEC_ID_MPEG1VIDEO)
+	codec, err := FindEncoder(AV_CODEC_ID_MPEG1VIDEO)
 	if err != nil {
 		fatal(err)
 	}

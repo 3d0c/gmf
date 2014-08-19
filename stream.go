@@ -17,6 +17,7 @@ type Stream struct {
 	avStream *C.struct_AVStream
 	cc       *CodecCtx
 	Pts      int
+	CgoMemoryManage
 }
 
 func (this *Stream) CodecCtx() *CodecCtx {
@@ -27,7 +28,7 @@ func (this *Stream) CodecCtx() *CodecCtx {
 	// @todo make explicit decoder/encoder definition
 	// If the codec context wasn't set, it means that it's called from InputCtx
 	// and it should be decoder.
-	c, err := NewDecoder(int(this.avStream.codec.codec_id))
+	c, err := FindDecoder(int(this.avStream.codec.codec_id))
 	if err != nil {
 		panic(fmt.Sprintf("unable to initialize codec for stream '%d', error:", this.Index(), err))
 	}
@@ -39,7 +40,6 @@ func (this *Stream) CodecCtx() *CodecCtx {
 
 	this.cc.Open(nil)
 
-	Release(c)
 	return this.cc
 }
 

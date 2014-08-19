@@ -385,7 +385,7 @@ type OutputFmt struct {
 	Filename    string
 	avOutputFmt *C.struct_AVOutputFormat
 }
-
+//FIXME: this func NewOutputFmt change to func GetOutputFmt maybe bester
 func NewOutputFmt(format string, filename string, mime string) *OutputFmt {
 	cformat := C.CString(format)
 	defer C.free(unsafe.Pointer(cformat))

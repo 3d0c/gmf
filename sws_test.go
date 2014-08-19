@@ -10,7 +10,7 @@ func TestScale(t *testing.T) {
 	srcWidth, srcHeight := 640, 480
 	dstWidth, dstHeight := 320, 200
 
-	codec, err := NewEncoder("mpeg4")
+	codec, err := FindEncoder("mpeg4")
 	if err != nil {
 		t.Fatal(err)
 	}

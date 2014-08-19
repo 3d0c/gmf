@@ -31,7 +31,7 @@ type output struct {
 func encodeWorker(o output, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	codec, err := NewEncoder(o.codec)
+	codec, err := FindEncoder(o.codec)
 	if err != nil {
 		fatal(err)
 	}

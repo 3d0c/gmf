@@ -63,7 +63,7 @@ func main() {
 		log.Println("No video stream found in", srcFileName)
 	}
 
-	codec, err := NewEncoder(AV_CODEC_ID_JPEG2000)
+	codec, err := FindEncoder(AV_CODEC_ID_JPEG2000)
 	if err != nil {
 		fatal(err)
 	}

@@ -8,7 +8,7 @@ import (
 func TestStream(t *testing.T) {
 	ctx := NewCtx()
 
-	vc, err := NewEncoder("mpeg4")
+	vc, err := FindEncoder("mpeg4")
 	if err != nil {
 		t.Fatal(err)
 	}

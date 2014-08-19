@@ -27,7 +27,7 @@ func addStream(codecName string, oc *FmtCtx, ist *Stream) (int, int) {
 	var cc *CodecCtx
 	var ost *Stream
 
-	codec := assert(NewEncoder(codecName)).(*Codec)
+	codec := assert(FindEncoder(codecName)).(*Codec)
 
 	// Create Video stream in output context
 	if ost = oc.NewStream(codec); ost == nil {

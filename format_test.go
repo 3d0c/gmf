@@ -80,7 +80,7 @@ func TestNewStream(t *testing.T) {
 	}
 	defer Release(ctx)
 
-	c := assert(NewEncoder(AV_CODEC_ID_MPEG1VIDEO)).(*Codec)
+	c := assert(FindEncoder(AV_CODEC_ID_MPEG1VIDEO)).(*Codec)
 
 	cc := NewCodecCtx(c)
 	defer Release(cc)
@@ -103,7 +103,7 @@ func TestWriteHeader(t *testing.T) {
 	defer Release(outputCtx)
 
 	// write_header needs a valid stream with code context initialized
-	c := assert(NewEncoder(AV_CODEC_ID_MPEG1VIDEO)).(*Codec)
+	c := assert(FindEncoder(AV_CODEC_ID_MPEG1VIDEO)).(*Codec)
 	outputCtx.NewStream(c).SetCodecCtx(NewCodecCtx(c).SetTimeBase(AVR{1, 25}).SetDimension(10, 10).SetFlag(CODEC_FLAG_GLOBAL_HEADER))
 
 	if err := outputCtx.WriteHeader(); err != nil {

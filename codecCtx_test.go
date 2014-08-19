@@ -22,7 +22,7 @@ var CodecCtxTestData = struct {
 func TestCodecCtx(t *testing.T) {
 	td := CodecCtxTestData
 
-	codec, err := NewEncoder("mpeg4")
+	codec, err := FindEncoder("mpeg4")
 	if err != nil {
 		t.Fatal(err)
 	}

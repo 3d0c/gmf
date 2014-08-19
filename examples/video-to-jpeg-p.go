@@ -53,7 +53,7 @@ func writeFile(b []byte) {
 func encodeWorker(data chan *Frame, wg *sync.WaitGroup, srcCtx *CodecCtx) {
 	defer wg.Done()
 	log.Println("worker started")
-	codec, err := NewEncoder(AV_CODEC_ID_JPEG2000)
+	codec, err := FindEncoder(AV_CODEC_ID_JPEG2000)
 	if err != nil {
 		fatal(err)
 	}
