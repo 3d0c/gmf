@@ -15,5 +15,5 @@ func _TestImg(t *testing.T) {
 		t.Fatalf("Expected bufsize = 15000, %d got\n", img.bufsize)
 	}
 
-	img.Free()
+	Release(img)
 }
