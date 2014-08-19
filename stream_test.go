@@ -57,5 +57,5 @@ func TestStreamInputCtx(t *testing.T) {
 
 	log.Printf("Input stream is OK, cnt: %d, %dx%d\n", inputCtx.StreamsCnt(), ist.CodecCtx().Width(), ist.CodecCtx().Height())
 
-	inputCtx.CloseInput()
+	inputCtx.CloseInputAndRelease()
 }

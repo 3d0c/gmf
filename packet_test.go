@@ -11,7 +11,7 @@ func TestFramesIterator(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	defer inputCtx.CloseInput()
+	defer inputCtx.CloseInputAndRelease()
 
 	for packet := range inputCtx.GetNewPackets() {
 		if packet.Size() <= 0 {

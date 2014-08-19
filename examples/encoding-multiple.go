@@ -113,7 +113,7 @@ func encodeWorker(o output, wg *sync.WaitGroup) {
 		i++
 	}
 
-	outputCtx.CloseOutput()
+	outputCtx.CloseOutputAndRelease()
 
 	log.Printf("done [%s], %d frames, %d written\n", o.filename, i, w)
 }

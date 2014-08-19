@@ -31,7 +31,7 @@ func TestCtxCreation(t *testing.T) {
 		t.Fatal("AVContext is not initialized")
 	}
 
-	ctx.Free()
+	Release(ctx)
 }
 
 func TestCtxInput(t *testing.T) {
@@ -40,7 +40,7 @@ func TestCtxInput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	inputCtx.CloseInput()
+	inputCtx.CloseInputAndRelease()
 }
 
 func TestCtxOutput(t *testing.T) {
@@ -58,7 +58,7 @@ func TestCtxOutput(t *testing.T) {
 				t.Error("Unexpected error:", err)
 			}
 		} else {
-			outuptCtx.CloseOutput()
+			outuptCtx.CloseOutputAndRelease()
 		}
 	}
 
@@ -68,9 +68,9 @@ func TestCtxOutput(t *testing.T) {
 func TestCtxCloseEmpty(t *testing.T) {
 	ctx := NewCtx()
 
-	ctx.CloseInput()
-	ctx.CloseOutput()
-	ctx.Free()
+	ctx.CloseInputAndRelease()
+	ctx.CloseOutputAndRelease()
+	Release(ctx)
 }
 
 func TestNewStream(t *testing.T) {
@@ -78,7 +78,7 @@ func TestNewStream(t *testing.T) {
 	if ctx.avCtx == nil {
 		t.Fatal("AVContext is not initialized")
 	}
-	defer ctx.Free()
+	defer Release(ctx)
 
 	c := assert(NewEncoder(AV_CODEC_ID_MPEG1VIDEO)).(*Codec)
 
@@ -100,6 +100,7 @@ func TestWriteHeader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer Release(outputCtx)
 
 	// write_header needs a valid stream with code context initialized
 	c := assert(NewEncoder(AV_CODEC_ID_MPEG1VIDEO)).(*Codec)
@@ -122,7 +123,7 @@ func TestPacketsIterator(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	defer inputCtx.CloseInput()
+	defer inputCtx.CloseInputAndRelease()
 
 	for packet := range inputCtx.GetNewPackets() {
 		if packet.Size() <= 0 {
@@ -187,11 +188,13 @@ func TestAVIOContext(t *testing.T) {
 		Release(p)
 	}
 
-	ictx.CloseInput()
+	ictx.CloseInputAndRelease()
+
 }
 
 func ExampleNewAVIOContext(t *testing.T) {
 	ctx := NewCtx()
+	defer Release(ctx)
 
 	// In this example, we're using custom reader implementation,
 	// so we should specify format manually.

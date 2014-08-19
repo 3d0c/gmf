@@ -23,6 +23,9 @@ func Retain(i CgoMemoryManager) CgoMemoryManager {
 }
 
 func Release(i CgoMemoryManager) {
+	if ( nil == i ) {
+		return
+	}
 	i.Release()
 	if ( 0 >= i.RetainCount() ) {
 		i.Free()

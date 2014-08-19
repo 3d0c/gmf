@@ -56,6 +56,7 @@ type FmtCtx struct {
 	ofmt     *OutputFmt
 	streams  map[int]*Stream
 	customPb bool
+	CgoMemoryManage
 }
 
 func init() {
@@ -143,7 +144,7 @@ func (this *FmtCtx) OpenInput(filename string) error {
 	return nil
 }
 
-func (this *FmtCtx) CloseOutput() {
+func (this *FmtCtx) CloseOutputAndRelease() {
 	if this.avCtx == nil || this.IsNoFile() {
 		return
 	}
@@ -153,16 +154,16 @@ func (this *FmtCtx) CloseOutput() {
 		C.avio_close(this.avCtx.pb)
 	}
 
-	this.Free()
+	Release(this)
 }
 
 func (this *FmtCtx) WriteTrailer() {
 	C.av_write_trailer(this.avCtx)
 }
 
-func (this *FmtCtx) CloseInput() {
+func (this *FmtCtx) CloseInputAndRelease() {
 	C.avformat_close_input(&this.avCtx)
-	this.Free()
+	Release(this)
 }
 
 func (this *FmtCtx) IsNoFile() bool {
@@ -256,6 +257,7 @@ func (this *FmtCtx) NewStream(c *Codec) *Stream {
 		return nil
 	} else {
 		this.streams[int(st.index)] = &Stream{avStream: st, Pts: 0}
+//		Retain(this.streams[int(st.index)])
 		return this.streams[int(st.index)]
 	}
 
@@ -314,6 +316,7 @@ func (this *FmtCtx) SetInputFormat(name string) error {
 }
 
 func (this *FmtCtx) Free() {
+//	Release(this.ofmt)
 	if this.avCtx != nil {
 		C.avformat_free_context(this.avCtx)
 	}
@@ -409,3 +412,4 @@ func NewOutputFmt(format string, filename string, mime string) *OutputFmt {
 func (this *OutputFmt) Name() string {
 	return C.GoString(this.avOutputFmt.name)
 }
+

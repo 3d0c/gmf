@@ -98,7 +98,7 @@ func main() {
 	}
 
 
-	outputCtx.CloseOutput()
+	outputCtx.CloseOutputAndRelease()
 
 	log.Println(i, "frames written to", outputfilename)
 }
