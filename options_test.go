@@ -11,13 +11,14 @@ func TestOptionSet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer Release(codec)
 
 	cc := NewCodecCtx(codec, []*Option{{"refcounted_frames", 1}})
 	if cc == nil {
 		t.Fatal(err)
 	}
 
-	cc.Free()
+	Release(cc)
 
 	d := NewDict([]Pair{{"refcounted_frames", "1"}})
 	cc2 := NewCodecCtx(codec, []*Option{{"dict", d}})
@@ -25,7 +26,6 @@ func TestOptionSet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cc2.Free()
-
+	Release(cc2)
 	log.Println("Options work")
 }

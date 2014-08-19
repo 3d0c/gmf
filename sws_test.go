@@ -31,6 +31,7 @@ func TestScale(t *testing.T) {
 	dstCodecCtx.SetProfile(FF_PROFILE_MPEG4_SIMPLE)
 
 	outputCtx := NewCtx()
+	defer Release(outputCtx)
 
 	videoStream := outputCtx.NewStream(codec)
 	if videoStream == nil {
@@ -44,8 +45,10 @@ func TestScale(t *testing.T) {
 	videoStream.SetCodecCtx(dstCodecCtx)
 
 	swsCtx := NewSwsCtx(srcEncCtx, dstCodecCtx, SWS_BICUBIC)
+	defer Release(swsCtx)
 
 	dstFrame := NewFrame().SetWidth(dstWidth).SetHeight(dstHeight).SetFormat(AV_PIX_FMT_YUV420P)
+	defer Release(dstFrame)
 
 	if err := dstFrame.ImgAlloc(); err != nil {
 		t.Fatal(err)
@@ -61,7 +64,8 @@ func TestScale(t *testing.T) {
 		break
 	}
 
-	outputCtx.Free()
+	Release(frame)
+
 
 	log.Println("Swscale is OK")
 }

@@ -23,6 +23,7 @@ type Sample struct {
 	data     **C.uint8_t
 	linesize *int
 	format   SampleFmt
+	CgoMemoryManage
 }
 
 func NewSample(nbSamples, nbChannels int, format SampleFmt) error {

@@ -68,6 +68,7 @@ func main() {
 	}
 
 	swsCtx := NewSwsCtx(srcEncCtx, dstCodecCtx, SWS_BICUBIC)
+	defer Release(swsCtx)
 
 	dstFrame := NewFrame().SetWidth(dstWidth).SetHeight(dstHeight).SetFormat(AV_PIX_FMT_YUV420P)
 

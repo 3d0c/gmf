@@ -29,6 +29,7 @@ var (
 
 type SwsCtx struct {
 	swsCtx *C.struct_SwsContext
+	CgoMemoryManage
 }
 
 func NewSwsCtx(src *CodecCtx, dst *CodecCtx, method int) *SwsCtx {
@@ -38,9 +39,12 @@ func NewSwsCtx(src *CodecCtx, dst *CodecCtx, method int) *SwsCtx {
 		return nil
 	}
 
-	return &SwsCtx{ctx}
+	return &SwsCtx{swsCtx: ctx}
 }
 
+func (this *SwsCtx) Free () {
+	C.sws_freeContext(this.swsCtx)
+}
 func (this *SwsCtx) Scale(src *Frame, dst *Frame) {
 	C.sws_scale(
 		this.swsCtx,
