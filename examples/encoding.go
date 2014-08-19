@@ -26,6 +26,7 @@ func main() {
 	if videoEncCtx == nil {
 		fatal(err)
 	}
+	defer Release(videoEncCtx)
 
 	outputCtx, err := NewOutputCtx(outputfilename)
 	if err != nil {

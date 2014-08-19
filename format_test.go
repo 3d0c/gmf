@@ -83,7 +83,7 @@ func TestNewStream(t *testing.T) {
 	c := assert(NewEncoder(AV_CODEC_ID_MPEG1VIDEO)).(*Codec)
 
 	cc := NewCodecCtx(c)
-	defer cc.Release()
+	defer Release(cc)
 
 	cc.SetTimeBase(AVR{1, 25})
 	cc.SetDimension(320, 200)

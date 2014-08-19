@@ -56,5 +56,5 @@ func TestCodecCtx(t *testing.T) {
 
 	log.Println("CodecCtx is successfully created and opened.")
 
-	cc.Release()
+	Release(cc)
 }

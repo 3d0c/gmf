@@ -66,6 +66,7 @@ import (
 	"errors"
 	"fmt"
 	"unsafe"
+//	"log"
 )
 
 var (
@@ -86,6 +87,7 @@ type SampleFmt int
 type CodecCtx struct {
 	codec      *Codec
 	avCodecCtx *C.struct_AVCodecContext
+	CgoMemoryManage
 }
 
 func NewCodecCtx(codec *Codec, options ...[]*Option) *CodecCtx {
@@ -178,15 +180,18 @@ func (this *CodecCtx) Open(dict *Dict) error {
 }
 
 func (this *CodecCtx) Close() {
-	C.avcodec_close(this.avCodecCtx)
+	if ( nil != this.avCodecCtx ) {
+		C.avcodec_close(this.avCodecCtx)
+		this.avCodecCtx = nil
+	}
 }
 
 func (this *CodecCtx) Free() {
-	C.av_freep(unsafe.Pointer(&this.avCodecCtx))
+	this.CloseAndRelease()
 }
 
-func (this *CodecCtx) Release() {
-	C.avcodec_close(this.avCodecCtx)
+func (this *CodecCtx) CloseAndRelease() {
+	this.Close()
 	C.av_freep(unsafe.Pointer(&this.avCodecCtx))
 }
 

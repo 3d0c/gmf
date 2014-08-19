@@ -49,10 +49,19 @@ func (this *Stream) SetCodecCtx(cc *CodecCtx) {
 		panic("Codec context is not initialized.")
 	}
 
-	this.avStream.codec = cc.avCodecCtx
+	Retain(cc)
 
 	if this.cc != nil {
-		this.cc.avCodecCtx = cc.avCodecCtx
+		Release(this.cc)
+//		this.cc.avCodecCtx = cc.avCodecCtx
+	}
+	this.cc = cc
+	this.avStream.codec = this.cc.avCodecCtx
+}
+
+func (this *Stream) Free() {
+	if ( nil != this.cc ) {
+		Release(this.cc)
 	}
 }
 
