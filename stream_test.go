@@ -17,6 +17,7 @@ func TestStream(t *testing.T) {
 	if cc == nil {
 		t.Fatal("Unable to allocate codec context")
 	}
+	defer Release(cc)
 
 	if ctx.NewStream(vc) == nil {
 		t.Fatal("Unable to create new stream")

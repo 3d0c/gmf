@@ -20,6 +20,10 @@ type Stream struct {
 	CgoMemoryManage
 }
 
+func (this *Stream) Free() {
+	// nothing to do
+}
+
 func (this *Stream) CodecCtx() *CodecCtx {
 	if this.IsCodecCtxSet() {
 		return this.cc
@@ -49,19 +53,11 @@ func (this *Stream) SetCodecCtx(cc *CodecCtx) {
 		panic("Codec context is not initialized.")
 	}
 
-	Retain(cc)
+	Retain(cc) //just Retain .not need Release,it can free memory by C.avformat_free_context() @ format.go Free().
+	this.avStream.codec = cc.avCodecCtx
 
 	if this.cc != nil {
-		Release(this.cc)
-//		this.cc.avCodecCtx = cc.avCodecCtx
-	}
-	this.cc = cc
-	this.avStream.codec = this.cc.avCodecCtx
-}
-
-func (this *Stream) Free() {
-	if ( nil != this.cc ) {
-		Release(this.cc)
+		this.cc.avCodecCtx = cc.avCodecCtx
 	}
 }
 

@@ -257,7 +257,7 @@ func (this *FmtCtx) NewStream(c *Codec) *Stream {
 		return nil
 	} else {
 		this.streams[int(st.index)] = &Stream{avStream: st, Pts: 0}
-//		Retain(this.streams[int(st.index)])
+		Retain(this.streams[int(st.index)])
 		return this.streams[int(st.index)]
 	}
 
@@ -316,7 +316,6 @@ func (this *FmtCtx) SetInputFormat(name string) error {
 }
 
 func (this *FmtCtx) Free() {
-//	Release(this.ofmt)
 	if this.avCtx != nil {
 		C.avformat_free_context(this.avCtx)
 	}

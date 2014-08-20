@@ -50,6 +50,7 @@ func main() {
 	if videoStream == nil {
 		fatal(errors.New(fmt.Sprintf("Unable to create stream for videoEnc [%s]\n", codec.LongName())))
 	}
+	defer Release(videoStream)
 
 	if err := videoEncCtx.Open(nil); err != nil {
 		fatal(err)

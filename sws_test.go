@@ -25,6 +25,7 @@ func TestScale(t *testing.T) {
 	if dstCodecCtx == nil {
 		t.Fatal("Unable to allocate codec context")
 	}
+	defer Release(dstCodecCtx)
 
 	dstCodecCtx.SetBitRate(400000).SetWidth(dstWidth).SetHeight(dstHeight).SetTimeBase(AVR{1, 25}).SetGopSize(10).SetMaxBFrames(1).SetPixFmt(AV_PIX_FMT_YUV420P)
 
@@ -37,6 +38,7 @@ func TestScale(t *testing.T) {
 	if videoStream == nil {
 		t.Fatalf("Unable to create stream for videoEnc [%s]\n", codec.LongName())
 	}
+	defer Release(videoStream)
 
 	if err := dstCodecCtx.Open(nil); err != nil {
 		t.Fatal(err)

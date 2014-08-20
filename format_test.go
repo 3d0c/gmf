@@ -104,7 +104,11 @@ func TestWriteHeader(t *testing.T) {
 
 	// write_header needs a valid stream with code context initialized
 	c := assert(FindEncoder(AV_CODEC_ID_MPEG1VIDEO)).(*Codec)
-	outputCtx.NewStream(c).SetCodecCtx(NewCodecCtx(c).SetTimeBase(AVR{1, 25}).SetDimension(10, 10).SetFlag(CODEC_FLAG_GLOBAL_HEADER))
+	stream := outputCtx.NewStream(c)
+	defer Release(stream)
+	cc := NewCodecCtx(c).SetTimeBase(AVR{1, 25}).SetDimension(10, 10).SetFlag(CODEC_FLAG_GLOBAL_HEADER)
+	defer Release(cc)
+	stream.SetCodecCtx(cc)
 
 	if err := outputCtx.WriteHeader(); err != nil {
 		t.Fatal(err)

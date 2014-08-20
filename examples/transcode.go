@@ -33,10 +33,12 @@ func addStream(codecName string, oc *FmtCtx, ist *Stream) (int, int) {
 	if ost = oc.NewStream(codec); ost == nil {
 		fatal(errors.New("unable to create stream in output context"))
 	}
+	defer Release(ost)
 
 	if cc = NewCodecCtx(codec); cc == nil {
 		fatal(errors.New("unable to create codec context"))
 	}
+	defer Release(cc)
 
 	if oc.IsGlobalHeader() {
 		cc.SetFlag(CODEC_FLAG_GLOBAL_HEADER)

@@ -32,6 +32,7 @@ func main() {
 	if dstCodecCtx == nil {
 		fatal("Unable to allocate codec context")
 	}
+	defer Release(dstCodecCtx)
 
 	dstCodecCtx.
 		SetBitRate(400000).
@@ -54,6 +55,7 @@ func main() {
 	if videoStream == nil {
 		fatal("Unable to create stream for videoEnc " + codec.LongName())
 	}
+	defer Release(videoStream)
 
 	if err := dstCodecCtx.Open(nil); err != nil {
 		fatal(err)

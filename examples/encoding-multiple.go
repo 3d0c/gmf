@@ -40,6 +40,7 @@ func encodeWorker(o output, wg *sync.WaitGroup) {
 	if videoEncCtx == nil {
 		fatal(err)
 	}
+	defer Release(videoEncCtx)
 
 	outputCtx, err := NewOutputCtx(o.filename)
 	if err != nil {
@@ -69,6 +70,7 @@ func encodeWorker(o output, wg *sync.WaitGroup) {
 	if videoStream == nil {
 		fatal(errors.New(fmt.Sprintf("Unable to create stream for videoEnc [%s]\n", codec.LongName())))
 	}
+	defer Release(videoStream)
 
 	if err := videoEncCtx.Open(nil); err != nil {
 		fatal(err)
