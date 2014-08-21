@@ -46,10 +46,10 @@ func TestCtxInput(t *testing.T) {
 func TestCtxOutput(t *testing.T) {
 	cases := map[interface{}]error{
 		outputSampleFilename:                       nil,
-		NewOutputFmt("mp4", "", ""):                nil,
-		NewOutputFmt("", outputSampleFilename, ""): nil,
-		NewOutputFmt("", "", "application/mp4"):    nil,
-		NewOutputFmt("", "", "wrong/mime"):         errors.New(fmt.Sprintf("output format is not initialized. Unable to allocate context")),
+		FindOutputFmt("mp4", "", ""):                nil,
+		FindOutputFmt("", outputSampleFilename, ""): nil,
+		FindOutputFmt("", "", "application/mp4"):    nil,
+		FindOutputFmt("", "", "wrong/mime"):         errors.New(fmt.Sprintf("output format is not initialized. Unable to allocate context")),
 	}
 
 	for arg, expected := range cases {

@@ -82,7 +82,7 @@ func NewOutputCtx(i interface{}) (*FmtCtx, error) {
 
 	switch t := i.(type) {
 	case string:
-		this.ofmt = NewOutputFmt("", i.(string), "")
+		this.ofmt = FindOutputFmt("", i.(string), "")
 
 	case *OutputFmt:
 		this.ofmt = i.(*OutputFmt)
@@ -383,9 +383,10 @@ func (this *FmtCtx) SetPb(val *AVIOContext) *FmtCtx {
 type OutputFmt struct {
 	Filename    string
 	avOutputFmt *C.struct_AVOutputFormat
+	CgoMemoryManage
 }
-//FIXME: this func NewOutputFmt change to func GetOutputFmt maybe bester
-func NewOutputFmt(format string, filename string, mime string) *OutputFmt {
+
+func FindOutputFmt(format string, filename string, mime string) *OutputFmt {
 	cformat := C.CString(format)
 	defer C.free(unsafe.Pointer(cformat))
 
@@ -406,6 +407,10 @@ func NewOutputFmt(format string, filename string, mime string) *OutputFmt {
 	}
 
 	return &OutputFmt{Filename: filename, avOutputFmt: ofmt}
+}
+
+func (this *OutputFmt) Free() {
+//nothing to done.
 }
 
 func (this *OutputFmt) Name() string {

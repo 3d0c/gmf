@@ -36,6 +36,7 @@ func init() {
 
 type Codec struct {
 	avCodec *C.struct_AVCodec
+	CgoMemoryManage
 }
 
 func FindDecoder(i interface{}) (*Codec, error) {
@@ -90,6 +91,9 @@ func FindEncoder(i interface{}) (*Codec, error) {
 	return &Codec{avCodec: avc}, nil
 }
 
+func (this *Codec) Free() {
+	//nothing to do
+}
 func (this *Codec) Id() int {
 	return int(this.avCodec.id)
 }

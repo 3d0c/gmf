@@ -31,8 +31,8 @@ import (
 
 type Frame struct {
 	avFrame   *C.struct_AVFrame
-	CgoMemoryManage
 	mediaType int32
+	CgoMemoryManage
 }
 
 func NewFrame() *Frame {

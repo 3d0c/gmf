@@ -58,15 +58,15 @@ func TestScale(t *testing.T) {
 
 	var frame *Frame
 
-	for frame = range GenSyntVideo(srcWidth, srcHeight, srcEncCtx.PixFmt()) {
+	for frame = range GenSyntVideoNewFrame(srcWidth, srcHeight, srcEncCtx.PixFmt()) {
 		frame.SetPts(0)
 
 		swsCtx.Scale(frame, dstFrame)
 
+		Release(frame)
 		break
 	}
 
-	Release(frame)
 
 
 	log.Println("Swscale is OK")

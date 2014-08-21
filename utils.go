@@ -66,41 +66,6 @@ func GetSampleFmtName(fmt int32) string {
 
 // Synthetic video generator. It produces 25 iteratable frames.
 // Used for tests.
-func GenSyntVideo(w, h int, fmt int32) chan *Frame {
-	yield := make(chan *Frame)
-
-	frame := NewFrame().SetWidth(w).SetHeight(h).SetFormat(fmt)
-
-	if err := frame.ImgAlloc(); err != nil {
-		return nil
-	}
-
-	go func() {
-		for i := 0; i < 25; i++ {
-			for y := 0; y < h; y++ {
-				for x := 0; x < w; x++ {
-					frame.SetData(0, y*frame.LineSize(0)+x, x+y+i*3)
-				}
-			}
-
-			// Cb and Cr
-			for y := 0; y < h/2; y++ {
-				for x := 0; x < w/2; x++ {
-					frame.SetData(1, y*frame.LineSize(1)+x, 128+y+i*2)
-					frame.SetData(2, y*frame.LineSize(2)+x, 64+x+i*5)
-				}
-			}
-
-			yield <- frame
-		}
-
-		close(yield)
-	}()
-
-	return yield
-}
-
-
 func GenSyntVideoNewFrame(w, h int, fmt int32) chan *Frame {
 	yield := make(chan *Frame)
 
