@@ -180,7 +180,7 @@ func (this *Frame) LineSize(idx int) int {
 	return int(C.gmf_get_frame_line_size(this.avFrame, C.int(idx)))
 }
 
-func (this *Frame) Clone() *Frame {
+func (this *Frame) CloneNewFrame() *Frame {
 	return &Frame{avFrame: C.av_frame_clone(this.avFrame)}
 }
 

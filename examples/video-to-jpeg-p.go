@@ -10,6 +10,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"sync"
+	"sync/atomic"
 )
 
 func fatal(err error) {
@@ -26,10 +27,11 @@ func assert(i interface{}, err error) interface{} {
 	return i
 }
 
-var i int = 0
+var i int32 = 0
 
 func writeFile(b []byte) {
-	name := "./tmp/" + strconv.Itoa(i) + ".jpg"
+	name := "./tmp/" + strconv.Itoa(int(atomic.AddInt32(&i,1))) + ".jpg"
+
 
 	fp, err := os.Create(name)
 	if err != nil {
@@ -40,7 +42,6 @@ func writeFile(b []byte) {
 		if err := fp.Close(); err != nil {
 			fatal(err)
 		}
-		i++
 	}()
 
 	if n, err := fp.Write(b); err != nil {
@@ -92,15 +93,15 @@ func encodeWorker(data chan *Frame, wg *sync.WaitGroup, srcCtx *CodecCtx) {
 		if !ok {
 			break
 		}
-
+//		log.Printf("srcFrome = %p",srcFrame)
 		swsCtx.Scale(srcFrame, dstFrame)
 
 		if p, ready, _ := dstFrame.EncodeNewPacket(cc); ready {
 			writeFile(p.Data())
 		}
+		Release(srcFrame)
 	}
 
-	dstFrame.Free()
 }
 
 func main() {
@@ -144,7 +145,7 @@ func main() {
 		ist := assert(inputCtx.GetStream(packet.StreamIndex())).(*Stream)
 
 		for frame := range packet.Frames(ist.CodecCtx()) {
-			dataChan <- frame
+			dataChan <- frame.CloneNewFrame()
 		}
 		Release(packet)
 	}
