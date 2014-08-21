@@ -56,7 +56,7 @@ func main() {
 	}
 
 	inputCtx := assert(NewInputCtx(srcFileName)).(*FmtCtx)
-	defer inputCtx.CloseInput()
+	defer inputCtx.CloseInputAndRelease()
 
 	srcVideoStream, err := inputCtx.GetBestStream(AVMEDIA_TYPE_VIDEO)
 	if err != nil {
@@ -69,6 +69,7 @@ func main() {
 	}
 
 	cc := NewCodecCtx(codec)
+	defer Release(cc)
 
 	cc.SetPixFmt(AV_PIX_FMT_RGB24).SetWidth(srcVideoStream.CodecCtx().Width()).SetHeight(srcVideoStream.CodecCtx().Height())
 
@@ -81,17 +82,19 @@ func main() {
 	}
 
 	swsCtx := NewSwsCtx(srcVideoStream.CodecCtx(), cc, SWS_BICUBIC)
+	defer Release(swsCtx)
 
 	dstFrame := NewFrame().
 		SetWidth(srcVideoStream.CodecCtx().Width()).
 		SetHeight(srcVideoStream.CodecCtx().Height()).
 		SetFormat(AV_PIX_FMT_RGB24)
+	defer Release(dstFrame)
 
 	if err := dstFrame.ImgAlloc(); err != nil {
 		fatal(err)
 	}
 
-	for packet := range inputCtx.Packets() {
+	for packet := range inputCtx.GetNewPackets() {
 		if packet.StreamIndex() != srcVideoStream.Index() {
 			// skip non video streams
 			continue
@@ -101,10 +104,14 @@ func main() {
 		for frame := range packet.Frames(ist.CodecCtx()) {
 			swsCtx.Scale(frame, dstFrame)
 
-			if p, ready, _ := dstFrame.Encode(cc); ready {
+			if p, ready, _ := dstFrame.EncodeNewPacket(cc); ready {
 				writeFile(p.Data())
+				defer Release(p)
 			}
 		}
+		Release(packet)
 	}
+
+	Release(dstFrame)
 
 }

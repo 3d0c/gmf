@@ -59,6 +59,7 @@ func encodeWorker(data chan *Frame, wg *sync.WaitGroup, srcCtx *CodecCtx) {
 	}
 
 	cc := NewCodecCtx(codec)
+	defer Release(cc)
 
 	w, h := srcCtx.Width(), srcCtx.Height()
 
@@ -73,12 +74,14 @@ func encodeWorker(data chan *Frame, wg *sync.WaitGroup, srcCtx *CodecCtx) {
 	}
 
 	swsCtx := NewSwsCtx(srcCtx, cc, SWS_BICUBIC)
+	defer Release(swsCtx)
 
 	// convert to RGB, optionally resize could be here
 	dstFrame := NewFrame().
 		SetWidth(w).
 		SetHeight(h).
 		SetFormat(AV_PIX_FMT_RGB24)
+	defer Release(dstFrame)
 
 	if err := dstFrame.ImgAlloc(); err != nil {
 		fatal(err)
@@ -92,7 +95,7 @@ func encodeWorker(data chan *Frame, wg *sync.WaitGroup, srcCtx *CodecCtx) {
 
 		swsCtx.Scale(srcFrame, dstFrame)
 
-		if p, ready, _ := dstFrame.Encode(cc); ready {
+		if p, ready, _ := dstFrame.EncodeNewPacket(cc); ready {
 			writeFile(p.Data())
 		}
 	}
@@ -116,7 +119,7 @@ func main() {
 	flag.Parse()
 
 	inputCtx := assert(NewInputCtx(*srcFileName)).(*FmtCtx)
-	defer inputCtx.CloseInput()
+	defer inputCtx.CloseInputAndRelease()
 
 	srcVideoStream, err := inputCtx.GetBestStream(AVMEDIA_TYPE_VIDEO)
 	if err != nil {
@@ -132,7 +135,7 @@ func main() {
 		go encodeWorker(dataChan, wg, srcVideoStream.CodecCtx())
 	}
 
-	for packet := range inputCtx.Packets() {
+	for packet := range inputCtx.GetNewPackets() {
 		if packet.StreamIndex() != srcVideoStream.Index() {
 			// skip non video streams
 			continue
@@ -143,6 +146,7 @@ func main() {
 		for frame := range packet.Frames(ist.CodecCtx()) {
 			dataChan <- frame
 		}
+		Release(packet)
 	}
 
 	close(dataChan)
