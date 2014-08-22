@@ -16,6 +16,7 @@ import "C"
 type SwrCtx struct {
 	swrCtx *C.struct_SwrContext
 	cc     *CodecCtx
+	CgoMemoryManage
 }
 
 func NewSwrCtx(options []*Option, cc *CodecCtx) *SwrCtx {

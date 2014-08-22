@@ -56,6 +56,7 @@ type FmtCtx struct {
 	ofmt     *OutputFmt
 	streams  map[int]*Stream
 	customPb bool
+	CgoMemoryManage
 }
 
 func init() {
@@ -81,7 +82,7 @@ func NewOutputCtx(i interface{}) (*FmtCtx, error) {
 
 	switch t := i.(type) {
 	case string:
-		this.ofmt = NewOutputFmt("", i.(string), "")
+		this.ofmt = FindOutputFmt("", i.(string), "")
 
 	case *OutputFmt:
 		this.ofmt = i.(*OutputFmt)
@@ -143,7 +144,7 @@ func (this *FmtCtx) OpenInput(filename string) error {
 	return nil
 }
 
-func (this *FmtCtx) CloseOutput() {
+func (this *FmtCtx) CloseOutputAndRelease() {
 	if this.avCtx == nil || this.IsNoFile() {
 		return
 	}
@@ -153,16 +154,16 @@ func (this *FmtCtx) CloseOutput() {
 		C.avio_close(this.avCtx.pb)
 	}
 
-	this.Free()
+	Release(this)
 }
 
 func (this *FmtCtx) WriteTrailer() {
 	C.av_write_trailer(this.avCtx)
 }
 
-func (this *FmtCtx) CloseInput() {
+func (this *FmtCtx) CloseInputAndRelease() {
 	C.avformat_close_input(&this.avCtx)
-	this.Free()
+	Release(this)
 }
 
 func (this *FmtCtx) IsNoFile() bool {
@@ -225,7 +226,7 @@ func (this *FmtCtx) DumpAv() {
 	fmt.Println("packet_buffer:", this.avCtx.packet_buffer)
 }
 
-func (this *FmtCtx) Packets() chan *Packet {
+func (this *FmtCtx) GetNewPackets() chan *Packet {
 	yield := make(chan *Packet)
 
 	go func() {
@@ -256,6 +257,7 @@ func (this *FmtCtx) NewStream(c *Codec) *Stream {
 		return nil
 	} else {
 		this.streams[int(st.index)] = &Stream{avStream: st, Pts: 0}
+		Retain(this.streams[int(st.index)])
 		return this.streams[int(st.index)]
 	}
 
@@ -381,9 +383,10 @@ func (this *FmtCtx) SetPb(val *AVIOContext) *FmtCtx {
 type OutputFmt struct {
 	Filename    string
 	avOutputFmt *C.struct_AVOutputFormat
+	CgoMemoryManage
 }
 
-func NewOutputFmt(format string, filename string, mime string) *OutputFmt {
+func FindOutputFmt(format string, filename string, mime string) *OutputFmt {
 	cformat := C.CString(format)
 	defer C.free(unsafe.Pointer(cformat))
 
@@ -406,6 +409,11 @@ func NewOutputFmt(format string, filename string, mime string) *OutputFmt {
 	return &OutputFmt{Filename: filename, avOutputFmt: ofmt}
 }
 
+func (this *OutputFmt) Free() {
+//nothing to done.
+}
+
 func (this *OutputFmt) Name() string {
 	return C.GoString(this.avOutputFmt.name)
 }
+

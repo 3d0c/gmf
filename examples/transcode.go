@@ -27,16 +27,18 @@ func addStream(codecName string, oc *FmtCtx, ist *Stream) (int, int) {
 	var cc *CodecCtx
 	var ost *Stream
 
-	codec := assert(NewEncoder(codecName)).(*Codec)
+	codec := assert(FindEncoder(codecName)).(*Codec)
 
 	// Create Video stream in output context
 	if ost = oc.NewStream(codec); ost == nil {
 		fatal(errors.New("unable to create stream in output context"))
 	}
+	defer Release(ost)
 
 	if cc = NewCodecCtx(codec); cc == nil {
 		fatal(errors.New("unable to create codec context"))
 	}
+	defer Release(cc)
 
 	if oc.IsGlobalHeader() {
 		cc.SetFlag(CODEC_FLAG_GLOBAL_HEADER)
@@ -88,10 +90,10 @@ func main() {
 	}
 
 	inputCtx := assert(NewInputCtx(srcFileName)).(*FmtCtx)
-	defer inputCtx.CloseInput()
+	defer inputCtx.CloseInputAndRelease()
 
 	outputCtx := assert(NewOutputCtx(dstFileName)).(*FmtCtx)
-	defer outputCtx.CloseOutput()
+	defer outputCtx.CloseOutputAndRelease()
 
 	srcVideoStream, err := inputCtx.GetBestStream(AVMEDIA_TYPE_VIDEO)
 	if err != nil {
@@ -113,7 +115,7 @@ func main() {
 		fatal(err)
 	}
 
-	for packet := range inputCtx.Packets() {
+	for packet := range inputCtx.GetNewPackets() {
 		ist := assert(inputCtx.GetStream(packet.StreamIndex())).(*Stream)
 		ost := assert(outputCtx.GetStream(stMap[ist.Index()])).(*Stream)
 
@@ -135,7 +137,7 @@ func main() {
 				frame.SetPts(ost.Pts)
 			}
 
-			if p, ready, _ := frame.Encode(ost.CodecCtx()); ready {
+			if p, ready, _ := frame.EncodeNewPacket(ost.CodecCtx()); ready {
 				if p.Pts() != AV_NOPTS_VALUE {
 					p.SetPts(RescaleQ(p.Pts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
 				}
@@ -149,10 +151,12 @@ func main() {
 				if err := outputCtx.WritePacket(p); err != nil {
 					fatal(err)
 				}
+				Release(p)
 			}
 
 			ost.Pts++
 		}
+		Release(packet)
 	}
 
 	// Flush encoders
@@ -164,7 +168,7 @@ func main() {
 		frame := NewFrame()
 
 		for {
-			if p, ready, _ := frame.Flush(ost.CodecCtx()); ready {
+			if p, ready, _ := frame.FlushNewPacket(ost.CodecCtx()); ready {
 				if p.Pts() != AV_NOPTS_VALUE {
 					p.SetPts(RescaleQ(p.Pts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
 				}
@@ -178,13 +182,16 @@ func main() {
 				if err := outputCtx.WritePacket(p); err != nil {
 					fatal(err)
 				}
+				Release(p)
 			} else {
+				Release(p)
 				break
 			}
+
 
 			ost.Pts++
 		}
 
-		frame.Free()
+		Release(frame)
 	}
 }

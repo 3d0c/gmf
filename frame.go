@@ -32,17 +32,18 @@ import (
 type Frame struct {
 	avFrame   *C.struct_AVFrame
 	mediaType int32
+	CgoMemoryManage
 }
 
 func NewFrame() *Frame {
 	return &Frame{avFrame: C.av_frame_alloc()}
 }
 
-func (this *Frame) Encode(cc *CodecCtx) (*Packet, bool, error) {
+func (this *Frame) EncodeNewPacket(cc *CodecCtx) (*Packet, bool, error) {
 	return encode(cc, this.avFrame, this.mediaType)
 }
 
-func (this *Frame) Flush(cc *CodecCtx) (*Packet, bool, error) {
+func (this *Frame) FlushNewPacket(cc *CodecCtx) (*Packet, bool, error) {
 	return encode(cc, nil, this.mediaType)
 }
 
@@ -179,7 +180,7 @@ func (this *Frame) LineSize(idx int) int {
 	return int(C.gmf_get_frame_line_size(this.avFrame, C.int(idx)))
 }
 
-func (this *Frame) Clone() *Frame {
+func (this *Frame) CloneNewFrame() *Frame {
 	return &Frame{avFrame: C.av_frame_clone(this.avFrame)}
 }
 

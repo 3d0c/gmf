@@ -17,7 +17,7 @@ func main() {
 	outputfilename := "sample-encoding.mpg"
 	dstWidth, dstHeight := 640, 480
 
-	codec, err := NewEncoder(AV_CODEC_ID_MPEG1VIDEO)
+	codec, err := FindEncoder(AV_CODEC_ID_MPEG1VIDEO)
 	if err != nil {
 		fatal(err)
 	}
@@ -26,6 +26,7 @@ func main() {
 	if videoEncCtx == nil {
 		fatal(err)
 	}
+	defer Release(videoEncCtx)
 
 	outputCtx, err := NewOutputCtx(outputfilename)
 	if err != nil {
@@ -49,6 +50,7 @@ func main() {
 	if videoStream == nil {
 		fatal(errors.New(fmt.Sprintf("Unable to create stream for videoEnc [%s]\n", codec.LongName())))
 	}
+	defer Release(videoStream)
 
 	if err := videoEncCtx.Open(nil); err != nil {
 		fatal(err)
@@ -65,10 +67,10 @@ func main() {
 	var frame *Frame
 	i := 0
 
-	for frame = range GenSyntVideo(videoEncCtx.Width(), videoEncCtx.Height(), videoEncCtx.PixFmt()) {
+	for frame = range GenSyntVideoNewFrame(videoEncCtx.Width(), videoEncCtx.Height(), videoEncCtx.PixFmt()) {
 		frame.SetPts(i)
 
-		if p, ready, err := frame.Encode(videoStream.CodecCtx()); ready {
+		if p, ready, err := frame.EncodeNewPacket(videoStream.CodecCtx()); ready {
 			if p.Pts() != AV_NOPTS_VALUE {
 				p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 			}
@@ -81,35 +83,23 @@ func main() {
 				fatal(err)
 			}
 
-			log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
+			log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", frame.Pts(), p.Size(), p.Pts(), p.Dts())
 
-			p.Free();
+			Release(p)
 
 		} else if err != nil {
 			fatal(err)
+		} else {
+			log.Printf("Write frame=%d frame=%d is not ready", i, frame.Pts())
 		}
+
 
 		i++
+		Release(frame)
 	}
 
-	frame.SetPts(i)
 
-	if p, ready, _ := frame.Encode(videoStream.CodecCtx()); ready {
-		p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
-
-		p.SetDts(RescaleQ(p.Dts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
-
-		if err := outputCtx.WritePacket(p); err != nil {
-			fatal(err)
-		}
-		p.Free()
-
-		log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
-	}
-
-	frame.Free();
-
-	outputCtx.CloseOutput()
+	outputCtx.CloseOutputAndRelease()
 
 	log.Println(i, "frames written to", outputfilename)
 }

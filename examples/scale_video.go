@@ -16,8 +16,8 @@ func main() {
 	srcWidth, srcHeight := 640, 480
 	dstWidth, dstHeight := 320, 200
 
-	// codec, err := NewEncoder(AV_CODEC_ID_MPEG1VIDEO)
-	codec, err := NewEncoder("mpeg4")
+	// codec, err := FindEncoder(AV_CODEC_ID_MPEG1VIDEO)
+	codec, err := FindEncoder("mpeg4")
 	if err != nil {
 		fatal(err)
 	}
@@ -32,6 +32,7 @@ func main() {
 	if dstCodecCtx == nil {
 		fatal("Unable to allocate codec context")
 	}
+	defer Release(dstCodecCtx)
 
 	dstCodecCtx.
 		SetBitRate(400000).
@@ -54,6 +55,7 @@ func main() {
 	if videoStream == nil {
 		fatal("Unable to create stream for videoEnc " + codec.LongName())
 	}
+	defer Release(videoStream)
 
 	if err := dstCodecCtx.Open(nil); err != nil {
 		fatal(err)
@@ -68,6 +70,7 @@ func main() {
 	}
 
 	swsCtx := NewSwsCtx(srcEncCtx, dstCodecCtx, SWS_BICUBIC)
+	defer Release(swsCtx)
 
 	dstFrame := NewFrame().SetWidth(dstWidth).SetHeight(dstHeight).SetFormat(AV_PIX_FMT_YUV420P)
 
@@ -78,12 +81,12 @@ func main() {
 	var frame *Frame
 
 	i := 0
-	for frame = range GenSyntVideo(srcWidth, srcHeight, srcEncCtx.PixFmt()) {
+	for frame = range GenSyntVideoNewFrame(srcWidth, srcHeight, srcEncCtx.PixFmt()) {
 		frame.SetPts(i)
 
 		swsCtx.Scale(frame, dstFrame)
 
-		if p, ready, err := dstFrame.Encode(videoStream.CodecCtx()); ready {
+		if p, ready, err := dstFrame.EncodeNewPacket(videoStream.CodecCtx()); ready {
 			if p.Pts() != AV_NOPTS_VALUE {
 				p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 			}
@@ -96,7 +99,7 @@ func main() {
 				fatal(err)
 			}
 
-			p.Free()
+			Release(p)
 
 			log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
 
@@ -105,27 +108,27 @@ func main() {
 		}
 
 		i++
+		Release(frame)
 	}
 
-	frame.SetPts(i)
+//	frame.SetPts(i)
+//
+//	if p, ready, _ := frame.EncodeNewPacket(videoStream.CodecCtx()); ready {
+//		p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
+//
+//		p.SetDts(RescaleQ(p.Dts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
+//
+//		if err := outputCtx.WritePacket(p); err != nil {
+//			fatal(err)
+//		}
+//		Release(p)
+//
+//		log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
+//	}
 
-	if p, ready, _ := frame.Encode(videoStream.CodecCtx()); ready {
-		p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
+	Release(dstFrame)
 
-		p.SetDts(RescaleQ(p.Dts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
-
-		if err := outputCtx.WritePacket(p); err != nil {
-			fatal(err)
-		}
-		p.Free()
-
-		log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
-	}
-
-	dstFrame.Free()
-	frame.Free()
-
-	outputCtx.CloseOutput()
+	outputCtx.CloseOutputAndRelease()
 
 	log.Println(i, "frames written to", outputfilename)
 }

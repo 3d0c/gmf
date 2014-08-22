@@ -36,9 +36,10 @@ func init() {
 
 type Codec struct {
 	avCodec *C.struct_AVCodec
+	CgoMemoryManage
 }
 
-func NewDecoder(i interface{}) (*Codec, error) {
+func FindDecoder(i interface{}) (*Codec, error) {
 	var avc *C.struct_AVCodec
 
 	switch t := i.(type) {
@@ -64,7 +65,7 @@ func NewDecoder(i interface{}) (*Codec, error) {
 	return &Codec{avCodec: avc}, nil
 }
 
-func NewEncoder(i interface{}) (*Codec, error) {
+func FindEncoder(i interface{}) (*Codec, error) {
 	var avc *C.struct_AVCodec
 
 	switch t := i.(type) {
@@ -90,6 +91,9 @@ func NewEncoder(i interface{}) (*Codec, error) {
 	return &Codec{avCodec: avc}, nil
 }
 
+func (this *Codec) Free() {
+	//nothing to do
+}
 func (this *Codec) Id() int {
 	return int(this.avCodec.id)
 }

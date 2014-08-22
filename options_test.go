@@ -7,7 +7,7 @@ import (
 
 // @todo write good test
 func TestOptionSet(t *testing.T) {
-	codec, err := NewEncoder("mpeg4")
+	codec, err := FindEncoder("mpeg4")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -17,7 +17,7 @@ func TestOptionSet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cc.Free()
+	Release(cc)
 
 	d := NewDict([]Pair{{"refcounted_frames", "1"}})
 	cc2 := NewCodecCtx(codec, []*Option{{"dict", d}})
@@ -25,7 +25,6 @@ func TestOptionSet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cc2.Free()
-
+	Release(cc2)
 	log.Println("Options work")
 }

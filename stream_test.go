@@ -8,7 +8,7 @@ import (
 func TestStream(t *testing.T) {
 	ctx := NewCtx()
 
-	vc, err := NewEncoder("mpeg4")
+	vc, err := FindEncoder("mpeg4")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -17,6 +17,7 @@ func TestStream(t *testing.T) {
 	if cc == nil {
 		t.Fatal("Unable to allocate codec context")
 	}
+	defer Release(cc)
 
 	if ctx.NewStream(vc) == nil {
 		t.Fatal("Unable to create new stream")
@@ -57,5 +58,5 @@ func TestStreamInputCtx(t *testing.T) {
 
 	log.Printf("Input stream is OK, cnt: %d, %dx%d\n", inputCtx.StreamsCnt(), ist.CodecCtx().Width(), ist.CodecCtx().Height())
 
-	inputCtx.CloseInput()
+	inputCtx.CloseInputAndRelease()
 }

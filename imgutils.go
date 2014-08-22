@@ -59,6 +59,7 @@ type Image struct {
 	pixFmt     int32
 	width      int
 	height     int
+	CgoMemoryManage
 }
 
 // @todo find better way to do allocation

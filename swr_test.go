@@ -19,7 +19,7 @@ func TestSwrInit(t *testing.T) {
 	if swrCtx == nil {
 		t.Fatal("unable to create Swr Context")
 	} else {
-		swrCtx.Free()
+		Release(swrCtx)
 	}
 
 	log.Println("Swr context is createad")
