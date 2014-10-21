@@ -106,6 +106,23 @@ func NewOutputCtx(i interface{}) (*FmtCtx, error) {
 	return this, nil
 }
 
+func NewOutputCtx2(filename,format string)(*FmtCtx, error) {
+	this := &FmtCtx{streams: make(map[int]*Stream)}
+
+	cfilename := C.CString(filename)
+	defer C.free(unsafe.Pointer(cfilename))
+
+	cFormat := C.CString(format)
+	defer  C.free(unsafe.Pointer(cFormat))
+
+	C.avformat_alloc_output_context2(&this.avCtx, nil, cFormat, cfilename)
+
+	if this.avCtx == nil {
+		return nil, errors.New(fmt.Sprintf("unable to allocate context"))
+	}
+	return this, nil
+}
+
 // Just a helper for NewCtx().OpenInput()
 func NewInputCtx(filename string) (*FmtCtx, error) {
 	ctx := NewCtx()
@@ -131,6 +148,8 @@ func (this *FmtCtx) OpenInput(filename string) error {
 		defer C.free(unsafe.Pointer(cfilename))
 	}
 
+	C.avformat_network_init()
+
 	if averr := C.avformat_open_input(&this.avCtx, cfilename, nil, nil); averr < 0 {
 		return errors.New(fmt.Sprintf("Error opening input '%s': %s", filename, AvError(int(averr))))
 	}
@@ -138,10 +157,16 @@ func (this *FmtCtx) OpenInput(filename string) error {
 	if averr := C.avformat_find_stream_info(this.avCtx, nil); averr < 0 {
 		return errors.New(fmt.Sprintf("Unable to find stream info: %s", AvError(int(averr))))
 	}
+
 	// fmt.Println(this.avCtx.pb)
 	// C.av_opt_set_int(this.avCtx.codec, "refcounted_frames", 1, 0)
 
 	return nil
+}
+
+func (this *FmtCtx)CheckFlagsAVFMTGLOBALHEADER()(int){
+
+	return int(this.avCtx.oformat.flags & C.AVFMT_GLOBALHEADER)
 }
 
 func (this *FmtCtx) CloseOutputAndRelease() {
@@ -175,11 +200,14 @@ func (this *FmtCtx) IsGlobalHeader() bool {
 }
 
 func (this *FmtCtx) WriteHeader() error {
-	cfilename := C.CString(this.ofmt.Filename)
-	defer C.free(unsafe.Pointer(cfilename))
+//	cfilename := C.CString(this.ofmt.Filename)
+//	defer C.free(unsafe.Pointer(cfilename))
+
+	cfilename := &(this.avCtx.filename[0])
 
 	// If NOFILE flag isn't set and we don't use custom IO, open it
 	if !this.IsNoFile() && !this.customPb {
+//		fmt.Println("In is no file.")
 		if averr := C.avio_open(&this.avCtx.pb, cfilename, C.AVIO_FLAG_WRITE); averr < 0 {
 			return errors.New(fmt.Sprintf("Unable to open '%s': %s", this.ofmt.Filename, AvError(int(averr))))
 		}
@@ -213,10 +241,23 @@ func (this *FmtCtx) SetOformat(ofmt *OutputFmt) error {
 }
 
 func (this *FmtCtx) Dump() {
-	cfilename := C.CString(this.ofmt.Filename)
-	defer C.free(unsafe.Pointer(cfilename))
+//	cfilename := C.CString("abcde")
+//	cfilename := C.CString(this.ofmt.Filename)
+//	defer C.free(unsafe.Pointer(cfilename))
 
-	C.av_dump_format(this.avCtx, 0, cfilename, 1)
+	if this.ofmt == nil {
+		C.av_dump_format(this.avCtx, 0, &(this.avCtx.filename[0]), 0)
+	} else {
+		C.av_dump_format(this.avCtx, 0, &(this.avCtx.filename[0]), 1)
+	}
+}
+
+func (this *FmtCtx) DumpOutput() {
+//	cfilename := C.CString("abcde")
+//	cfilename := C.CString(this.ofmt.Filename)
+//	defer C.free(unsafe.Pointer(cfilename))
+
+	C.av_dump_format(this.avCtx, 0, &(this.avCtx.filename[0]), 1)
 }
 
 func (this *FmtCtx) DumpAv() {
