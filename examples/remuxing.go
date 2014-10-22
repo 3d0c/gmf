@@ -74,6 +74,4 @@ func main() {
 		Release(packet)
 	}
 
-	outputCtx.WriteTrailer()
-
 }
