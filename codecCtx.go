@@ -201,6 +201,10 @@ func (this *CodecCtx) SetOpt() {
 	C.av_opt_set_int(unsafe.Pointer(this.avCodecCtx), C.CString("refcounted_frames"), 1, 0)
 }
 
+func (this *CodecCtx) Codec() *Codec{
+	return &Codec{avCodec:this.avCodecCtx.codec}
+}
+
 func (this *CodecCtx) Id() int {
 	return int(this.avCodecCtx.codec_id)
 }
