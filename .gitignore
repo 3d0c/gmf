@@ -2,3 +2,6 @@
 *.mp4
 *.mpg
 !examples/tests-sample.mp4
+remuxing
+transcode
+*.ts
