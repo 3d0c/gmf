@@ -37,6 +37,11 @@ static int gmf_alloc_priv_data(AVFormatContext *s, AVDictionary **options) {
 	return 0;
 }
 
+static char *gmf_sprintf_sdp(AVFormatContext *ctx) {
+	char *sdp = malloc(sizeof(char)*16384);
+	av_sdp_create(&ctx, 1, sdp, sizeof(char)*16384);
+	return sdp;
+}
 */
 import "C"
 
@@ -44,6 +49,7 @@ import (
 	"errors"
 	"fmt"
 	"unsafe"
+	"os"
 )
 
 var (
@@ -428,6 +434,23 @@ func (this *FmtCtx) SetPb(val *AVIOContext) *FmtCtx {
 	return this
 }
 
+func (this *FmtCtx)GetSDPString()(sdp string) {
+	sdpChar := C.gmf_sprintf_sdp(this.avCtx)
+	defer  C.free(unsafe.Pointer(sdpChar))
+
+	return C.GoString(sdpChar)
+}
+
+func (this *FmtCtx) WriteSDPFile(filename string) error {
+	file,err := os.Create(filename)
+	if err != nil {
+		return errors.New(fmt.Sprintf("Error open file:%s,error message:%s",filename,err))
+	}
+	defer file.Close()
+
+	file.WriteString(this.GetSDPString());
+	return nil
+}
 type OutputFmt struct {
 	Filename    string
 	avOutputFmt *C.struct_AVOutputFormat
