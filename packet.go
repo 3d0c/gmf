@@ -79,6 +79,39 @@ func (this *Packet) Decode(cc *CodecCtx) (*Frame, bool, int, error) {
 	return frames[cc.Type()], (gotOutput > 0), int(ret), nil
 }
 
+func (this *Packet) DecodeToNewFrame(cc *CodecCtx) (*Frame, bool, int, error) {
+	f := &Frame{avFrame: C.av_frame_alloc(), mediaType: cc.Type()}
+	this.decode(cc, f)
+}
+
+func (this *Packet) decode(cc *CodecCtx, frame *Frame) (*Frame, bool, int, error) {
+	var gotOutput int
+	var ret int = 0
+
+	switch cc.Type() {
+	case AVMEDIA_TYPE_AUDIO:
+		ret = int(C.avcodec_decode_audio4(cc.avCodecCtx, frame.avFrame, (*C.int)(unsafe.Pointer(&gotOutput)), &this.avPacket))
+		if ret < 0 {
+			return nil, false, int(ret), errors.New(fmt.Sprintf("Unable to decode audio packet, averror: %s", AvError(int(ret))))
+		}
+
+		break
+
+	case AVMEDIA_TYPE_VIDEO:
+		ret = int(C.avcodec_decode_video2(cc.avCodecCtx, frame.avFrame, (*C.int)(unsafe.Pointer(&gotOutput)), &this.avPacket))
+		if ret < 0 {
+			return nil, false, int(ret), errors.New(fmt.Sprintf("Unable to decode video packet, averror: %s", AvError(int(ret))))
+		}
+
+		break
+
+	default:
+		return nil, false, int(ret), errors.New(fmt.Sprintf("Unknown codec type: %v", cc.Type()))
+	}
+
+	return frame, (gotOutput > 0), int(ret), nil
+}
+
 func (this *Packet) Frames(cc *CodecCtx) chan *Frame {
 	yield := make(chan *Frame)
 
