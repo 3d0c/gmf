@@ -170,6 +170,33 @@ func (this *Frame) ImgAlloc() error {
 	return nil
 }
 
+func NewAudioFrame(sampleFormat int32, channels, nb_samples int) (*Frame, error) {
+	this := NewFrame()
+	this.mediaType = AVMEDIA_TYPE_AUDIO
+	this.SetNbSamples(nb_samples)
+	this.SetFormat(sampleFormat)
+	this.SetChannelLayout(channels)
+
+	//the codec gives us the frame size, in samples,
+	//we calculate the size of the samples buffer in bytes
+	size := C.av_samples_get_buffer_size(nil, C.int(channels), C.int(nb_samples),
+		sampleFormat, 0)
+	if size < 0 {
+		return nil, errors.New("Could not get sample buffer size")
+	}
+	samples := (*_Ctype_uint8_t)(C.av_malloc(C.size_t(size)))
+	if samples == nil {
+		return nil, errors.New(fmt.Sprintf("Could not allocate %d bytes for samples buffer", size))
+	}
+
+	//setup the data pointers in the AVFrame
+	ret := int(C.avcodec_fill_audio_frame(this.avFrame, C.int(channels), sampleFormat,
+		samples, C.int(size), 0))
+	if ret < 0 {
+		return nil, errors.New("Could not setup audio frame")
+	}
+	return this, nil
+}
 func (this *Frame) SetData(idx int, lineSize int, data int) *Frame {
 	C.gmf_set_frame_data(this.avFrame, C.int(idx), C.int(lineSize), (_Ctype_uint8_t)(data))
 
