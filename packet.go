@@ -81,7 +81,7 @@ func (this *Packet) Decode(cc *CodecCtx) (*Frame, bool, int, error) {
 
 func (this *Packet) DecodeToNewFrame(cc *CodecCtx) (*Frame, bool, int, error) {
 	f := &Frame{avFrame: C.av_frame_alloc(), mediaType: cc.Type()}
-	this.decode(cc, f)
+	return this.decode(cc, f)
 }
 
 func (this *Packet) decode(cc *CodecCtx, frame *Frame) (*Frame, bool, int, error) {

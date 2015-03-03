@@ -3,10 +3,11 @@ package gmf
 
 /*
 
-#cgo pkg-config: libavformat
+#cgo pkg-config: libavformat libavdevice
 
 #include <stdlib.h>
 #include "libavformat/avformat.h"
+#include <libavdevice/avdevice.h>
 #include "libavutil/opt.h"
 
 static AVStream* gmf_get_stream(AVFormatContext *ctx, int idx) {
@@ -69,6 +70,7 @@ type FmtCtx struct {
 func init() {
 	C.av_register_all()
 	C.avformat_network_init()
+	C.avdevice_register_all()
 }
 
 // @todo return error if avCtx is null
@@ -154,6 +156,20 @@ func NewInputCtx(filename string) (*FmtCtx, error) {
 	return ctx, nil
 }
 
+func NewInputCtxWithFormatName(filename, format string) (*FmtCtx, error) {
+	ctx := NewCtx()
+
+	if ctx.avCtx == nil {
+		return nil, errors.New(fmt.Sprintf("unable to allocate context"))
+	}
+	if err := ctx.SetInputFormat(format); err != nil {
+		return nil, err
+	}
+	if err := ctx.OpenInput(filename); err != nil {
+		return nil, err
+	}
+	return ctx, nil
+}
 func (this *FmtCtx) OpenInput(filename string) error {
 	var cfilename *_Ctype_char
 
