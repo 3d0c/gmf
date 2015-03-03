@@ -81,6 +81,7 @@ var (
 	FF_MB_DECISION_BITS      int   = C.FF_MB_DECISION_BITS
 	FF_MB_DECISION_RD        int   = C.FF_MB_DECISION_RD
 	AV_SAMPLE_FMT_S16        int32 = C.AV_SAMPLE_FMT_S16
+	AV_SAMPLE_FMT_S16P       int32 = C.AV_SAMPLE_FMT_S16P
 )
 
 type SampleFmt int
@@ -257,6 +258,9 @@ func (this *CodecCtx) TimeBase() AVRational {
 
 func (this *CodecCtx) ChannelLayout() int {
 	return int(this.avCodecCtx.channel_layout)
+}
+func (this *CodecCtx) SetChannelLayout(channelLayout int) {
+	this.avCodecCtx.channel_layout = C.uint64_t(channelLayout)
 }
 
 func (this *CodecCtx) BitRate() int {

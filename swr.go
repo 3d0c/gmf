@@ -1,3 +1,6 @@
+/*
+2015  Sleepy Programmer <hunan@emsym.com>
+*/
 package gmf
 
 /*
@@ -5,13 +8,16 @@ package gmf
 #cgo pkg-config: libswresample
 
 #include "libswresample/swresample.h"
+#include <libavcodec/avcodec.h>
+#include <libavutil/frame.h>
+
+int gmf_sw_resample(SwrContext* ctx, AVFrame*dstFrame, AVFrame*srcFrame){
+	return swr_convert(ctx, dstFrame->data, dstFrame->nb_samples,
+		(const uint8_t **)srcFrame->data, srcFrame->nb_samples);
+}
 
 */
 import "C"
-
-//
-// Unfinished.
-//
 
 type SwrCtx struct {
 	swrCtx *C.struct_SwrContext
@@ -38,7 +44,15 @@ func (this *SwrCtx) Free() {
 }
 
 func (this *SwrCtx) Convert(input *Frame) *Frame {
-	panic("This stuff is unfinished.")
+	if this.cc == nil {
+		return nil
+	}
+	dstSamples := input.NbSamples()
+	channels := this.cc.Channels()
+	format := this.cc.SampleFmt()
+	dstFrame, _ := NewAudioFrame(format, channels, dstSamples)
+
+	C.gmf_sw_resample(this.swrCtx, dstFrame.avFrame, input.avFrame)
 	// frame := NewFrame()
 
 	// dstNbSamples := C.av_rescale_rnd(C.swr_get_delay(this.swrCtx, this.cc.avCodecCtx.sample_rate)+input.avFrame.nb_samples, C.int64_t(this.cc.SampleRate()), this.cc.SampleRate(), C.AV_ROUND_UP)
@@ -46,5 +60,5 @@ func (this *SwrCtx) Convert(input *Frame) *Frame {
 	// if dstNbSamples > input.NbSamples() {
 	// }
 
-	return nil
+	return dstFrame
 }
