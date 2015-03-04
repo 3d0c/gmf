@@ -52,6 +52,10 @@ func RescaleQ(a int, encBase AVRational, stBase AVRational) int {
 	return int(C.av_rescale_q(C.int64_t(a), C.struct_AVRational(encBase), C.struct_AVRational(stBase)))
 }
 
+func CompareTimeStamp(aTimestamp int, aTimebase AVRational, bTimestamp int, bTimebase AVRational) int {
+	return int(C.av_compare_ts(C.int64_t(aTimestamp), C.struct_AVRational(aTimebase),
+		C.int64_t(bTimestamp), C.struct_AVRational(bTimebase)))
+}
 func RescaleDelta(inTb AVRational, inTs int, fsTb AVRational, duration int, last *int, outTb AVRational) int {
 	return int(C.av_rescale_delta(C.struct_AVRational(inTb), C.int64_t(inTs), C.struct_AVRational(fsTb), C.int(duration), (*C.int64_t)(unsafe.Pointer(&last)), C.struct_AVRational(outTb)))
 }
