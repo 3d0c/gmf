@@ -291,9 +291,7 @@ func (this *FmtCtx) Dump() {
 
 func (this *FmtCtx) DumpAv() {
 	fmt.Println("AVCTX:\n", this.avCtx, "\niformat:\n", this.avCtx.iformat)
-	fmt.Println("raw_packet_buffer:", this.avCtx.raw_packet_buffer)
 	fmt.Println("flags:", this.avCtx.flags)
-	fmt.Println("packet_buffer:", this.avCtx.packet_buffer)
 }
 
 func (this *FmtCtx) GetNewPackets() chan *Packet {
