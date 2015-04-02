@@ -48,20 +48,20 @@ func AvError(averr int) error {
 	return errors.New(string(b[:bytes.Index(b, []byte{0})]))
 }
 
-func RescaleQ(a int, encBase AVRational, stBase AVRational) int {
-	return int(C.av_rescale_q(C.int64_t(a), C.struct_AVRational(encBase), C.struct_AVRational(stBase)))
+func RescaleQ(a int64, encBase AVRational, stBase AVRational) int64 {
+	return int64(C.av_rescale_q(C.int64_t(a), C.struct_AVRational(encBase), C.struct_AVRational(stBase)))
 }
 
 func CompareTimeStamp(aTimestamp int, aTimebase AVRational, bTimestamp int, bTimebase AVRational) int {
 	return int(C.av_compare_ts(C.int64_t(aTimestamp), C.struct_AVRational(aTimebase),
 		C.int64_t(bTimestamp), C.struct_AVRational(bTimebase)))
 }
-func RescaleDelta(inTb AVRational, inTs int, fsTb AVRational, duration int, last *int, outTb AVRational) int {
-	return int(C.av_rescale_delta(C.struct_AVRational(inTb), C.int64_t(inTs), C.struct_AVRational(fsTb), C.int(duration), (*C.int64_t)(unsafe.Pointer(&last)), C.struct_AVRational(outTb)))
+func RescaleDelta(inTb AVRational, inTs int64, fsTb AVRational, duration int, last *int64, outTb AVRational) int64 {
+	return int64(C.av_rescale_delta(C.struct_AVRational(inTb), C.int64_t(inTs), C.struct_AVRational(fsTb), C.int(duration), (*C.int64_t)(unsafe.Pointer(&last)), C.struct_AVRational(outTb)))
 }
 
-func Rescale(a, b, c int) int {
-	return int(C.av_rescale(C.int64_t(a), C.int64_t(b), C.int64_t(c)))
+func Rescale(a, b, c int64) int64 {
+	return int64(C.av_rescale(C.int64_t(a), C.int64_t(b), C.int64_t(c)))
 }
 
 func GetSampleFmtName(fmt int32) string {
