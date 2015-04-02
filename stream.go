@@ -24,16 +24,16 @@ func (this *Stream) Free() {
 	// nothing to do
 }
 
-func (this *Stream)DumpContexCodec(codec *CodecCtx){
+func (this *Stream) DumpContexCodec(codec *CodecCtx) {
 
-	ret := C.avcodec_copy_context(this.avStream.codec,codec.avCodecCtx);
+	ret := C.avcodec_copy_context(this.avStream.codec, codec.avCodecCtx)
 	if ret < 0 {
 		panic("Failed to copy context from input to output stream codec context\n")
 	}
 }
 
-func (this *Stream)SetCodecFlags(){
-	this.avStream.codec.flags |=  C.CODEC_FLAG_GLOBAL_HEADER
+func (this *Stream) SetCodecFlags() {
+	this.avStream.codec.flags |= C.CODEC_FLAG_GLOBAL_HEADER
 }
 
 func (this *Stream) CodecCtx() *CodecCtx {

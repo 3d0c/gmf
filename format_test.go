@@ -45,7 +45,7 @@ func TestCtxInput(t *testing.T) {
 
 func TestCtxOutput(t *testing.T) {
 	cases := map[interface{}]error{
-		outputSampleFilename:                       nil,
+		outputSampleFilename:                        nil,
 		FindOutputFmt("mp4", "", ""):                nil,
 		FindOutputFmt("", outputSampleFilename, ""): nil,
 		FindOutputFmt("", "", "application/mp4"):    nil,

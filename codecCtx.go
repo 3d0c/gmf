@@ -66,7 +66,7 @@ import (
 	"errors"
 	"fmt"
 	"unsafe"
-//	"log"
+	//	"log"
 )
 
 var (
@@ -182,7 +182,7 @@ func (this *CodecCtx) Open(dict *Dict) error {
 }
 
 func (this *CodecCtx) Close() {
-	if ( nil != this.avCodecCtx ) {
+	if nil != this.avCodecCtx {
 		C.avcodec_close(this.avCodecCtx)
 		this.avCodecCtx = nil
 	}
@@ -203,8 +203,8 @@ func (this *CodecCtx) SetOpt() {
 	C.av_opt_set_int(unsafe.Pointer(this.avCodecCtx), C.CString("refcounted_frames"), 1, 0)
 }
 
-func (this *CodecCtx) Codec() *Codec{
-	return &Codec{avCodec:this.avCodecCtx.codec}
+func (this *CodecCtx) Codec() *Codec {
+	return &Codec{avCodec: this.avCodecCtx.codec}
 }
 
 func (this *CodecCtx) Id() int {

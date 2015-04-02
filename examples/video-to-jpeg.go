@@ -1,11 +1,12 @@
 package main
 
 import (
-	. "github.com/3d0c/gmf"
 	"log"
 	"os"
 	"runtime/debug"
 	"strconv"
+
+	. "github.com/3d0c/gmf"
 )
 
 func fatal(err error) {

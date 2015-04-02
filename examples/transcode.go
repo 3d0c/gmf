@@ -3,10 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
-	. "github.com/3d0c/gmf"
 	"log"
 	"os"
 	"runtime/debug"
+
+	. "github.com/3d0c/gmf"
 )
 
 func fatal(err error) {
@@ -187,7 +188,6 @@ func main() {
 				Release(p)
 				break
 			}
-
 
 			ost.Pts++
 		}

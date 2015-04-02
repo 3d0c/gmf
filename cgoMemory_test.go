@@ -1,7 +1,7 @@
 package gmf
 
 import (
-//	"log"
+	//	"log"
 	"testing"
 )
 
@@ -19,53 +19,52 @@ type Data struct {
 var dataIsFree bool = false
 var subDataIsFree bool = false
 
-func (this *Data)Free() {
-//	log.Printf(" Data Free(%p) retainCount=%d",this,this.RetainCount())
+func (this *Data) Free() {
+	//	log.Printf(" Data Free(%p) retainCount=%d",this,this.RetainCount())
 	dataIsFree = true
 }
 
-func (this *SubData)Free() {
-//	log.Printf(" SubData Free(%p) retainCount=%d",this,this.RetainCount())
+func (this *SubData) Free() {
+	//	log.Printf(" SubData Free(%p) retainCount=%d",this,this.RetainCount())
 	subDataIsFree = true
 }
-
 
 func TestCgoMemory(t *testing.T) {
 
 	var abc *Data
 
 	abc = new(Data)
-	sss := SubData{Id:12}
-
+	sss := SubData{Id: 12}
 
 	Retain(abc)
 
-	if ( 2 != abc.RetainCount() ){
+	if 2 != abc.RetainCount() {
 		t.Fatal("has error.")
 	}
 
 	Release(abc)
 
-	if ( 1 != abc.RetainCount() ){
+	if 1 != abc.RetainCount() {
 		t.Fatal("has error.")
 	}
 
 	Release(abc)
 
-	if ( 0 != abc.RetainCount() ){
+	if 0 != abc.RetainCount() {
 		t.Fatal("has error.")
 	}
 
-	if ( ! dataIsFree ) {
+	if !dataIsFree {
 		t.Fatal("Data not run Free.")
 	}
 
 	Release(&sss)
 
-	if ( 0 != sss.RetainCount() ){
+	if 0 != sss.RetainCount() {
 		t.Fatal("has error.")
 	}
 
-	if ( ! subDataIsFree ) {
+	if !subDataIsFree {
 		t.Fatal("subData not run Free.")
-	}}
+	}
+}

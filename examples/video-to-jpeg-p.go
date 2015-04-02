@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	. "github.com/3d0c/gmf"
 	"log"
 	"os"
 	"runtime"
@@ -11,6 +10,8 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
+
+	. "github.com/3d0c/gmf"
 )
 
 func fatal(err error) {
@@ -30,8 +31,7 @@ func assert(i interface{}, err error) interface{} {
 var i int32 = 0
 
 func writeFile(b []byte) {
-	name := "./tmp/" + strconv.Itoa(int(atomic.AddInt32(&i,1))) + ".jpg"
-
+	name := "./tmp/" + strconv.Itoa(int(atomic.AddInt32(&i, 1))) + ".jpg"
 
 	fp, err := os.Create(name)
 	if err != nil {
@@ -93,7 +93,7 @@ func encodeWorker(data chan *Frame, wg *sync.WaitGroup, srcCtx *CodecCtx) {
 		if !ok {
 			break
 		}
-//		log.Printf("srcFrome = %p",srcFrame)
+		//		log.Printf("srcFrome = %p",srcFrame)
 		swsCtx.Scale(srcFrame, dstFrame)
 
 		if p, ready, _ := dstFrame.EncodeNewPacket(cc); ready {
