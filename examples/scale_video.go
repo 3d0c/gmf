@@ -1,14 +1,13 @@
 package main
 
 import (
-	. "github.com/3d0c/gmf"
 	"log"
-	"os"
+
+	. "github.com/3d0c/gmf"
 )
 
 func fatal(err interface{}) {
 	log.Fatal(err)
-	os.Exit(0)
 }
 
 func main() {
@@ -111,20 +110,20 @@ func main() {
 		Release(frame)
 	}
 
-//	frame.SetPts(i)
-//
-//	if p, ready, _ := frame.EncodeNewPacket(videoStream.CodecCtx()); ready {
-//		p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
-//
-//		p.SetDts(RescaleQ(p.Dts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
-//
-//		if err := outputCtx.WritePacket(p); err != nil {
-//			fatal(err)
-//		}
-//		Release(p)
-//
-//		log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
-//	}
+	//	frame.SetPts(i)
+	//
+	//	if p, ready, _ := frame.EncodeNewPacket(videoStream.CodecCtx()); ready {
+	//		p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
+	//
+	//		p.SetDts(RescaleQ(p.Dts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
+	//
+	//		if err := outputCtx.WritePacket(p); err != nil {
+	//			log.Fatal(err)
+	//		}
+	//		Release(p)
+	//
+	//		log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
+	//	}
 
 	Release(dstFrame)
 

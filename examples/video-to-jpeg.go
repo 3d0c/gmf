@@ -1,17 +1,17 @@
 package main
 
 import (
-	. "github.com/3d0c/gmf"
 	"log"
 	"os"
 	"runtime/debug"
 	"strconv"
+
+	. "github.com/3d0c/gmf"
 )
 
 func fatal(err error) {
 	debug.PrintStack()
 	log.Fatal(err)
-	os.Exit(0)
 }
 
 func assert(i interface{}, err error) interface{} {
@@ -74,7 +74,7 @@ func main() {
 	cc.SetPixFmt(AV_PIX_FMT_RGB24).SetWidth(srcVideoStream.CodecCtx().Width()).SetHeight(srcVideoStream.CodecCtx().Height())
 
 	if codec.IsExperimental() {
-		cc.SetStrictCompliance(-2)
+		cc.SetStrictCompliance(FF_COMPLIANCE_EXPERIMENTAL)
 	}
 
 	if err := cc.Open(nil); err != nil {

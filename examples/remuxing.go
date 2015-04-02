@@ -2,16 +2,16 @@ package main
 
 import (
 	"fmt"
-	. "github.com/3d0c/gmf"
 	"log"
 	"os"
 	"runtime/debug"
+
+	. "github.com/3d0c/gmf"
 )
 
 func fatal(err error) {
 	debug.PrintStack()
 	log.Fatal(err)
-	os.Exit(0)
 }
 
 func assert(i interface{}, err error) interface{} {
@@ -28,7 +28,7 @@ func main() {
 	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
 
 	if len(os.Args) != 3 {
-		fmt.Println("usage:",os.Args[0] ," input output")
+		fmt.Println("usage:", os.Args[0], " input output")
 		fmt.Println("API example program to remux a media file with libavformat and libavcodec.")
 		fmt.Println("The output format is guessed according to the file extension.")
 
@@ -42,13 +42,13 @@ func main() {
 	defer inputCtx.CloseInputAndRelease()
 	inputCtx.Dump()
 
-	outputCtx := assert(NewOutputCtxWithFormatName(dstFileName,"mpegts")).(*FmtCtx)
+	outputCtx := assert(NewOutputCtxWithFormatName(dstFileName, "mpegts")).(*FmtCtx)
 	defer outputCtx.CloseOutputAndRelease()
 
 	fmt.Println("===================================")
 
-	for i:=0 ; i < inputCtx.StreamsCnt() ; i++ {
-		srcStream,err := inputCtx.GetStream(i)
+	for i := 0; i < inputCtx.StreamsCnt(); i++ {
+		srcStream, err := inputCtx.GetStream(i)
 		if err != nil {
 			fmt.Println("GetStream error")
 		}
@@ -64,7 +64,7 @@ func main() {
 	first := false
 	for packet := range inputCtx.GetNewPackets() {
 
-		if first {  //if read from rtsp ,the first packets is wrong.
+		if first { //if read from rtsp ,the first packets is wrong.
 			if err := outputCtx.WritePacket(packet); err != nil {
 				fatal(err)
 			}

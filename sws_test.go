@@ -67,7 +67,5 @@ func TestScale(t *testing.T) {
 		break
 	}
 
-
-
 	log.Println("Swscale is OK")
 }

@@ -3,16 +3,16 @@ package main
 import (
 	"errors"
 	"fmt"
-	. "github.com/3d0c/gmf"
 	"log"
 	"os"
 	"runtime/debug"
+
+	. "github.com/3d0c/gmf"
 )
 
 func fatal(err error) {
 	debug.PrintStack()
 	log.Fatal(err)
-	os.Exit(0)
 }
 
 func assert(i interface{}, err error) interface{} {
@@ -45,7 +45,7 @@ func addStream(codecName string, oc *FmtCtx, ist *Stream) (int, int) {
 	}
 
 	if codec.IsExperimental() {
-		cc.SetStrictCompliance(-2)
+		cc.SetStrictCompliance(FF_COMPLIANCE_EXPERIMENTAL)
 	}
 
 	if cc.Type() == AVMEDIA_TYPE_AUDIO {
@@ -83,7 +83,6 @@ func main() {
 	if len(os.Args) != 3 {
 		fmt.Println("Simple transcoder, it guesses source format and codecs and tries to convert it to v:mpeg4/a:mp2.")
 		fmt.Println("usage: [input filename] [output.mp4]")
-		os.Exit(0)
 	} else {
 		srcFileName = os.Args[1]
 		dstFileName = os.Args[2]
@@ -187,7 +186,6 @@ func main() {
 				Release(p)
 				break
 			}
-
 
 			ost.Pts++
 		}

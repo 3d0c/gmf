@@ -31,8 +31,9 @@ Sleepy Programmer <hunan@emsym.com>
 package main
 
 import (
-	. "github.com/3d0c/gmf"
 	"log"
+
+	. "github.com/3d0c/gmf"
 )
 
 func main() {

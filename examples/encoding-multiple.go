@@ -11,15 +11,14 @@ package main
 import (
 	"errors"
 	"fmt"
-	. "github.com/3d0c/gmf"
 	"log"
-	"os"
 	"sync"
+
+	. "github.com/3d0c/gmf"
 )
 
 func fatal(err error) {
 	log.Fatal(err)
-	os.Exit(0)
 }
 
 type output struct {

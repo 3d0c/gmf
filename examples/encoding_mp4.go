@@ -33,14 +33,13 @@ package main
 import (
 	"errors"
 	"fmt"
-	. "github.com/3d0c/gmf"
 	"log"
-	"os"
+
+	. "github.com/3d0c/gmf"
 )
 
 func fatal(err error) {
 	log.Fatal(err)
-	os.Exit(0)
 }
 
 func audio(outputCtx *FmtCtx, output chan *Packet) *Stream {
