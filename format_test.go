@@ -12,8 +12,8 @@ import (
 var (
 	inputSampleFilename  string = "examples/tests-sample.mp4"
 	outputSampleFilename string = "examples/tests-output.mp4"
-	inputSampleWidth     int    = 640
-	inputSampleHeight    int    = 480
+	inputSampleWidth     int    = 320
+	inputSampleHeight    int    = 200
 )
 
 func assert(i interface{}, err error) interface{} {
@@ -148,7 +148,7 @@ func customReader() ([]byte, int) {
 	var err error
 
 	if section == nil {
-		file, err = os.Open("examples/sample-enc-mpeg4.mp4")
+		file, err = os.Open(inputSampleFilename)
 		if err != nil {
 			panic(err)
 		}
