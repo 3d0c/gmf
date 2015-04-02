@@ -45,7 +45,7 @@ func addStream(codecName string, oc *FmtCtx, ist *Stream) (int, int) {
 	}
 
 	if codec.IsExperimental() {
-		cc.SetStrictCompliance(-2)
+		cc.SetStrictCompliance(FF_COMPLIANCE_EXPERIMENTAL)
 	}
 
 	if cc.Type() == AVMEDIA_TYPE_AUDIO {

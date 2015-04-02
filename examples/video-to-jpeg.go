@@ -74,7 +74,7 @@ func main() {
 	cc.SetPixFmt(AV_PIX_FMT_RGB24).SetWidth(srcVideoStream.CodecCtx().Width()).SetHeight(srcVideoStream.CodecCtx().Height())
 
 	if codec.IsExperimental() {
-		cc.SetStrictCompliance(-2)
+		cc.SetStrictCompliance(FF_COMPLIANCE_EXPERIMENTAL)
 	}
 
 	if err := cc.Open(nil); err != nil {

@@ -77,7 +77,7 @@ func main() {
 	cc.SetTimeBase(srcVideoStream.CodecCtx().TimeBase().AVR())
 
 	if codec.IsExperimental() {
-		cc.SetStrictCompliance(-2)
+		cc.SetStrictCompliance(FF_COMPLIANCE_EXPERIMENTAL)
 	}
 
 	if err := cc.Open(nil); err != nil {

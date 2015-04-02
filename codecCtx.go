@@ -337,6 +337,14 @@ func (this *CodecCtx) SetSampleRate(val int) *CodecCtx {
 	return this
 }
 
+var (
+	FF_COMPLIANCE_VERY_STRICT  int = C.FF_COMPLIANCE_VERY_STRICT
+	FF_COMPLIANCE_STRICT       int = C.FF_COMPLIANCE_STRICT
+	FF_COMPLIANCE_NORMAL       int = C.FF_COMPLIANCE_NORMAL
+	FF_COMPLIANCE_UNOFFICIAL   int = C.FF_COMPLIANCE_UNOFFICIAL
+	FF_COMPLIANCE_EXPERIMENTAL int = C.FF_COMPLIANCE_EXPERIMENTAL
+)
+
 func (this *CodecCtx) SetStrictCompliance(val int) *CodecCtx {
 	this.avCodecCtx.strict_std_compliance = C.int(val)
 	return this

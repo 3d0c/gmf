@@ -66,7 +66,7 @@ func encodeWorker(data chan *Frame, wg *sync.WaitGroup, srcCtx *CodecCtx) {
 	cc.SetPixFmt(AV_PIX_FMT_RGB24).SetWidth(w).SetHeight(h)
 
 	if codec.IsExperimental() {
-		cc.SetStrictCompliance(-2)
+		cc.SetStrictCompliance(FF_COMPLIANCE_EXPERIMENTAL)
 	}
 
 	if err := cc.Open(nil); err != nil {
