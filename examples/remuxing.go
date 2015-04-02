@@ -12,7 +12,6 @@ import (
 func fatal(err error) {
 	debug.PrintStack()
 	log.Fatal(err)
-	os.Exit(0)
 }
 
 func assert(i interface{}, err error) interface{} {

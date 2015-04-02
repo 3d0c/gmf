@@ -8,7 +8,6 @@ import (
 
 func fatal(err interface{}) {
 	log.Fatal(err)
-	os.Exit(0)
 }
 
 func main() {

@@ -19,7 +19,6 @@ import (
 
 func fatal(err error) {
 	log.Fatal(err)
-	os.Exit(0)
 }
 
 type output struct {

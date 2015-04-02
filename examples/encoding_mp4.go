@@ -40,7 +40,6 @@ import (
 
 func fatal(err error) {
 	log.Fatal(err)
-	os.Exit(0)
 }
 
 func audio(outputCtx *FmtCtx, output chan *Packet) *Stream {

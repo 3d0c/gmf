@@ -10,7 +10,6 @@ import (
 
 func fatal(err error) {
 	log.Fatal(err)
-	os.Exit(0)
 }
 
 func main() {
@@ -93,11 +92,9 @@ func main() {
 			log.Printf("Write frame=%d frame=%d is not ready", i, frame.Pts())
 		}
 
-
 		i++
 		Release(frame)
 	}
-
 
 	outputCtx.CloseOutputAndRelease()
 
