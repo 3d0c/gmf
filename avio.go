@@ -51,7 +51,7 @@ var handlersMap map[uintptr]*AVIOHandlers
 type AVIOContext struct {
 	// avAVIOContext *_Ctype_AVIOContext
 	avAVIOContext *C.struct_AVIOContext
-	buffer        *C.uchar
+	handlerKey    uintptr
 	CgoMemoryManage
 }
 
@@ -59,9 +59,9 @@ type AVIOContext struct {
 func NewAVIOContext(ctx *FmtCtx, handlers *AVIOHandlers) (*AVIOContext, error) {
 	this := &AVIOContext{}
 
-	this.buffer = (*C.uchar)(C.av_malloc(C.size_t(IO_BUFFER_SIZE)))
+	buffer := (*C.uchar)(C.av_malloc(C.size_t(IO_BUFFER_SIZE)))
 
-	if this.buffer == nil {
+	if buffer == nil {
 		return nil, errors.New("unable to allocate buffer")
 	}
 
@@ -74,6 +74,7 @@ func NewAVIOContext(ctx *FmtCtx, handlers *AVIOHandlers) (*AVIOContext, error) {
 		}
 
 		handlersMap[uintptr(unsafe.Pointer(ctx.avCtx))] = handlers
+		this.handlerKey = uintptr(unsafe.Pointer(ctx.avCtx))
 	}
 
 	if handlers.ReadPacket != nil {
@@ -88,7 +89,7 @@ func NewAVIOContext(ctx *FmtCtx, handlers *AVIOHandlers) (*AVIOContext, error) {
 		ptrSeek = (*[0]byte)(C.seekCallBack)
 	}
 
-	if this.avAVIOContext = C.avio_alloc_context(this.buffer, C.int(IO_BUFFER_SIZE), 0, unsafe.Pointer(ctx.avCtx), ptrRead, ptrWrite, ptrSeek); this.avAVIOContext == nil {
+	if this.avAVIOContext = C.avio_alloc_context(buffer, C.int(IO_BUFFER_SIZE), 0, unsafe.Pointer(ctx.avCtx), ptrRead, ptrWrite, ptrSeek); this.avAVIOContext == nil {
 		return nil, errors.New("unable to initialize avio context")
 	}
 
@@ -96,8 +97,9 @@ func NewAVIOContext(ctx *FmtCtx, handlers *AVIOHandlers) (*AVIOContext, error) {
 }
 
 func (this *AVIOContext) Free() {
+	delete(handlersMap, this.handlerKey)
+	C.av_free(unsafe.Pointer(this.avAVIOContext.buffer))
 	C.av_free(unsafe.Pointer(this.avAVIOContext))
-	C.free(unsafe.Pointer(this.buffer))
 }
 
 //export readCallBack
