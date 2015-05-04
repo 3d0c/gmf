@@ -112,6 +112,31 @@ func (this *Packet) decode(cc *CodecCtx, frame *Frame) (*Frame, bool, int, error
 	return frame, (gotOutput > 0), int(ret), nil
 }
 
+func (this *Packet) GetNextFrame(cc *CodecCtx) (*Frame, error) {
+	for {
+		if this.avPacket.size <= 0 {
+			break
+		}
+
+		frame, ready, ret, err := this.DecodeToNewFrame(cc)
+		if !ready {
+			Release(frame)
+
+			if ret < 0 || err != nil {
+				return nil, err
+			}
+		}
+
+		C.shift_data(&this.avPacket, C.int(ret))
+
+		if ready {
+			return frame, nil
+		}
+	}
+
+	return nil, nil
+}
+
 func (this *Packet) Frames(cc *CodecCtx) chan *Frame {
 	yield := make(chan *Frame)
 

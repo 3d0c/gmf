@@ -293,6 +293,19 @@ func (this *FmtCtx) DumpAv() {
 	fmt.Println("flags:", this.avCtx.flags)
 }
 
+func (this *FmtCtx) GetNextPacket() *Packet {
+	p := NewPacket()
+	for {
+
+		if ret := C.av_read_frame(this.avCtx, &p.avPacket); int(ret) < 0 {
+			Release(p)
+			return nil
+		}
+
+		return p
+	}
+}
+
 func (this *FmtCtx) GetNewPackets() chan *Packet {
 	yield := make(chan *Packet)
 

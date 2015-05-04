@@ -141,6 +141,23 @@ func TestPacketsIterator(t *testing.T) {
 	}
 }
 
+func TestGetNextPacket(t *testing.T) {
+	inputCtx, err := NewInputCtx(inputSampleFilename)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer inputCtx.CloseInputAndRelease()
+
+	packet := inputCtx.GetNextPacket()
+	if packet.Size() <= 0 {
+		t.Fatal("Expected size > 0")
+	} else {
+		log.Printf("One packet has been read. size: %v, pts: %v\n", packet.Size(), packet.Pts())
+	}
+	Release(packet)
+}
+
 var section *io.SectionReader
 
 func customReader() ([]byte, int) {
