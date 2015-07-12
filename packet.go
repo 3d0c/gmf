@@ -181,6 +181,10 @@ func (this *Packet) SetDts(val int) {
 	this.avPacket.dts = _Ctype_int64_t(val)
 }
 
+func (this *Packet) Flags() int {
+	return int(this.avPacket.flags)
+}
+
 func (this *Packet) Duration() int {
 	return int(this.avPacket.duration)
 }
