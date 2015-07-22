@@ -26,7 +26,7 @@ var (
 	AV_PIX_FMT_RGB24        int32    = C.AV_PIX_FMT_RGB24
 	AV_PIX_FMT_NONE         int32    = C.AV_PIX_FMT_NONE
 	FF_PROFILE_MPEG4_SIMPLE int      = C.FF_PROFILE_MPEG4_SIMPLE
-	AV_NOPTS_VALUE          uint64   = C.AV_NOPTS_VALUE
+	AV_NOPTS_VALUE          int64   = C.AV_NOPTS_VALUE
 )
 
 func init() {
