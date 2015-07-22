@@ -75,15 +75,15 @@ func encode(cc *CodecCtx, avFrame *C.struct_AVFrame, mediaType int32) (*Packet, 
 	return p, (gotOutput > 0), nil
 }
 
-func (this *Frame) Pts() int {
-	return int(this.avFrame.pts)
+func (this *Frame) Pts() int64 {
+	return int64(this.avFrame.pts)
 }
 
 func (this *Frame) Unref() {
 	C.av_frame_unref(this.avFrame)
 }
 
-func (this *Frame) SetPts(val int) {
+func (this *Frame) SetPts(val int64) {
 	this.avFrame.pts = (_Ctype_int64_t)(val)
 }
 
@@ -104,11 +104,11 @@ func (this *Frame) Height() int {
 	return int(this.avFrame.height)
 }
 
-func (this *Frame) PktPts() int {
-	return int(this.avFrame.pkt_pts)
+func (this *Frame) PktPts() int64 {
+	return int64(this.avFrame.pkt_pts)
 }
 
-func (this *Frame) SetPktPts(val int) {
+func (this *Frame) SetPktPts(val int64) {
 	this.avFrame.pkt_pts = (_Ctype_int64_t)(val)
 }
 

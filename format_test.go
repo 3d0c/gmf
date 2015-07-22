@@ -202,7 +202,7 @@ func TestAVIOContext(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ictx.SetPb(avioCtx).SetFlag(AV_NOPTS_VALUE).OpenInput("")
+	ictx.SetPb(avioCtx).OpenInput("")
 
 	for p := range ictx.GetNewPackets() {
 		_ = p
@@ -230,7 +230,7 @@ func ExampleNewAVIOContext(t *testing.T) {
 	}
 
 	// Setting up AVFormatContext.pb
-	ctx.SetPb(avioCtx).SetFlag(AV_NOPTS_VALUE)
+	ctx.SetPb(avioCtx)
 
 	// Calling OpenInput with empty arg, because all files stuff we're doing in custom reader.
 	// But the library have to initialize some stuff, so we call it anyway.

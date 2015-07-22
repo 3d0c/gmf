@@ -165,19 +165,19 @@ func (this *Packet) Frames(cc *CodecCtx) chan *Frame {
 	return yield
 }
 
-func (this *Packet) Pts() int {
-	return int(this.avPacket.pts)
+func (this *Packet) Pts() int64 {
+	return int64(this.avPacket.pts)
 }
 
-func (this *Packet) SetPts(pts int) {
+func (this *Packet) SetPts(pts int64) {
 	this.avPacket.pts = C.int64_t(pts)
 }
 
-func (this *Packet) Dts() int {
-	return int(this.avPacket.dts)
+func (this *Packet) Dts() int64 {
+	return int64(this.avPacket.dts)
 }
 
-func (this *Packet) SetDts(val int) {
+func (this *Packet) SetDts(val int64) {
 	this.avPacket.dts = _Ctype_int64_t(val)
 }
 
@@ -201,8 +201,8 @@ func (this *Packet) Size() int {
 	return int(this.avPacket.size)
 }
 
-func (this *Packet) Pos() int {
-	return int(this.avPacket.pos)
+func (this *Packet) Pos() int64 {
+	return int64(this.avPacket.pos)
 }
 
 func (this *Packet) Data() []byte {
