@@ -209,6 +209,14 @@ func (this *Packet) Data() []byte {
 	return C.GoBytes(unsafe.Pointer(this.avPacket.data), C.int(this.avPacket.size))
 }
 
+func (this *Packet) Clone() *Packet {
+	np := NewPacket()
+
+	C.av_copy_packet(&np.avPacket, &this.avPacket)
+
+	return np
+}
+
 func (this *Packet) Dump() {
 	fmt.Println(this.avPacket)
 	fmt.Println("pkt:{\n", "pts:", this.avPacket.pts, "\ndts:", this.avPacket.dts, "\ndata:", string(C.GoBytes(unsafe.Pointer(this.avPacket.data), 128)), "size:", this.avPacket.size, "\n}")
