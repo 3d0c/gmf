@@ -58,6 +58,18 @@ var (
 	AVFMTCTX_NOHEADER int = C.AVFMTCTX_NOHEADER
 )
 
+const (
+	// Logging levels
+	AV_LOG_QUIET   int = C.AV_LOG_QUIET
+	AV_LOG_PANIC   int = C.AV_LOG_PANIC
+	AV_LOG_FATAL   int = C.AV_LOG_FATAL
+	AV_LOG_ERROR   int = C.AV_LOG_ERROR
+	AV_LOG_WARNING int = C.AV_LOG_WARNING
+	AV_LOG_INFO    int = C.AV_LOG_INFO
+	AV_LOG_VERBOSE int = C.AV_LOG_VERBOSE
+	AV_LOG_DEBUG   int = C.AV_LOG_DEBUG
+)
+
 type FmtCtx struct {
 	avCtx    *C.struct_AVFormatContext
 	Filename string
@@ -71,6 +83,10 @@ func init() {
 	C.av_register_all()
 	C.avformat_network_init()
 	C.avdevice_register_all()
+}
+
+func LogSetLevel(level int) {
+	C.av_log_set_level(C.int(level))
 }
 
 // @todo return error if avCtx is null
