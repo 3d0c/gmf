@@ -76,7 +76,7 @@ func addStream(codecName string, oc *FmtCtx, ist *Stream) (int, int) {
 func main() {
 	var srcFileName, dstFileName string
 	var stMap map[int]int = make(map[int]int, 0)
-	var lastDelta int
+	var lastDelta int64
 
 	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
 
