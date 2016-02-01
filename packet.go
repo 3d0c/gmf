@@ -190,7 +190,7 @@ func (this *Packet) Duration() int {
 }
 
 func (this *Packet) SetDuration(duration int) {
-	this.avPacket.duration = C.int(duration)
+	this.avPacket.duration = C.int64_t(duration)
 }
 
 func (this *Packet) StreamIndex() int {
