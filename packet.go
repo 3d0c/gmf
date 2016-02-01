@@ -228,5 +228,5 @@ func (this *Packet) SetStreamIndex(val int) *Packet {
 }
 
 func (this *Packet) Free() {
-	C.av_free_packet(&this.avPacket)
+	C.av_packet_unref(&this.avPacket)
 }
