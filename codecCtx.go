@@ -282,7 +282,7 @@ func (this *CodecCtx) Channels() int {
 }
 
 func (this *CodecCtx) SetBitRate(val int) *CodecCtx {
-	this.avCodecCtx.bit_rate = C.int(val)
+	this.avCodecCtx.bit_rate = C.int64_t(val)
 	return this
 }
 
