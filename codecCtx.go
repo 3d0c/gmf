@@ -60,7 +60,7 @@ static int select_channel_layout(AVCodec *codec) {
 }
 
 static void call_av_freep(AVCodecContext *out){
-	return av_freep(&out);
+    return av_freep(&out);
 }
 */
 import "C"
@@ -207,7 +207,7 @@ func (this *CodecCtx) Free() {
 
 func (this *CodecCtx) CloseAndRelease() {
 	this.Close()
-	C.call_av_freep(this.avCodecCtx)
+	C.call_av_freep(unsafe.Pointer(this.avCodecCtx))
 }
 
 // @todo
