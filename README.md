@@ -6,7 +6,8 @@ More bindings and cool features are coming soon.
 
 #### Installation
 ##### Prerequisites
-Current master branch requires `go 1.3`. If you use older version of `go`, checkout `go1.2` branch. (It's not recommended, because this version won't be supported)
+Current master branch requires `go 1.6`.  
+Older versions available in branches go1.2 and go1.5.
 
 ##### Build
 build lastest version of ffmpeg, obtained from [https://github.com/FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg)  
