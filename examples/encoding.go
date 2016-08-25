@@ -64,7 +64,7 @@ func main() {
 	}
 
 	var frame *Frame
-	i := 0
+	i := int64(0)
 
 	for frame = range GenSyntVideoNewFrame(videoEncCtx.Width(), videoEncCtx.Height(), videoEncCtx.PixFmt()) {
 		frame.SetPts(i)
