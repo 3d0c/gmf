@@ -59,7 +59,7 @@ func audio(outputCtx *FmtCtx, output chan *Packet) *Stream {
 	}
 
 	/// output
-	codec, err := FindEncoder("libmp3lame")
+	codec, err := FindEncoder("aac")
 	if err != nil {
 		log.Fatal("find encoder error:", err.Error())
 	}
@@ -69,7 +69,8 @@ func audio(outputCtx *FmtCtx, output chan *Packet) *Stream {
 		log.Fatal("new output codec context error:", err.Error())
 	}
 
-	occ.SetSampleFmt(AV_SAMPLE_FMT_S16P).
+	outSampleFmt := AV_SAMPLE_FMT_FLTP
+	occ.SetSampleFmt(outSampleFmt).
 		SetSampleRate(cc.SampleRate()).
 		SetBitRate(128e3)
 	channelLayout := occ.SelectChannelLayout()
@@ -87,7 +88,7 @@ func audio(outputCtx *FmtCtx, output chan *Packet) *Stream {
 		{"in_sample_rate", cc.SampleRate()},
 		{"out_sample_rate", occ.SampleRate()},
 		{"in_sample_fmt", SampleFmt(cc.SampleFmt())},
-		{"out_sample_fmt", SampleFmt(AV_SAMPLE_FMT_S16P)},
+		{"out_sample_fmt", SampleFmt(outSampleFmt)},
 	}
 
 	swrCtx := NewSwrCtx(options, occ)
@@ -106,6 +107,9 @@ func audio(outputCtx *FmtCtx, output chan *Packet) *Stream {
 
 	ost.SetCodecCtx(occ)
 
+	frameSize := occ.FrameSize()
+	log.Println("Codec frame size: ", frameSize)
+
 	go func() {
 		count := int64(0)
 		for packet := range mic.GetNewPackets() {
@@ -118,15 +122,15 @@ func audio(outputCtx *FmtCtx, output chan *Packet) *Stream {
 
 			fifo.Write(srcFrame)
 
-			for fifo.SamplesToRead() >= 1152 {
-				winFrame := fifo.Read(1152)
+			for fifo.SamplesToRead() >= frameSize {
+				winFrame := fifo.Read(frameSize)
 				dstFrame := swrCtx.Convert(winFrame)
 				Release(winFrame)
 
 				if dstFrame == nil {
 					continue
 				}
-				count += 1152
+				count += int64(frameSize)
 
 				dstFrame.SetPts(count)
 
@@ -151,7 +155,7 @@ func video(outputCtx *FmtCtx, output chan *Packet) *Stream {
 
 	ist.CodecCtx().PixFmt()
 
-	codec, err := FindEncoder(AV_CODEC_ID_MPEG4)
+	codec, err := FindEncoder(AV_CODEC_ID_H264)
 	if err != nil {
 		fatal(err)
 	}

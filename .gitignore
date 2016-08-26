@@ -1,6 +1,7 @@
 .*
 *.mp4
 *.mpg
+*.exe
 !examples/tests-sample.mp4
 remuxing
 transcode
