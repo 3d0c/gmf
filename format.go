@@ -283,6 +283,14 @@ func (this *FmtCtx) WritePacket(p *Packet) error {
 	return nil
 }
 
+func (this *FmtCtx) WritePacketNoBuffer(p *Packet) error {
+	if averr := C.av_write_frame(this.avCtx, &p.avPacket); averr < 0 {
+		return errors.New(fmt.Sprintf("Unable to write packet to '%s': %s", this.Filename, AvError(int(averr))))
+	}
+
+	return nil
+}
+
 func (this *FmtCtx) SetOformat(ofmt *OutputFmt) error {
 	if ofmt == nil {
 		return errors.New("'ofmt' is not initialized.")

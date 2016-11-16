@@ -102,6 +102,10 @@ func (this *AVIOContext) Free() {
 	C.av_free(unsafe.Pointer(this.avAVIOContext))
 }
 
+func (this *AVIOContext) Flush() {
+	C.avio_flush(unsafe.Pointer(this.avAVIOContext))
+}
+
 //export readCallBack
 func readCallBack(opaque unsafe.Pointer, buf *C.uint8_t, buf_size C.int) C.int {
 	handlers, found := handlersMap[uintptr(opaque)]
