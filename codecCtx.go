@@ -217,7 +217,7 @@ func (this *CodecCtx) Free() {
 
 func (this *CodecCtx) CloseAndRelease() {
 	this.Close()
-	C.call_av_freep(unsafe.Pointer(this.avCodecCtx))
+       C.call_av_freep(this.avCodecCtx)
 }
 
 // @todo
