@@ -103,7 +103,7 @@ func (this *AVIOContext) Free() {
 }
 
 func (this *AVIOContext) Flush() {
-	C.avio_flush(unsafe.Pointer(this.avAVIOContext))
+	C.avio_flush(this.avAVIOContext)
 }
 
 //export readCallBack
