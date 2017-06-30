@@ -3,7 +3,7 @@ package gmf
 
 /*
 
-#cgo pkg-config: libavformat libavdevice
+#cgo pkg-config: libavformat libavdevice libavfilter
 
 #include <stdlib.h>
 #include "libavformat/avformat.h"
