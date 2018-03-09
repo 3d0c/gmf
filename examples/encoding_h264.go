@@ -102,7 +102,7 @@ func audio(outputCtx *FmtCtx, output chan *Packet) *Stream {
 
 	ost := outputCtx.NewStream(codec)
 	if ost == nil {
-		log.Fatal("Unable to create stream for [%s]\n", codec.LongName())
+		log.Fatalf("Unable to create stream for [%s]\n", codec.LongName())
 	}
 
 	ost.SetCodecCtx(occ)
@@ -134,8 +134,11 @@ func audio(outputCtx *FmtCtx, output chan *Packet) *Stream {
 
 				dstFrame.SetPts(count)
 
-				writePacket, ready, _ := dstFrame.EncodeNewPacket(occ)
-				if ready {
+				writePacket, err := dstFrame.Encode(ost)
+				if err != nil {
+					log.Fatal(err)
+				}
+				if writePacket != nil {
 					writePacket.SetStreamIndex(ost.Index())
 					output <- writePacket
 				}
@@ -210,7 +213,7 @@ func video(outputCtx *FmtCtx, output chan *Packet) *Stream {
 				swsCtx.Scale(frame, dstFrame)
 				dstFrame.SetPts(i)
 
-				if p, ready, err := dstFrame.EncodeNewPacket(videoEncCtx); ready {
+				if p, err := dstFrame.Encode(videoStream); p != nil {
 					p.SetStreamIndex(videoStream.Index())
 					if p.Pts() != AV_NOPTS_VALUE {
 						p.SetPts(RescaleQ(p.Pts(), videoEncCtx.TimeBase(), videoStream.TimeBase()))

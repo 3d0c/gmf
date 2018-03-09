@@ -186,8 +186,12 @@ func NewInputCtxWithFormatName(filename, format string) (*FmtCtx, error) {
 	}
 	return ctx, nil
 }
+
 func (this *FmtCtx) OpenInput(filename string) error {
-	var cfilename *_Ctype_char
+	var (
+		cfilename *_Ctype_char
+		options   *C.struct_AVDictionary = nil
+	)
 
 	if filename == "" {
 		cfilename = nil
@@ -196,7 +200,7 @@ func (this *FmtCtx) OpenInput(filename string) error {
 		defer C.free(unsafe.Pointer(cfilename))
 	}
 
-	if averr := C.avformat_open_input(&this.avCtx, cfilename, nil, nil); averr < 0 {
+	if averr := C.avformat_open_input(&this.avCtx, cfilename, nil, &options); averr < 0 {
 		return errors.New(fmt.Sprintf("Error opening input '%s': %s", filename, AvError(int(averr))))
 	}
 
@@ -215,7 +219,7 @@ func (this *FmtCtx) AddStreamWithCodeCtx(codeCtx *CodecCtx) (*Stream, error) {
 
 	// Create Video stream in output context
 	if ost = this.NewStream(codeCtx.Codec()); ost == nil {
-		return nil, errors.New(fmt.Sprintf("unable to create stream in context:filename:", this.Filename))
+		return nil, fmt.Errorf("unable to create stream in context, filename: %s", this.Filename)
 	}
 	defer Release(ost)
 
@@ -259,8 +263,8 @@ func (this *FmtCtx) IsGlobalHeader() bool {
 }
 
 func (this *FmtCtx) WriteHeader() error {
-
 	cfilename := &(this.avCtx.filename[0])
+
 	// If NOFILE flag isn't set and we don't use custom IO, open it
 	if !this.IsNoFile() && !this.customPb {
 		if averr := C.avio_open(&this.avCtx.pb, cfilename, C.AVIO_FLAG_WRITE); averr < 0 {

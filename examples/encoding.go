@@ -13,7 +13,7 @@ func fatal(err error) {
 }
 
 func main() {
-	outputfilename := "sample-encoding.mpg"
+	outputfilename := "sample-encoding1.mpg"
 	dstWidth, dstHeight := 640, 480
 
 	codec, err := FindEncoder(AV_CODEC_ID_MPEG1VIDEO)
@@ -36,7 +36,7 @@ func main() {
 		SetBitRate(400000).
 		SetWidth(dstWidth).
 		SetHeight(dstHeight).
-		SetTimeBase(AVR{1, 25}).
+		SetTimeBase(AVR{Num: 1, Den: 25}).
 		SetPixFmt(AV_PIX_FMT_YUV420P).
 		SetProfile(FF_PROFILE_MPEG4_SIMPLE).
 		SetMbDecision(FF_MB_DECISION_RD)
@@ -65,11 +65,12 @@ func main() {
 
 	var frame *Frame
 	i := int64(0)
+	n := 0
 
 	for frame = range GenSyntVideoNewFrame(videoEncCtx.Width(), videoEncCtx.Height(), videoEncCtx.PixFmt()) {
 		frame.SetPts(i)
 
-		if p, ready, err := frame.EncodeNewPacket(videoStream.CodecCtx()); ready {
+		if p, err := frame.Encode(videoStream); p != nil {
 			if p.Pts() != AV_NOPTS_VALUE {
 				p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 			}
@@ -82,21 +83,20 @@ func main() {
 				fatal(err)
 			}
 
+			n++
+
 			log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", frame.Pts(), p.Size(), p.Pts(), p.Dts())
 
 			Release(p)
-
 		} else if err != nil {
 			fatal(err)
-		} else {
-			log.Printf("Write frame=%d frame=%d is not ready", i, frame.Pts())
 		}
 
-		i++
 		Release(frame)
+		i++
 	}
 
 	outputCtx.CloseOutputAndRelease()
 
-	log.Println(i, "frames written to", outputfilename)
+	log.Println(n, "frames written to", outputfilename)
 }

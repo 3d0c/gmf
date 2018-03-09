@@ -20,91 +20,94 @@ type Stream struct {
 	CgoMemoryManage
 }
 
-func (this *Stream) Free() {
+func (s *Stream) Free() {
 	// nothing to do
 }
 
-func (this *Stream) DumpContexCodec(codec *CodecCtx) {
-
-	ret := C.avcodec_copy_context(this.avStream.codec, codec.avCodecCtx)
+func (s *Stream) DumpContexCodec(codec *CodecCtx) {
+	ret := C.avcodec_copy_context(s.avStream.codec, codec.avCodecCtx)
 	if ret < 0 {
 		panic("Failed to copy context from input to output stream codec context\n")
 	}
 }
 
-func (this *Stream) SetCodecFlags() {
-	this.avStream.codec.flags |= C.CODEC_FLAG_GLOBAL_HEADER
+func (s *Stream) SetCodecFlags() {
+	s.avStream.codec.flags |= C.CODEC_FLAG_GLOBAL_HEADER
 }
 
-func (this *Stream) CodecCtx() *CodecCtx {
-	if this.IsCodecCtxSet() {
-		return this.cc
+func (s *Stream) CodecCtx() *CodecCtx {
+	if s.IsCodecCtxSet() {
+		return s.cc
 	}
 
 	// @todo make explicit decoder/encoder definition
 	// If the codec context wasn't set, it means that it's called from InputCtx
 	// and it should be decoder.
-	c, err := FindDecoder(int(this.avStream.codec.codec_id))
+	c, err := FindDecoder(int(s.avStream.codec.codec_id))
 	if err != nil {
-		panic(fmt.Sprintf("unable to initialize codec for stream '%d', error:", this.Index(), err))
+		panic(fmt.Errorf("error initializing codec for stream '%d' - %s", s.Index(), err))
 	}
 
-	this.cc = &CodecCtx{
+	s.cc = &CodecCtx{
 		codec:      c,
-		avCodecCtx: this.avStream.codec,
+		avCodecCtx: s.avStream.codec,
 	}
 
-	this.cc.Open(nil)
+	s.cc.Open(nil)
 
-	return this.cc
+	return s.cc
 }
 
-func (this *Stream) SetCodecCtx(cc *CodecCtx) {
+func (s *Stream) SetCodecCtx(cc *CodecCtx) {
 	if cc == nil {
 		// don't sure that it should panic...
 		panic("Codec context is not initialized.")
 	}
 
 	Retain(cc) //just Retain .not need Release,it can free memory by C.avformat_free_context() @ format.go Free().
-	this.avStream.codec = cc.avCodecCtx
+	s.avStream.codec = cc.avCodecCtx
 
-	if this.cc != nil {
-		this.cc.avCodecCtx = cc.avCodecCtx
+	if s.cc != nil {
+		s.cc.avCodecCtx = cc.avCodecCtx
 	}
 }
 
-func (this *Stream) IsCodecCtxSet() bool {
-	return (this.cc != nil)
+func (s *Stream) IsCodecCtxSet() bool {
+	return (s.cc != nil)
 }
 
-func (this *Stream) Index() int {
-	return int(this.avStream.index)
+func (s *Stream) Index() int {
+	return int(s.avStream.index)
 }
 
-func (this *Stream) Id() int {
-	return int(this.avStream.id)
+func (s *Stream) Id() int {
+	return int(s.avStream.id)
 }
 
-func (this *Stream) NbFrames() int {
-	return int(this.avStream.nb_frames)
+func (s *Stream) NbFrames() int {
+	if int(s.avStream.nb_frames) == 0 {
+		return 1
+	}
+
+	return int(s.avStream.nb_frames)
 }
 
-func (this *Stream) TimeBase() AVRational {
-	return AVRational(this.avStream.time_base)
+func (s *Stream) TimeBase() AVRational {
+	return AVRational(s.avStream.time_base)
 }
 
-func (this *Stream) Type() int32 {
-	return this.CodecCtx().Type()
+func (s *Stream) Type() int32 {
+	return s.CodecCtx().Type()
 }
 
-func (this *Stream) IsAudio() bool {
-	return (this.Type() == AVMEDIA_TYPE_AUDIO)
+func (s *Stream) IsAudio() bool {
+	return (s.Type() == AVMEDIA_TYPE_AUDIO)
 }
 
-func (this *Stream) IsVideo() bool {
-	return (this.Type() == AVMEDIA_TYPE_VIDEO)
+func (s *Stream) IsVideo() bool {
+	return (s.Type() == AVMEDIA_TYPE_VIDEO)
 }
 
-func (this *Stream) Duration() int64 {
-	return int64(this.avStream.duration)
+func (s *Stream) Duration() int64 {
+	return int64(s.avStream.duration)
 }

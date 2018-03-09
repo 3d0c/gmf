@@ -1,7 +1,6 @@
 package gmf
 
 /*
-
 #cgo pkg-config: libavcodec libavutil
 
 #include "libavcodec/avcodec.h"
@@ -26,6 +25,7 @@ import "C"
 import (
 	"errors"
 	"fmt"
+	"syscall"
 	"unsafe"
 )
 
@@ -39,131 +39,163 @@ func NewFrame() *Frame {
 	return &Frame{avFrame: C.av_frame_alloc()}
 }
 
-func (this *Frame) EncodeNewPacket(cc *CodecCtx) (*Packet, bool, error) {
-	return encode(cc, this.avFrame, this.mediaType)
-}
+// Deprected
+// func (this *Frame) EncodeNewPacket(cc *CodecCtx) (*Packet, bool, error) {
+// 	return encode(cc, this.avFrame, this.mediaType)
+// }
 
-func (this *Frame) FlushNewPacket(cc *CodecCtx) (*Packet, bool, error) {
-	return encode(cc, nil, this.mediaType)
-}
+// Deprected
+// func (this *Frame) FlushNewPacket(cc *CodecCtx) (*Packet, bool, error) {
+// 	return encode(cc, nil, this.mediaType)
+// }
 
-func encode(cc *CodecCtx, avFrame *C.struct_AVFrame, mediaType int32) (*Packet, bool, error) {
-	var gotOutput int
-	var ret int
+// Deprected
+// func encode(cc *CodecCtx, avFrame *C.struct_AVFrame, mediaType int32) (*Packet, bool, error) {
+// 	var gotOutput int
+// 	var ret int
 
-	p := NewPacket()
+// 	p := NewPacket()
 
-	switch mediaType {
-	case AVMEDIA_TYPE_AUDIO:
-		ret = int(C.avcodec_encode_audio2(cc.avCodecCtx, &p.avPacket, avFrame, (*C.int)(unsafe.Pointer(&gotOutput))))
-		if ret < 0 {
-			return nil, false, errors.New(fmt.Sprintf("Unable to encode video packet, averror: %s", AvError(int(ret))))
-		}
+// 	switch mediaType {
+// 	case AVMEDIA_TYPE_AUDIO:
+// 		ret = int(C.avcodec_encode_audio2(cc.avCodecCtx, &p.avPacket, avFrame, (*C.int)(unsafe.Pointer(&gotOutput))))
+// 		if ret < 0 {
+// 			return nil, false, errors.New(fmt.Sprintf("Unable to encode video packet, averror: %s", AvError(int(ret))))
+// 		}
 
-	case AVMEDIA_TYPE_VIDEO:
-		cc.avCodecCtx.field_order = C.AV_FIELD_PROGRESSIVE
+// 	case AVMEDIA_TYPE_VIDEO:
+// 		cc.avCodecCtx.field_order = C.AV_FIELD_PROGRESSIVE
 
-		ret = int(C.avcodec_encode_video2(cc.avCodecCtx, &p.avPacket, avFrame, (*C.int)(unsafe.Pointer(&gotOutput))))
-		if ret < 0 {
-			return nil, false, errors.New(fmt.Sprintf("Unable to encode video packet, averror: %s", AvError(int(ret))))
-		}
+// 		ret = int(C.avcodec_encode_video2(cc.avCodecCtx, &p.avPacket, avFrame, (*C.int)(unsafe.Pointer(&gotOutput))))
+// 		if ret < 0 {
+// 			return nil, false, errors.New(fmt.Sprintf("Unable to encode video packet, averror: %s", AvError(int(ret))))
+// 		}
 
-	default:
-		return nil, false, errors.New(fmt.Sprintf("Unknown codec type: %v", mediaType))
+// 	default:
+// 		return nil, false, errors.New(fmt.Sprintf("Unknown codec type: %v", mediaType))
+// 	}
+
+// 	return p, (gotOutput > 0), nil
+// }
+
+func (f *Frame) Encode(enc *CodecCtx) (*Packet, error) {
+	var (
+		pkt *Packet
+		ret int
+	)
+
+	if pkt = NewPacket(); pkt == nil {
+		return nil, fmt.Errorf("fatal error - uninitialized packet")
 	}
 
-	return p, (gotOutput > 0), nil
+	if ret = int(C.avcodec_send_frame(enc.avCodecCtx, f.avFrame)); ret != 0 {
+		return nil, fmt.Errorf("error sending frame - %v", syscall.Errno(ret))
+	}
+
+	for {
+		ret = int(C.avcodec_receive_packet(enc.avCodecCtx, &pkt.avPacket))
+		if AvErrno(ret) == syscall.EAGAIN {
+			break
+		}
+		if ret != 0 {
+			return nil, fmt.Errorf("error receiving packet - %v", syscall.Errno(ret))
+		}
+
+		return pkt, nil
+	}
+
+	return nil, nil
 }
 
-func (this *Frame) Pts() int64 {
-	return int64(this.avFrame.pts)
+func (f *Frame) Pts() int64 {
+	return int64(f.avFrame.pts)
 }
 
-func (this *Frame) Unref() {
-	C.av_frame_unref(this.avFrame)
+func (f *Frame) Unref() {
+	C.av_frame_unref(f.avFrame)
 }
 
-func (this *Frame) SetPts(val int64) {
-	this.avFrame.pts = (_Ctype_int64_t)(val)
+func (f *Frame) SetPts(val int64) {
+	f.avFrame.pts = (_Ctype_int64_t)(val)
 }
 
-func (this *Frame) SetBestPts() {
-	this.avFrame.pts = C.av_frame_get_best_effort_timestamp(this.avFrame)
+func (f *Frame) SetBestPts() {
+	f.avFrame.pts = C.av_frame_get_best_effort_timestamp(f.avFrame)
 }
 
 // AVPixelFormat for video frames, AVSampleFormat for audio
-func (this *Frame) Format() int {
-	return int(this.avFrame.format)
+func (f *Frame) Format() int {
+	return int(f.avFrame.format)
 }
 
-func (this *Frame) Width() int {
-	return int(this.avFrame.width)
+func (f *Frame) Width() int {
+	return int(f.avFrame.width)
 }
 
-func (this *Frame) Height() int {
-	return int(this.avFrame.height)
+func (f *Frame) Height() int {
+	return int(f.avFrame.height)
 }
 
-func (this *Frame) PktPts() int64 {
-	return int64(this.avFrame.pkt_pts)
+func (f *Frame) PktPts() int64 {
+	return int64(f.avFrame.pkt_pts)
 }
 
-func (this *Frame) SetPktPts(val int64) {
-	this.avFrame.pkt_pts = (_Ctype_int64_t)(val)
+func (f *Frame) SetPktPts(val int64) {
+	f.avFrame.pkt_pts = (_Ctype_int64_t)(val)
 }
 
-func (this *Frame) PktDts() int {
-	return int(this.avFrame.pkt_dts)
+func (f *Frame) PktDts() int {
+	return int(f.avFrame.pkt_dts)
 }
 
-func (this *Frame) SetPktDts(val int) {
-	this.avFrame.pkt_dts = (_Ctype_int64_t)(val)
+func (f *Frame) SetPktDts(val int) {
+	f.avFrame.pkt_dts = (_Ctype_int64_t)(val)
 }
 
-func (this *Frame) TimeStamp() int {
-	return int(C.av_frame_get_best_effort_timestamp(this.avFrame))
+func (f *Frame) TimeStamp() int {
+	return int(C.av_frame_get_best_effort_timestamp(f.avFrame))
 }
 
-func (this *Frame) PktPos() int {
-	return int(C.av_frame_get_pkt_pos(this.avFrame))
+func (f *Frame) PktPos() int {
+	return int(C.av_frame_get_pkt_pos(f.avFrame))
 }
 
-func (this *Frame) PktDuration() int {
-	return int(C.av_frame_get_pkt_duration(this.avFrame))
+func (f *Frame) PktDuration() int {
+	return int(C.av_frame_get_pkt_duration(f.avFrame))
 }
 
-func (this *Frame) KeyFrame() int {
-	return int(this.avFrame.key_frame)
+func (f *Frame) KeyFrame() int {
+	return int(f.avFrame.key_frame)
 }
 
-func (this *Frame) NbSamples() int {
-	return int(this.avFrame.nb_samples)
+func (f *Frame) NbSamples() int {
+	return int(f.avFrame.nb_samples)
 }
 
-func (this *Frame) Channels() int {
-	return int(this.avFrame.channels)
+func (f *Frame) Channels() int {
+	return int(f.avFrame.channels)
 }
 
-func (this *Frame) SetFormat(val int32) *Frame {
-	this.avFrame.format = C.int(val)
-	return this
+func (f *Frame) SetFormat(val int32) *Frame {
+	f.avFrame.format = C.int(val)
+	return f
 }
 
-func (this *Frame) SetWidth(val int) *Frame {
-	this.avFrame.width = C.int(val)
-	return this
+func (f *Frame) SetWidth(val int) *Frame {
+	f.avFrame.width = C.int(val)
+	return f
 }
 
-func (this *Frame) SetHeight(val int) *Frame {
-	this.avFrame.height = C.int(val)
-	return this
+func (f *Frame) SetHeight(val int) *Frame {
+	f.avFrame.height = C.int(val)
+	return f
 }
 
-func (this *Frame) ImgAlloc() error {
+func (f *Frame) ImgAlloc() error {
 	if ret := int(C.av_image_alloc(
-		(**C.uint8_t)(unsafe.Pointer(&this.avFrame.data)),
-		(*_Ctype_int)(unsafe.Pointer(&this.avFrame.linesize)),
-		C.int(this.Width()), C.int(this.Height()), int32(this.Format()), 32)); ret < 0 {
+		(**C.uint8_t)(unsafe.Pointer(&f.avFrame.data)),
+		(*_Ctype_int)(unsafe.Pointer(&f.avFrame.linesize)),
+		C.int(f.Width()), C.int(f.Height()), int32(f.Format()), 32)); ret < 0 {
 		return errors.New(fmt.Sprintf("Unable to allocate raw image buffer: %v", AvError(ret)))
 	}
 
@@ -171,11 +203,11 @@ func (this *Frame) ImgAlloc() error {
 }
 
 func NewAudioFrame(sampleFormat int32, channels, nb_samples int) (*Frame, error) {
-	this := NewFrame()
-	this.mediaType = AVMEDIA_TYPE_AUDIO
-	this.SetNbSamples(nb_samples)
-	this.SetFormat(sampleFormat)
-	this.SetChannelLayout(channels)
+	f := NewFrame()
+	f.mediaType = AVMEDIA_TYPE_AUDIO
+	f.SetNbSamples(nb_samples)
+	f.SetFormat(sampleFormat)
+	f.SetChannelLayout(channels)
 
 	//the codec gives us the frame size, in samples,
 	//we calculate the size of the samples buffer in bytes
@@ -190,47 +222,47 @@ func NewAudioFrame(sampleFormat int32, channels, nb_samples int) (*Frame, error)
 	}
 
 	//setup the data pointers in the AVFrame
-	ret := int(C.avcodec_fill_audio_frame(this.avFrame, C.int(channels), sampleFormat,
+	ret := int(C.avcodec_fill_audio_frame(f.avFrame, C.int(channels), sampleFormat,
 		samples, C.int(size), 0))
 	if ret < 0 {
 		return nil, errors.New("Could not setup audio frame")
 	}
-	return this, nil
+	return f, nil
 }
-func (this *Frame) SetData(idx int, lineSize int, data int) *Frame {
-	C.gmf_set_frame_data(this.avFrame, C.int(idx), C.int(lineSize), (_Ctype_uint8_t)(data))
+func (f *Frame) SetData(idx int, lineSize int, data int) *Frame {
+	C.gmf_set_frame_data(f.avFrame, C.int(idx), C.int(lineSize), (_Ctype_uint8_t)(data))
 
-	return this
-}
-
-func (this *Frame) LineSize(idx int) int {
-	return int(C.gmf_get_frame_line_size(this.avFrame, C.int(idx)))
+	return f
 }
 
-func (this *Frame) CloneNewFrame() *Frame {
-	return &Frame{avFrame: C.av_frame_clone(this.avFrame)}
+func (f *Frame) LineSize(idx int) int {
+	return int(C.gmf_get_frame_line_size(f.avFrame, C.int(idx)))
 }
 
-func (this *Frame) Free() {
-	C.av_frame_free(&this.avFrame)
+func (f *Frame) CloneNewFrame() *Frame {
+	return &Frame{avFrame: C.av_frame_clone(f.avFrame)}
 }
 
-func (this *Frame) SetNbSamples(val int) *Frame {
-	this.avFrame.nb_samples = C.int(val)
-	return this
+func (f *Frame) Free() {
+	C.av_frame_free(&f.avFrame)
 }
 
-func (this *Frame) SetChannelLayout(val int) *Frame {
-	this.avFrame.channel_layout = (_Ctype_uint64_t)(val)
-	return this
+func (f *Frame) SetNbSamples(val int) *Frame {
+	f.avFrame.nb_samples = C.int(val)
+	return f
 }
 
-func (this *Frame) SetChannels(val int) *Frame {
-	this.avFrame.channels = C.int(val)
-	return this
+func (f *Frame) SetChannelLayout(val int) *Frame {
+	f.avFrame.channel_layout = (_Ctype_uint64_t)(val)
+	return f
 }
 
-func (this *Frame) SetQuality(val int) *Frame {
-	this.avFrame.quality = C.int(val)
-	return this
+func (f *Frame) SetChannels(val int) *Frame {
+	f.avFrame.channels = C.int(val)
+	return f
+}
+
+func (f *Frame) SetQuality(val int) *Frame {
+	f.avFrame.quality = C.int(val)
+	return f
 }

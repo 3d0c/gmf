@@ -1,7 +1,6 @@
 package gmf
 
 /*
-
 #cgo pkg-config: libavcodec libavutil
 
 #include "libavutil/avutil.h"
@@ -16,6 +15,7 @@ import "C"
 import (
 	"bytes"
 	"errors"
+	"syscall"
 	"unsafe"
 )
 
@@ -48,6 +48,14 @@ func AvError(averr int) error {
 	return errors.New(string(b[:bytes.Index(b, []byte{0})]))
 }
 
+func AvErrno(ret int) syscall.Errno {
+	if ret < 0 {
+		ret = -ret
+	}
+
+	return syscall.Errno(ret)
+}
+
 func RescaleQ(a int64, encBase AVRational, stBase AVRational) int64 {
 	return int64(C.av_rescale_q(C.int64_t(a), C.struct_AVRational(encBase), C.struct_AVRational(stBase)))
 }
@@ -76,6 +84,39 @@ func GenSyntVideoNewFrame(w, h int, fmt int32) chan *Frame {
 	go func() {
 		defer close(yield)
 		for i := 0; i < 25; i++ {
+			frame := NewFrame().SetWidth(w).SetHeight(h).SetFormat(fmt)
+
+			if err := frame.ImgAlloc(); err != nil {
+				return
+			}
+
+			for y := 0; y < h; y++ {
+				for x := 0; x < w; x++ {
+					frame.SetData(0, y*frame.LineSize(0)+x, x+y+i*3)
+				}
+			}
+
+			// Cb and Cr
+			for y := 0; y < h/2; y++ {
+				for x := 0; x < w/2; x++ {
+					frame.SetData(1, y*frame.LineSize(1)+x, 128+y+i*2)
+					frame.SetData(2, y*frame.LineSize(2)+x, 64+x+i*5)
+				}
+			}
+
+			yield <- frame
+		}
+	}()
+	return yield
+}
+
+// tmp
+func GenSyntVideoN(N, w, h int, fmt int32) chan *Frame {
+	yield := make(chan *Frame)
+
+	go func() {
+		defer close(yield)
+		for i := 0; i < N; i++ {
 			frame := NewFrame().SetWidth(w).SetHeight(h).SetFormat(fmt)
 
 			if err := frame.ImgAlloc(); err != nil {

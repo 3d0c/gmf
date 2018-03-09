@@ -104,9 +104,11 @@ func main() {
 		for frame := range packet.Frames(ist.CodecCtx()) {
 			swsCtx.Scale(frame, dstFrame)
 
-			if p, ready, _ := dstFrame.EncodeNewPacket(cc); ready {
+			if p, err := dstFrame.Encode(cc); p != nil {
 				writeFile(p.Data())
 				defer Release(p)
+			} else if err != nil {
+				fatal(err)
 			}
 		}
 		Release(packet)
