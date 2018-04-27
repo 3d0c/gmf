@@ -1,7 +1,6 @@
 package gmf
 
 /*
-
 #cgo pkg-config: libavcodec
 
 #include "libavcodec/avcodec.h"
@@ -17,8 +16,8 @@ void shift_data(AVPacket *pkt, int offset) {
 import "C"
 
 import (
-	"errors"
 	"fmt"
+	"syscall"
 	"unsafe"
 )
 
@@ -48,96 +47,70 @@ func (p *Packet) initPacket() {
 	p.frames = make(map[int32]*Frame, 0)
 }
 
-// @todo should be private
-func (p *Packet) Decode(cc *CodecCtx) (*Frame, bool, int, error) {
-	var gotOutput int
-	var ret int = 0
-
+func (p *Packet) Decode(cc *CodecCtx) (*Frame, bool, error) {
 	if p.frames[cc.Type()] == nil {
 		p.frames[cc.Type()] = &Frame{avFrame: C.av_frame_alloc(), mediaType: cc.Type()}
 	}
 
-	switch cc.Type() {
-	case AVMEDIA_TYPE_AUDIO:
-		ret = int(C.avcodec_decode_audio4(cc.avCodecCtx, p.frames[AVMEDIA_TYPE_AUDIO].avFrame, (*C.int)(unsafe.Pointer(&gotOutput)), &p.avPacket))
-		if ret < 0 {
-			return nil, false, int(ret), errors.New(fmt.Sprintf("Unable to decode audio packet, averror: %s", AvError(int(ret))))
-		}
-
-		break
-
-	case AVMEDIA_TYPE_VIDEO:
-		ret = int(C.avcodec_decode_video2(cc.avCodecCtx, p.frames[AVMEDIA_TYPE_VIDEO].avFrame, (*C.int)(unsafe.Pointer(&gotOutput)), &p.avPacket))
-		if ret < 0 {
-			return nil, false, int(ret), errors.New(fmt.Sprintf("Unable to decode video packet, averror: %s", AvError(int(ret))))
-		}
-
-		break
-
-	default:
-		return nil, false, int(ret), errors.New(fmt.Sprintf("Unknown codec type: %v", cc.Type()))
-	}
-
-	return p.frames[cc.Type()], (gotOutput > 0), int(ret), nil
+	return p.decode(cc, p.frames[cc.Type()])
 }
 
-func (p *Packet) DecodeToNewFrame(cc *CodecCtx) (*Frame, bool, int, error) {
-	f := &Frame{avFrame: C.av_frame_alloc(), mediaType: cc.Type()}
-	return p.decode(cc, f)
-}
+func (p *Packet) decode(cc *CodecCtx, f *Frame) (*Frame, bool, error) {
+	var (
+		gotframe bool = false
+		ret      int  = 0
+	)
 
-func (p *Packet) decode(cc *CodecCtx, frame *Frame) (*Frame, bool, int, error) {
-	var gotOutput int
-	var ret int = 0
-
-	switch cc.Type() {
-	case AVMEDIA_TYPE_AUDIO:
-		ret = int(C.avcodec_decode_audio4(cc.avCodecCtx, frame.avFrame, (*C.int)(unsafe.Pointer(&gotOutput)), &p.avPacket))
-		if ret < 0 {
-			return nil, false, int(ret), errors.New(fmt.Sprintf("Unable to decode audio packet, averror: %s", AvError(int(ret))))
-		}
-
-		break
-
-	case AVMEDIA_TYPE_VIDEO:
-		ret = int(C.avcodec_decode_video2(cc.avCodecCtx, frame.avFrame, (*C.int)(unsafe.Pointer(&gotOutput)), &p.avPacket))
-		if ret < 0 {
-			return nil, false, int(ret), errors.New(fmt.Sprintf("Unable to decode video packet, averror: %s", AvError(int(ret))))
-		}
-
-		break
-
-	default:
-		return nil, false, int(ret), errors.New(fmt.Sprintf("Unknown codec type: %v", cc.Type()))
-	}
-
-	return frame, (gotOutput > 0), int(ret), nil
-}
-
-func (p *Packet) GetNextFrame(cc *CodecCtx) (*Frame, error) {
-	for {
-		if p.avPacket.size <= 0 {
-			break
-		}
-
-		frame, ready, ret, err := p.DecodeToNewFrame(cc)
-		if !ready {
-			Release(frame)
-
-			if ret < 0 || err != nil {
-				return nil, err
-			}
-		}
-
-		C.shift_data(&p.avPacket, C.int(ret))
-
-		if ready {
-			return frame, nil
+	if p != nil {
+		ret = int(C.avcodec_send_packet(cc.avCodecCtx, &p.avPacket))
+		if ret < 0 && ret != AVERROR_EOF {
+			return f, false, fmt.Errorf("error sending packet - ret %d", ret)
 		}
 	}
 
-	return nil, nil
+	ret = int(C.avcodec_receive_frame(cc.avCodecCtx, f.avFrame))
+	if ret < 0 && AvErrno(ret) != syscall.EAGAIN {
+		return f, false, nil
+	}
+
+	if ret >= 0 {
+		gotframe = true
+	}
+
+	return f, gotframe, nil
 }
+
+// Possible overkill, overhead of creating new frames
+//
+// func (p *Packet) DecodeToNewFrame(cc *CodecCtx) (*Frame, bool, error) {
+// 	f := &Frame{avFrame: C.av_frame_alloc(), mediaType: cc.Type()}
+// 	return p.decode(cc, f)
+// }
+
+// func (p *Packet) GetNextFrame(cc *CodecCtx) (*Frame, error) {
+// 	for {
+// 		if p.avPacket.size <= 0 {
+// 			break
+// 		}
+
+// 		frame, ready, err := p.DecodeToNewFrame(cc)
+// 		if !ready {
+// 			Release(frame)
+
+// 			if ret < 0 || err != nil {
+// 				return nil, err
+// 			}
+// 		}
+
+// 		C.shift_data(&p.avPacket, C.int(ret))
+
+// 		if ready {
+// 			return frame, nil
+// 		}
+// 	}
+
+// 	return nil, nil
+// }
 
 func (p *Packet) Frames(cc *CodecCtx) chan *Frame {
 	yield := make(chan *Frame)
@@ -146,21 +119,10 @@ func (p *Packet) Frames(cc *CodecCtx) chan *Frame {
 		defer close(yield)
 
 		for {
-			frame, ready, ret, err := p.Decode(cc)
-			if ready {
-				yield <- frame
-			}
+			frame, _, _ := p.Decode(cc)
+			yield <- frame
+			break
 
-			if ret < 0 || err != nil {
-				fmt.Println("Decoding error:", err)
-				break
-			}
-
-			C.shift_data(&p.avPacket, C.int(ret))
-
-			if p.avPacket.size <= 0 {
-				break
-			}
 		}
 	}()
 

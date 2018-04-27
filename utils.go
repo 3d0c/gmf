@@ -26,6 +26,15 @@ type AVR struct {
 	Den int
 }
 
+const (
+	AVERROR_EOF = -541478725
+)
+
+var (
+	AV_TIME_BASE   int        = C.AV_TIME_BASE
+	AV_TIME_BASE_Q AVRational = AVRational{1, C.int(AV_TIME_BASE)}
+)
+
 func (this AVR) AVRational() AVRational {
 	return AVRational{C.int(this.Num), C.int(this.Den)}
 }
@@ -33,11 +42,6 @@ func (this AVR) AVRational() AVRational {
 func (this AVRational) AVR() AVR {
 	return AVR{Num: int(this.num), Den: int(this.den)}
 }
-
-var (
-	AV_TIME_BASE   int        = C.AV_TIME_BASE
-	AV_TIME_BASE_Q AVRational = AVRational{1, C.int(AV_TIME_BASE)}
-)
 
 func AvError(averr int) error {
 	errlen := 1024

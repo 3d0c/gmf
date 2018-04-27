@@ -1,7 +1,8 @@
 ### Go FFmpeg Bindings 
 
 #### Status: `beta`
-Updated 09 Mar 2018. Please note, that there is work in progress adding support for new avcodec_send_frame()/avcodec_receive_packet() api.  
+Updated 09 Mar 2018.  
+Please note, that there is work in progress adding support for new avcodec_send_frame()/avcodec_receive_packet() api.  
 Because it's a breaking changes, some examples haven't ported yet.    
 
 #### Installation

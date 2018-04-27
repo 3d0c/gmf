@@ -49,35 +49,6 @@ func NewFrame() *Frame {
 // 	return encode(cc, nil, this.mediaType)
 // }
 
-// Deprected
-// func encode(cc *CodecCtx, avFrame *C.struct_AVFrame, mediaType int32) (*Packet, bool, error) {
-// 	var gotOutput int
-// 	var ret int
-
-// 	p := NewPacket()
-
-// 	switch mediaType {
-// 	case AVMEDIA_TYPE_AUDIO:
-// 		ret = int(C.avcodec_encode_audio2(cc.avCodecCtx, &p.avPacket, avFrame, (*C.int)(unsafe.Pointer(&gotOutput))))
-// 		if ret < 0 {
-// 			return nil, false, errors.New(fmt.Sprintf("Unable to encode video packet, averror: %s", AvError(int(ret))))
-// 		}
-
-// 	case AVMEDIA_TYPE_VIDEO:
-// 		cc.avCodecCtx.field_order = C.AV_FIELD_PROGRESSIVE
-
-// 		ret = int(C.avcodec_encode_video2(cc.avCodecCtx, &p.avPacket, avFrame, (*C.int)(unsafe.Pointer(&gotOutput))))
-// 		if ret < 0 {
-// 			return nil, false, errors.New(fmt.Sprintf("Unable to encode video packet, averror: %s", AvError(int(ret))))
-// 		}
-
-// 	default:
-// 		return nil, false, errors.New(fmt.Sprintf("Unknown codec type: %v", mediaType))
-// 	}
-
-// 	return p, (gotOutput > 0), nil
-// }
-
 func (f *Frame) Encode(enc *CodecCtx) (*Packet, error) {
 	var (
 		pkt *Packet
