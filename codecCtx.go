@@ -90,7 +90,7 @@ var (
 	AV_CODEC_ID_GIF        int = C.AV_CODEC_ID_GIF
 	AV_CODEC_ID_RAWVIDEO   int = C.AV_CODEC_ID_RAWVIDEO
 
-	CODEC_FLAG_GLOBAL_HEADER int = C.CODEC_FLAG_GLOBAL_HEADER
+	CODEC_FLAG_GLOBAL_HEADER int = C.AV_CODEC_FLAG_GLOBAL_HEADER
 	FF_MB_DECISION_SIMPLE    int = C.FF_MB_DECISION_SIMPLE
 	FF_MB_DECISION_BITS      int = C.FF_MB_DECISION_BITS
 	FF_MB_DECISION_RD        int = C.FF_MB_DECISION_RD
@@ -156,7 +156,7 @@ func (this *CodecCtx) CopyExtra(ist *Stream) *CodecCtx {
 
 	codec.field_order = icodec.field_order
 
-	codec.extradata = (*_Ctype_uint8_t)(C.av_mallocz((_Ctype_size_t)((C.uint64_t)(icodec.extradata_size) + C.FF_INPUT_BUFFER_PADDING_SIZE)))
+	codec.extradata = (*_Ctype_uint8_t)(C.av_mallocz((_Ctype_size_t)((C.uint64_t)(icodec.extradata_size) + C.AV_INPUT_BUFFER_PADDING_SIZE)))
 
 	C.memcpy(unsafe.Pointer(codec.extradata), unsafe.Pointer(icodec.extradata), (_Ctype_size_t)(icodec.extradata_size))
 	codec.extradata_size = icodec.extradata_size

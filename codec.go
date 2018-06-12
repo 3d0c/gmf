@@ -195,5 +195,5 @@ func (this *Codec) Type() int {
 }
 
 func (this *Codec) IsExperimental() bool {
-	return bool((this.avCodec.capabilities & C.CODEC_CAP_EXPERIMENTAL) != 0)
+	return bool((this.avCodec.capabilities & C.AV_CODEC_CAP_EXPERIMENTAL) != 0)
 }

@@ -32,7 +32,7 @@ func (s *Stream) DumpContexCodec(codec *CodecCtx) {
 }
 
 func (s *Stream) SetCodecFlags() {
-	s.avStream.codec.flags |= C.CODEC_FLAG_GLOBAL_HEADER
+	s.avStream.codec.flags |= C.AV_CODEC_FLAG_GLOBAL_HEADER
 }
 
 func (s *Stream) CodecCtx() *CodecCtx {
