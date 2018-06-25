@@ -92,10 +92,13 @@ func main() {
 		ist := assert(inputCtx.GetStream(packet.StreamIndex())).(*Stream)
 
 		for frame := range packet.Frames(ist.CodecCtx()) {
-			if p, ready, _ := frame.EncodeNewPacket(cc); ready {
-				writeFile(p.Data())
-				defer Release(p)
+			p, err := frame.Encode(cc)
+			if err != nil {
+				Release(p)
+				fatal(err)
 			}
+			writeFile(p.Data())
+			Release(p)
 		}
 		Release(packet)
 	}

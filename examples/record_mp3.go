@@ -36,6 +36,10 @@ import (
 	. "github.com/3d0c/gmf"
 )
 
+func fatal(err error) {
+	log.Fatal(err)
+}
+
 func main() {
 	/// input
 	mic, _ := NewInputCtxWithFormatName("default", "alsa")
@@ -115,9 +119,9 @@ func main() {
 
 	count := 0
 	for packet := range mic.GetNewPackets() {
-		srcFrame, got, ret, err := packet.DecodeToNewFrame(ast.CodecCtx())
+		srcFrame, got, err := packet.Decode(ast.CodecCtx())
 		Release(packet)
-		if !got || ret < 0 || err != nil {
+		if !got || err != nil {
 			log.Println("capture audio error:", err)
 			continue
 		}
@@ -135,8 +139,8 @@ func main() {
 				continue
 			}
 
-			writePacket, ready, _ := dstFrame.EncodeNewPacket(occ)
-			for ready {
+			writePacket, err := dstFrame.Encode(occ)
+			if err == nil {
 				if err := outputCtx.WritePacket(writePacket); err != nil {
 					log.Println("write packet err", err.Error())
 				}
@@ -147,8 +151,10 @@ func main() {
 					break
 				} else { //exit
 					exit = true
-					writePacket, ready, _ = dstFrame.FlushNewPacket(occ)
+					writePacket, err = dstFrame.Encode(occ)
 				}
+			} else {
+				fatal(err)
 			}
 			Release(dstFrame)
 		}

@@ -100,9 +100,9 @@ func main() {
 
 	count := 0
 	for packet := range mic.GetNewPackets() {
-		srcFrame, got, ret, err := packet.DecodeToNewFrame(ast.CodecCtx())
+		srcFrame, got, err := packet.Decode(ast.CodecCtx())
 		Release(packet)
-		if !got || ret < 0 || err != nil {
+		if !got || err != nil {
 			log.Println("capture audio error:", err)
 			continue
 		}
@@ -116,13 +116,15 @@ func main() {
 				continue
 			}
 
-			writePacket, ready, _ := dstFrame.EncodeNewPacket(occ)
-			if ready {
+			writePacket, err := dstFrame.Encode(occ)
+			if err == nil {
 				if err := outputCtx.WritePacket(writePacket); err != nil {
 					log.Println("write packet err", err.Error())
 				}
 
 				Release(writePacket)
+			} else {
+				fatal(err)
 			}
 		}
 		if count > int(cc.SampleRate())*10 {

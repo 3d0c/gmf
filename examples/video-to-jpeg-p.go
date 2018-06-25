@@ -94,9 +94,12 @@ func encodeWorker(data chan *Frame, wg *sync.WaitGroup, srcCtx *CodecCtx) {
 		}
 		//		log.Printf("srcFrome = %p",srcFrame)
 		swsCtx.Scale(srcFrame, dstFrame)
-
-		if p, ready, _ := dstFrame.EncodeNewPacket(cc); ready {
+		p, err := dstFrame.Encode(cc)
+		if err == nil {
 			writeFile(p.Data())
+		} else {
+			Release(srcFrame)
+			fatal(err)
 		}
 		Release(srcFrame)
 	}
