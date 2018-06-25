@@ -136,7 +136,8 @@ func main() {
 				frame.SetPts(ost.Pts)
 			}
 
-			if p, ready, _ := frame.EncodeNewPacket(ost.CodecCtx()); ready {
+			p, err := frame.Encode(ost.CodecCtx())
+			if err == nil {
 				if p.Pts() != AV_NOPTS_VALUE {
 					p.SetPts(RescaleQ(p.Pts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
 				}
@@ -151,6 +152,8 @@ func main() {
 					fatal(err)
 				}
 				Release(p)
+			} else {
+				fatal(err)
 			}
 
 			ost.Pts++
@@ -167,26 +170,26 @@ func main() {
 		frame := NewFrame()
 
 		for {
-			if p, ready, _ := frame.FlushNewPacket(ost.CodecCtx()); ready {
-				if p.Pts() != AV_NOPTS_VALUE {
-					p.SetPts(RescaleQ(p.Pts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
-				}
-
-				if p.Dts() != AV_NOPTS_VALUE {
-					p.SetDts(RescaleQ(p.Dts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
-				}
-
-				p.SetStreamIndex(ost.Index())
-
-				if err := outputCtx.WritePacket(p); err != nil {
-					fatal(err)
-				}
+			p, err := frame.Encode(ost.CodecCtx())
+			if err != nil {
 				Release(p)
-			} else {
-				Release(p)
-				break
+				fatal(err)
+			}
+			if p.Pts() != AV_NOPTS_VALUE {
+				p.SetPts(RescaleQ(p.Pts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
 			}
 
+			if p.Dts() != AV_NOPTS_VALUE {
+				p.SetDts(RescaleQ(p.Dts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
+			}
+
+			p.SetStreamIndex(ost.Index())
+
+			if err := outputCtx.WritePacket(p); err != nil {
+				fatal(err)
+			}
+
+			Release(p)
 			ost.Pts++
 		}
 

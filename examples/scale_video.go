@@ -85,7 +85,7 @@ func main() {
 
 		swsCtx.Scale(frame, dstFrame)
 
-		if p, ready, err := dstFrame.EncodeNewPacket(videoStream.CodecCtx()); ready {
+		if p, err := dstFrame.Encode(videoStream.CodecCtx()); err == nil {
 			if p.Pts() != AV_NOPTS_VALUE {
 				p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 			}
@@ -102,7 +102,7 @@ func main() {
 
 			log.Printf("Write frame=%d size=%v pts=%v dts=%v\n", i, p.Size(), p.Pts(), p.Dts())
 
-		} else if err != nil {
+		} else {
 			fatal(err)
 		}
 

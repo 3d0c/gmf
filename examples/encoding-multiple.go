@@ -91,7 +91,7 @@ func encodeWorker(o output, wg *sync.WaitGroup) {
 			break
 		}
 
-		if p, err := frame.Encode(videoStream); p != nil {
+		if p, err := frame.Encode(videoStream.CodecCtx()); p != nil {
 			if p.Pts() != AV_NOPTS_VALUE {
 				p.SetPts(RescaleQ(p.Pts(), videoStream.CodecCtx().TimeBase(), videoStream.TimeBase()))
 			}

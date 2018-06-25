@@ -106,24 +106,22 @@ func main() {
 		for frame := range packet.Frames(codecCtx) {
 			swsCtx.Scale(frame, dstFrame)
 
-			p, ready, err := dstFrame.EncodeNewPacket(cc)
+			p, err := dstFrame.Encode(cc)
 
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			if ready {
-				width, height := frame.Width(), frame.Height()
-				img := new(image.RGBA)
-				img.Pix = p.Data()
-				img.Stride = 4 * width // 4 bytes per pixel (RGBA), width times per row
-				img.Rect = image.Rect(0, 0, width, height)
+			width, height := frame.Width(), frame.Height()
+			img := new(image.RGBA)
+			img.Pix = p.Data()
+			img.Stride = 4 * width // 4 bytes per pixel (RGBA), width times per row
+			img.Rect = image.Rect(0, 0, width, height)
 
-				writeFile(img)
+			writeFile(img)
 
-				i++
-				gmf.Release(p)
-			}
+			i++
+			gmf.Release(p)
 
 			gmf.Release(frame)
 		}

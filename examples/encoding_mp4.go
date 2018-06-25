@@ -109,9 +109,9 @@ func audio(outputCtx *FmtCtx, output chan *Packet) *Stream {
 	go func() {
 		count := int64(0)
 		for packet := range mic.GetNewPackets() {
-			srcFrame, got, ret, err := packet.DecodeToNewFrame(ast.CodecCtx())
+			srcFrame, got, err := packet.Decode(ast.CodecCtx())
 			Release(packet)
-			if !got || ret < 0 || err != nil {
+			if !got || err != nil {
 				log.Println("input audio error:", err)
 				continue
 			}
@@ -130,10 +130,12 @@ func audio(outputCtx *FmtCtx, output chan *Packet) *Stream {
 
 				dstFrame.SetPts(count)
 
-				writePacket, ready, _ := dstFrame.EncodeNewPacket(occ)
-				if ready {
+				writePacket, err := dstFrame.Encode(occ)
+				if err == nil {
 					writePacket.SetStreamIndex(ost.Index())
 					output <- writePacket
+				} else {
+					fatal(err)
 				}
 				Release(dstFrame)
 			}
@@ -206,7 +208,8 @@ func video(outputCtx *FmtCtx, output chan *Packet) *Stream {
 				swsCtx.Scale(frame, dstFrame)
 				dstFrame.SetPts(i)
 
-				if p, ready, err := dstFrame.EncodeNewPacket(videoEncCtx); ready {
+				p, err := dstFrame.Encode(videoEncCtx)
+				if err == nil {
 					p.SetStreamIndex(videoStream.Index())
 					if p.Pts() != AV_NOPTS_VALUE {
 						p.SetPts(RescaleQ(p.Pts(), videoEncCtx.TimeBase(), videoStream.TimeBase()))
