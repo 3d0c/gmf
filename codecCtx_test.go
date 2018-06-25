@@ -43,7 +43,7 @@ func TestCodecCtx(t *testing.T) {
 	}
 
 	if cc.TimeBase().AVR().Num != td.timebase.Num || cc.TimeBase().AVR().Den != td.timebase.Den {
-		t.Fatal("Expected AVR = %v, %v got", cc.TimeBase().AVR())
+		t.Fatalf("Expected AVR = %v, %v got", cc.TimeBase().AVR(), td.timebase)
 	}
 
 	if cc.PixFmt() != td.pixfmt {
