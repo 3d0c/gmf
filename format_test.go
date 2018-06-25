@@ -213,20 +213,20 @@ func TestAVIOContext(t *testing.T) {
 
 }
 
-func ExampleNewAVIOContext(t *testing.T) {
+func ExampleNewAVIOContext() {
 	ctx := NewCtx()
 	defer Release(ctx)
 
 	// In this example, we're using custom reader implementation,
 	// so we should specify format manually.
 	if err := ctx.SetInputFormat("mov"); err != nil {
-		t.Fatal(err)
+		log.Fatal(err)
 	}
 
 	avioCtx, err := NewAVIOContext(ctx, &AVIOHandlers{ReadPacket: customReader})
 	defer Release(avioCtx)
 	if err != nil {
-		t.Fatal(err)
+		log.Fatal(err)
 	}
 
 	// Setting up AVFormatContext.pb
