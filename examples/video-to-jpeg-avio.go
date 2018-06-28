@@ -49,7 +49,7 @@ func customReader() ([]byte, int) {
 }
 
 func writeFile(b []byte) {
-	name := "./tmp-img/" + strconv.Itoa(seq) + ".jpg"
+	name := "tmp-img/" + strconv.Itoa(seq) + ".jpg"
 
 	fp, err := os.Create(name)
 	if err != nil {
