@@ -119,9 +119,9 @@ func main() {
 
 	count := 0
 	for packet := range mic.GetNewPackets() {
-		srcFrame, got, err := packet.Decode(ast.CodecCtx())
+		srcFrame, err := packet.Frames(ast.CodecCtx())
 		Release(packet)
-		if !got || err != nil {
+		if err != nil {
 			log.Println("capture audio error:", err)
 			continue
 		}

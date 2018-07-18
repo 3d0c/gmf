@@ -101,16 +101,20 @@ func main() {
 		}
 		ist := assert(inputCtx.GetStream(packet.StreamIndex())).(*Stream)
 
-		for frame := range packet.Frames(ist.CodecCtx()) {
-			swsCtx.Scale(frame, dstFrame)
-
-			if p, err := dstFrame.Encode(cc); p != nil {
-				writeFile(p.Data())
-				defer Release(p)
-			} else if err != nil {
-				fatal(err)
-			}
+		frame, err := packet.Frames(ist.CodecCtx())
+		if err != nil {
+			log.Fatal(err)
 		}
+
+		swsCtx.Scale(frame, dstFrame)
+
+		if p, err := dstFrame.Encode(cc); p != nil {
+			writeFile(p.Data())
+			defer Release(p)
+		} else if err != nil {
+			fatal(err)
+		}
+
 		Release(packet)
 	}
 

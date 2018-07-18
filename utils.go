@@ -8,6 +8,7 @@ package gmf
 #include "libavutil/mathematics.h"
 #include "libavutil/rational.h"
 #include "libavutil/samplefmt.h"
+#include "libavcodec/avcodec.h"
 
 */
 import "C"
@@ -74,6 +75,10 @@ func RescaleDelta(inTb AVRational, inTs int64, fsTb AVRational, duration int, la
 
 func Rescale(a, b, c int64) int64 {
 	return int64(C.av_rescale(C.int64_t(a), C.int64_t(b), C.int64_t(c)))
+}
+
+func RescaleTs(pkt *Packet, encBase AVRational, stBase AVRational) {
+	C.av_packet_rescale_ts(&pkt.avPacket, C.struct_AVRational(encBase), C.struct_AVRational(stBase))
 }
 
 func GetSampleFmtName(fmt int32) string {

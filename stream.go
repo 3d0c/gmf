@@ -60,7 +60,6 @@ func (s *Stream) CodecCtx() *CodecCtx {
 
 func (s *Stream) SetCodecCtx(cc *CodecCtx) {
 	if cc == nil {
-		// don't sure that it should panic...
 		panic("Codec context is not initialized.")
 	}
 
@@ -110,4 +109,10 @@ func (s *Stream) IsVideo() bool {
 
 func (s *Stream) Duration() int64 {
 	return int64(s.avStream.duration)
+}
+
+func (s *Stream) SetTimeBase(val AVR) *Stream {
+	s.avStream.time_base.num = C.int(val.Num)
+	s.avStream.time_base.den = C.int(val.Den)
+	return s
 }

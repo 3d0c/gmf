@@ -96,6 +96,9 @@ func main() {
 		log.Println("No video stream found in", srcfileName)
 	}
 
+	fmt.Println("ictx.Duration:", ictx.Duration())
+	fmt.Printf("bitrate: %d/sec\n", ictx.BitRate())
+
 	codec, err := FindEncoder(AV_CODEC_ID_JPEG2000)
 	if err != nil {
 		log.Fatal(err)
@@ -138,17 +141,20 @@ func main() {
 
 		fmt.Println(p)
 
-		for frame := range p.Frames(ist.CodecCtx()) {
-			swsCtx.Scale(frame, dstFrame)
-
-			if p, err := dstFrame.Encode(cc); p != nil {
-				writeFile(p.Data())
-			} else if err != nil {
-				log.Fatal(err)
-			}
-
-			i++
+		frame, err := p.Frames(ist.CodecCtx())
+		if err != nil {
+			log.Fatal(err)
 		}
+
+		swsCtx.Scale(frame, dstFrame)
+
+		if p, err := dstFrame.Encode(cc); p != nil {
+			writeFile(p.Data())
+		} else if err != nil {
+			log.Fatal(err)
+		}
+
+		i++
 
 		Release(p)
 	}

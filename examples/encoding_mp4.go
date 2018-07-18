@@ -109,9 +109,9 @@ func audio(outputCtx *FmtCtx, output chan *Packet) *Stream {
 	go func() {
 		count := int64(0)
 		for packet := range mic.GetNewPackets() {
-			srcFrame, got, err := packet.Decode(ast.CodecCtx())
+			srcFrame, err := packet.Frames(ast.CodecCtx())
 			Release(packet)
-			if !got || err != nil {
+			if err != nil {
 				log.Println("input audio error:", err)
 				continue
 			}
@@ -204,29 +204,33 @@ func video(outputCtx *FmtCtx, output chan *Packet) *Stream {
 				continue
 			}
 
-			for frame := range packet.Frames(ist.CodecCtx()) {
-				swsCtx.Scale(frame, dstFrame)
-				dstFrame.SetPts(i)
+			frame, err := packet.Frames(ist.CodecCtx())
+			if err != nil {
+				fatal(err)
+			}
 
-				p, err := dstFrame.Encode(videoEncCtx)
-				if err == nil {
-					p.SetStreamIndex(videoStream.Index())
-					if p.Pts() != AV_NOPTS_VALUE {
-						p.SetPts(RescaleQ(p.Pts(), videoEncCtx.TimeBase(), videoStream.TimeBase()))
-					}
+			swsCtx.Scale(frame, dstFrame)
+			dstFrame.SetPts(i)
 
-					if p.Dts() != AV_NOPTS_VALUE {
-						p.SetDts(RescaleQ(p.Dts(), videoEncCtx.TimeBase(), videoStream.TimeBase()))
-					}
-					output <- p
-				} else if err != nil {
-					fatal(err)
-				} else {
-					log.Printf("encode frame=%d frame=%d is not ready", i, frame.Pts())
+			p, err := dstFrame.Encode(videoEncCtx)
+			if err == nil {
+				p.SetStreamIndex(videoStream.Index())
+				if p.Pts() != AV_NOPTS_VALUE {
+					p.SetPts(RescaleQ(p.Pts(), videoEncCtx.TimeBase(), videoStream.TimeBase()))
 				}
 
-				i++
+				if p.Dts() != AV_NOPTS_VALUE {
+					p.SetDts(RescaleQ(p.Dts(), videoEncCtx.TimeBase(), videoStream.TimeBase()))
+				}
+				output <- p
+			} else if err != nil {
+				fatal(err)
+			} else {
+				log.Printf("encode frame=%d frame=%d is not ready", i, frame.Pts())
 			}
+
+			i++
+
 		}
 		close(output)
 	}()
