@@ -308,7 +308,6 @@ func (this *FmtCtx) SetOformat(ofmt *OutputFmt) error {
 }
 
 func (this *FmtCtx) Dump() {
-
 	if this.ofmt == nil {
 		C.av_dump_format(this.avCtx, 0, &(this.avCtx.filename[0]), 0)
 	} else {
@@ -430,7 +429,15 @@ func (this *FmtCtx) Free() {
 }
 
 func (this *FmtCtx) Duration() int {
-	return int(this.avCtx.duration)
+	us := int(this.avCtx.duration) % AV_TIME_BASE
+	fmt.Printf("us: %v\n", us)
+	fmt.Printf("duration: %v\n", int(this.avCtx.duration))
+	return int(this.avCtx.duration) / AV_TIME_BASE
+}
+
+// Total stream bitrate in bit/s
+func (this *FmtCtx) BitRate() int64 {
+	return int64(this.avCtx.bit_rate)
 }
 
 func (this *FmtCtx) StartTime() int {

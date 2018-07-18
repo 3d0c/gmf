@@ -18,7 +18,6 @@ void gmf_set_frame_data(AVFrame *frame, int idx, int l_size, uint8_t data) {
 int gmf_get_frame_line_size(AVFrame *frame, int idx) {
 	return frame->linesize[idx];
 }
-
 */
 import "C"
 
@@ -39,43 +38,30 @@ func NewFrame() *Frame {
 	return &Frame{avFrame: C.av_frame_alloc()}
 }
 
-// Deprected
-// func (this *Frame) EncodeNewPacket(cc *CodecCtx) (*Packet, bool, error) {
-// 	return encode(cc, this.avFrame, this.mediaType)
-// }
-
-// Deprected
-// func (this *Frame) FlushNewPacket(cc *CodecCtx) (*Packet, bool, error) {
-// 	return encode(cc, nil, this.mediaType)
-// }
-
 func (f *Frame) Encode(enc *CodecCtx) (*Packet, error) {
-	var (
-		pkt *Packet
-		ret int
-	)
-
-	if pkt = NewPacket(); pkt == nil {
-		return nil, fmt.Errorf("fatal error - uninitialized packet")
+	pkt := NewPacket()
+	if pkt == nil {
+		return nil, fmt.Errorf("unable to initialize new packet")
 	}
 
-	if ret = int(C.avcodec_send_frame(enc.avCodecCtx, f.avFrame)); ret != 0 {
-		return nil, fmt.Errorf("error sending frame - %v", syscall.Errno(ret))
+	if ret := int(C.avcodec_send_frame(enc.avCodecCtx, f.avFrame)); ret < 0 {
+		return nil, fmt.Errorf("error sending frame - %v", AvErrno(ret))
 	}
 
 	for {
-		ret = int(C.avcodec_receive_packet(enc.avCodecCtx, &pkt.avPacket))
+		ret := int(C.avcodec_receive_packet(enc.avCodecCtx, &pkt.avPacket))
 		if AvErrno(ret) == syscall.EAGAIN {
+			return nil, nil
+		}
+		if ret < 0 {
+			return nil, fmt.Errorf("%v", AvErrno(ret))
+		}
+		if ret >= 0 {
 			break
 		}
-		if ret != 0 {
-			return nil, fmt.Errorf("error receiving packet - %v", syscall.Errno(ret))
-		}
-
-		return pkt, nil
 	}
 
-	return nil, nil
+	return pkt, nil
 }
 
 func (f *Frame) Pts() int64 {

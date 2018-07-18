@@ -43,7 +43,7 @@ func writeFile(b image.Image) {
 func main() {
 	srcFileName := "tests-sample.mp4"
 
-	os.Mkdir("./tmp", 0755)
+	os.MkdirAll("./tmp", 0755)
 
 	if len(os.Args) > 1 {
 		srcFileName = os.Args[1]
@@ -103,28 +103,31 @@ func main() {
 			continue
 		}
 
-		for frame := range packet.Frames(codecCtx) {
-			swsCtx.Scale(frame, dstFrame)
-
-			p, err := dstFrame.Encode(cc)
-
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			width, height := frame.Width(), frame.Height()
-			img := new(image.RGBA)
-			img.Pix = p.Data()
-			img.Stride = 4 * width // 4 bytes per pixel (RGBA), width times per row
-			img.Rect = image.Rect(0, 0, width, height)
-
-			writeFile(img)
-
-			i++
-			gmf.Release(p)
-
-			gmf.Release(frame)
+		frame, err := packet.Frames(codecCtx)
+		if err != nil {
+			log.Fatal(err)
 		}
+		swsCtx.Scale(frame, dstFrame)
+
+		p, err := dstFrame.Encode(cc)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		width, height := frame.Width(), frame.Height()
+		img := new(image.RGBA)
+		img.Pix = p.Data()
+		img.Stride = 4 * width // 4 bytes per pixel (RGBA), width times per row
+		img.Rect = image.Rect(0, 0, width, height)
+
+		writeFile(img)
+
+		i++
+		gmf.Release(p)
+
+		gmf.Release(frame)
+
 		gmf.Release(packet)
 	}
 

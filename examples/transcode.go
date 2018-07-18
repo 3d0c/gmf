@@ -59,7 +59,9 @@ func addStream(codecName string, oc *FmtCtx, ist *Stream) (int, int) {
 
 	if cc.Type() == AVMEDIA_TYPE_VIDEO {
 		cc.SetTimeBase(AVR{1, 25})
+		ost.SetTimeBase(AVR{1, 25})
 		cc.SetProfile(FF_PROFILE_MPEG4_SIMPLE)
+		fmt.Printf("setup dims: %d, %d\n", ist.CodecCtx().Width(), ist.CodecCtx().Height())
 		cc.SetDimension(ist.CodecCtx().Width(), ist.CodecCtx().Height())
 		cc.SetPixFmt(ist.CodecCtx().PixFmt())
 	}
@@ -83,6 +85,7 @@ func main() {
 	if len(os.Args) != 3 {
 		fmt.Println("Simple transcoder, it guesses source format and codecs and tries to convert it to v:mpeg4/a:mp2.")
 		fmt.Println("usage: [input filename] [output.mp4]")
+		return
 	} else {
 		srcFileName = os.Args[1]
 		dstFileName = os.Args[2]
@@ -114,85 +117,63 @@ func main() {
 		fatal(err)
 	}
 
+	var (
+		packets int = 0
+		frames  int = 0
+		encoded int = 0
+	)
+
 	for packet := range inputCtx.GetNewPackets() {
+		packets++
 		ist := assert(inputCtx.GetStream(packet.StreamIndex())).(*Stream)
 		ost := assert(outputCtx.GetStream(stMap[ist.Index()])).(*Stream)
 
-		for frame := range packet.Frames(ist.CodecCtx()) {
-			if ost.IsAudio() {
-				fsTb := AVR{1, ist.CodecCtx().SampleRate()}
-				outTb := AVR{1, ist.CodecCtx().SampleRate()}
-
-				frame.SetPts(packet.Pts())
-
-				pts := RescaleDelta(ist.TimeBase(), frame.Pts(), fsTb.AVRational(), frame.NbSamples(), &lastDelta, outTb.AVRational())
-
-				frame.
-					SetNbSamples(ost.CodecCtx().FrameSize()).
-					SetFormat(ost.CodecCtx().SampleFmt()).
-					SetChannelLayout(ost.CodecCtx().ChannelLayout()).
-					SetPts(pts)
-			} else {
-				frame.SetPts(ost.Pts)
-			}
-
-			p, err := frame.Encode(ost.CodecCtx())
-			if err == nil {
-				if p.Pts() != AV_NOPTS_VALUE {
-					p.SetPts(RescaleQ(p.Pts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
-				}
-
-				if p.Dts() != AV_NOPTS_VALUE {
-					p.SetDts(RescaleQ(p.Dts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
-				}
-
-				p.SetStreamIndex(ost.Index())
-
-				if err := outputCtx.WritePacket(p); err != nil {
-					fatal(err)
-				}
-				Release(p)
-			} else {
-				fatal(err)
-			}
-
-			ost.Pts++
+		frame, err := packet.Frames(ist.CodecCtx())
+		if err != nil {
+			fmt.Printf("error: %s\n", err)
 		}
+
+		if frame == nil {
+			Release(packet)
+			continue
+		}
+
+		frames++
+
+		if ost.IsAudio() {
+			fsTb := AVR{1, ist.CodecCtx().SampleRate()}
+			outTb := AVR{1, ist.CodecCtx().SampleRate()}
+
+			frame.SetPts(packet.Pts())
+
+			pts := RescaleDelta(ist.TimeBase(), frame.Pts(), fsTb.AVRational(), frame.NbSamples(), &lastDelta, outTb.AVRational())
+
+			frame.
+				SetNbSamples(ost.CodecCtx().FrameSize()).
+				SetFormat(ost.CodecCtx().SampleFmt()).
+				SetChannelLayout(ost.CodecCtx().ChannelLayout()).
+				SetPts(pts)
+		}
+
+		pkt, err := frame.Encode(ost.CodecCtx())
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		if pkt == nil {
+			continue
+		}
+
+		pkt.SetStreamIndex(ost.Index())
+
+		if err := outputCtx.WritePacket(pkt); err != nil {
+			fatal(err)
+		}
+
+		encoded++
+
 		Release(packet)
 	}
 
-	// Flush encoders
-	// @todo refactor it (should be a better way)
-	for i := 0; i < outputCtx.StreamsCnt(); i++ {
-		ist := assert(inputCtx.GetStream(0)).(*Stream)
-		ost := assert(outputCtx.GetStream(stMap[ist.Index()])).(*Stream)
-
-		frame := NewFrame()
-
-		for {
-			p, err := frame.Encode(ost.CodecCtx())
-			if err != nil {
-				Release(p)
-				fatal(err)
-			}
-			if p.Pts() != AV_NOPTS_VALUE {
-				p.SetPts(RescaleQ(p.Pts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
-			}
-
-			if p.Dts() != AV_NOPTS_VALUE {
-				p.SetDts(RescaleQ(p.Dts(), ost.CodecCtx().TimeBase(), ost.TimeBase()))
-			}
-
-			p.SetStreamIndex(ost.Index())
-
-			if err := outputCtx.WritePacket(p); err != nil {
-				fatal(err)
-			}
-
-			Release(p)
-			ost.Pts++
-		}
-
-		Release(frame)
-	}
+	fmt.Printf("packets: %d, frames: %d, encoded: %d\n", packets, frames, encoded)
 }

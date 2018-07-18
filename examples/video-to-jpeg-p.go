@@ -146,9 +146,13 @@ func main() {
 
 		ist := assert(inputCtx.GetStream(packet.StreamIndex())).(*Stream)
 
-		for frame := range packet.Frames(ist.CodecCtx()) {
-			dataChan <- frame.CloneNewFrame()
+		frame, err := packet.Frames(ist.CodecCtx())
+		if err != nil {
+			log.Fatal(err)
 		}
+
+		dataChan <- frame.CloneNewFrame()
+
 		Release(packet)
 	}
 
