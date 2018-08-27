@@ -25,6 +25,12 @@ import (
 	"unsafe"
 )
 
+const (
+	AVIO_FLAG_READ       = 1
+	AVIO_FLAG_WRITE      = 2
+	AVIO_FLAG_READ_WRITE = (AVIO_FLAG_READ | AVIO_FLAG_WRITE)
+)
+
 var (
 	IO_BUFFER_SIZE int = 32768
 )
@@ -40,7 +46,7 @@ var (
 //	avoictx := NewAVIOContext(ctx, &AVIOHandlers{ReadPacket: gridFsReader})
 type AVIOHandlers struct {
 	ReadPacket  func() ([]byte, int)
-	WritePacket func([]byte)
+	WritePacket func([]byte) int
 	Seek        func(int64, int) int64
 }
 
@@ -49,17 +55,23 @@ type AVIOHandlers struct {
 var handlersMap map[uintptr]*AVIOHandlers
 
 type AVIOContext struct {
-	// avAVIOContext *_Ctype_AVIOContext
-	avAVIOContext *C.struct_AVIOContext
-	handlerKey    uintptr
+	avAVIOContext *_Ctype_AVIOContext
+	// avAVIOContext *C.struct_AVIOContext
+	handlerKey uintptr
 	CgoMemoryManage
 }
 
 // AVIOContext constructor. Use it only if You need custom IO behaviour!
-func NewAVIOContext(ctx *FmtCtx, handlers *AVIOHandlers) (*AVIOContext, error) {
+func NewAVIOContext(ctx *FmtCtx, handlers *AVIOHandlers, size ...int) (*AVIOContext, error) {
 	this := &AVIOContext{}
 
-	buffer := (*C.uchar)(C.av_malloc(C.size_t(IO_BUFFER_SIZE)))
+	bufferSize := IO_BUFFER_SIZE
+
+	if len(size) == 1 {
+		bufferSize = size[0]
+	}
+	fmt.Printf("Init buffer with %d\n", bufferSize)
+	buffer := (*C.uchar)(C.av_malloc(C.size_t(bufferSize)))
 
 	if buffer == nil {
 		return nil, errors.New("unable to allocate buffer")
@@ -77,21 +89,32 @@ func NewAVIOContext(ctx *FmtCtx, handlers *AVIOHandlers) (*AVIOContext, error) {
 		this.handlerKey = uintptr(unsafe.Pointer(ctx.avCtx))
 	}
 
+	var flag int = 0
+
 	if handlers.ReadPacket != nil {
 		ptrRead = (*[0]byte)(C.readCallBack)
+		flag = 0
 	}
 
 	if handlers.WritePacket != nil {
 		ptrWrite = (*[0]byte)(C.writeCallBack)
+		flag = AVIO_FLAG_WRITE
 	}
 
 	if handlers.Seek != nil {
 		ptrSeek = (*[0]byte)(C.seekCallBack)
 	}
 
-	if this.avAVIOContext = C.avio_alloc_context(buffer, C.int(IO_BUFFER_SIZE), 0, unsafe.Pointer(ctx.avCtx), ptrRead, ptrWrite, ptrSeek); this.avAVIOContext == nil {
+	if handlers.ReadPacket != nil && handlers.WritePacket != nil {
+		flag = AVIO_FLAG_READ_WRITE
+	}
+
+	if this.avAVIOContext = C.avio_alloc_context(buffer, C.int(bufferSize), C.int(flag), unsafe.Pointer(ctx.avCtx), ptrRead, ptrWrite, ptrSeek); this.avAVIOContext == nil {
+		C.av_free(unsafe.Pointer(this.avAVIOContext.buffer))
 		return nil, errors.New("unable to initialize avio context")
 	}
+
+	this.avAVIOContext.min_packet_size = C.int(bufferSize)
 
 	return this, nil
 }
@@ -118,7 +141,7 @@ func readCallBack(opaque unsafe.Pointer, buf *C.uint8_t, buf_size C.int) C.int {
 	}
 
 	b, n := handlers.ReadPacket()
-	if n >= 0 {
+	if n > 0 {
 		C.memcpy(unsafe.Pointer(buf), unsafe.Pointer(&b[0]), C.size_t(n))
 	}
 
@@ -136,8 +159,7 @@ func writeCallBack(opaque unsafe.Pointer, buf *C.uint8_t, buf_size C.int) C.int 
 		panic("No writer handler initialized.")
 	}
 
-	handlers.WritePacket(C.GoBytes(unsafe.Pointer(buf), buf_size))
-	return 0
+	return C.int(handlers.WritePacket(C.GoBytes(unsafe.Pointer(buf), buf_size)))
 }
 
 //export seekCallBack

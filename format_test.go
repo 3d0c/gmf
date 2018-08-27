@@ -149,7 +149,7 @@ func TestGetNextPacket(t *testing.T) {
 
 	defer inputCtx.CloseInputAndRelease()
 
-	packet := inputCtx.GetNextPacket()
+	packet, _ := inputCtx.GetNextPacket()
 	if packet.Size() <= 0 {
 		t.Fatal("Expected size > 0")
 	} else {

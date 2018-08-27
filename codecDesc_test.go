@@ -18,15 +18,8 @@ func TestCodecs(t *testing.T) {
 	}
 }
 
-func TestCodecsLongName(t *testing.T) {
-	for _, codecDesc := range Codecs {
-		codecsMap[codecDesc.Id()] = codecDesc
-	}
-
-	codec := codecsMap[28] // h264 codec
-	expected := "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10"
-
-	if actual := codec.LongName(); actual != expected {
-		t.Fatalf("The long_name should '%s' not '%s'", expected, actual)
-	}
-}
+// func TestListCodecs(t *testing.T) {
+// 	for _, codecDesc := range Codecs {
+// 		log.Printf("%s, %s\n", codecDesc.Name(), codecDesc.LongName())
+// 	}
+// }

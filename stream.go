@@ -9,10 +9,6 @@ package gmf
 */
 import "C"
 
-import (
-	"fmt"
-)
-
 type Stream struct {
 	avStream *C.struct_AVStream
 	cc       *CodecCtx
@@ -40,12 +36,10 @@ func (s *Stream) CodecCtx() *CodecCtx {
 		return s.cc
 	}
 
-	// @todo make explicit decoder/encoder definition
-	// If the codec context wasn't set, it means that it's called from InputCtx
-	// and it should be decoder.
 	c, err := FindDecoder(int(s.avStream.codec.codec_id))
 	if err != nil {
-		panic(fmt.Errorf("error initializing codec for stream '%d' - %s", s.Index(), err))
+		return nil
+		// return fmt.Errorf("error initializing codec for stream '%d' - %s", s.Index(), err)
 	}
 
 	s.cc = &CodecCtx{
@@ -115,4 +109,21 @@ func (s *Stream) SetTimeBase(val AVR) *Stream {
 	s.avStream.time_base.num = C.int(val.Num)
 	s.avStream.time_base.den = C.int(val.Den)
 	return s
+}
+
+func (s *Stream) GetRFrameRate() AVRational {
+	return AVRational(s.avStream.r_frame_rate)
+}
+
+func (s *Stream) SetRFrameRate(val AVR) {
+	s.avStream.r_frame_rate.num = C.int(val.Num)
+	s.avStream.r_frame_rate.den = C.int(val.Den)
+}
+
+func (s *Stream) GetAvgFrameRate() AVRational {
+	return AVRational(s.avStream.avg_frame_rate)
+}
+
+func (s *Stream) GetStartTime() int64 {
+	return int64(s.avStream.start_time)
 }

@@ -31,6 +31,7 @@ import (
 type Frame struct {
 	avFrame   *C.struct_AVFrame
 	mediaType int32
+	err       error
 	CgoMemoryManage
 }
 
@@ -222,4 +223,8 @@ func (f *Frame) SetChannels(val int) *Frame {
 func (f *Frame) SetQuality(val int) *Frame {
 	f.avFrame.quality = C.int(val)
 	return f
+}
+
+func (f *Frame) SetPictType() {
+	f.avFrame.pict_type = C.AV_PICTURE_TYPE_NONE
 }

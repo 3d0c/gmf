@@ -26,5 +26,13 @@ func TestOptionSet(t *testing.T) {
 	}
 
 	Release(cc2)
+
+	octx, err := NewOutputCtx(FindOutputFmt("hls", "file.hls", ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	octx.SetOptions([]*Option{{"start_number", 1}})
+
 	log.Println("Options work")
 }

@@ -5,12 +5,14 @@ package gmf
 #cgo pkg-config: libavcodec libavutil
 
 #include <string.h>
+#include <stdint.h>
 
 #include "libavcodec/avcodec.h"
 #include "libavutil/channel_layout.h"
 #include "libavutil/samplefmt.h"
 #include "libavutil/opt.h"
 #include "libavutil/mem.h"
+#include "libavutil/bprint.h"
 
 static int check_sample_fmt(AVCodec *codec, enum AVSampleFormat sample_fmt) {
     const enum AVSampleFormat *p = codec->sample_fmts;
@@ -62,14 +64,37 @@ static int select_channel_layout(AVCodec *codec) {
 static void call_av_freep(AVCodecContext *out){
     return av_freep(&out);
 }
+
+static char * gmf_get_channel_layout_name(int channels, int layout) {
+	AVBPrint pbuf;
+
+	av_bprint_init(&pbuf, 0, 1);
+    av_bprint_channel_layout(&pbuf, channels, layout);
+
+	char *result = av_malloc(sizeof(char)*1024);
+
+	memcpy(result, pbuf.str, pbuf.len);
+
+	av_bprint_clear(&pbuf);
+
+	return result;
+}
+
 */
 import "C"
 
 import (
 	"errors"
 	"fmt"
+	"syscall"
 	"unsafe"
-	//	"log"
+)
+
+const (
+	AVCOL_RANGE_UNSPECIFIED = iota
+	AVCOL_RANGE_MPEG        ///< the normal 219*2^(n-8) "MPEG" YUV ranges
+	AVCOL_RANGE_JPEG        ///< the normal     2^n-1   "JPEG" YUV ranges
+	AVCOL_RANGE_NB          ///< Not part of ABI
 )
 
 var (
@@ -106,9 +131,16 @@ var (
 	AV_SAMPLE_FMT_S32P int32 = C.AV_SAMPLE_FMT_S32P
 	AV_SAMPLE_FMT_FLTP int32 = C.AV_SAMPLE_FMT_FLTP
 	AV_SAMPLE_FMT_DBLP int32 = C.AV_SAMPLE_FMT_DBLP
+
+	color_range_names map[uint32]string = map[uint32]string{
+		AVCOL_RANGE_UNSPECIFIED: "unknown",
+		AVCOL_RANGE_MPEG:        "tv",
+		AVCOL_RANGE_JPEG:        "pc",
+	}
 )
 
 type SampleFmt int
+type avBprint C.struct_AVBprint
 
 type CodecCtx struct {
 	codec      *Codec
@@ -139,8 +171,8 @@ func NewCodecCtx(codec *Codec, options ...[]*Option) *CodecCtx {
 	return result
 }
 
-func (this *CodecCtx) CopyExtra(ist *Stream) *CodecCtx {
-	codec := this.avCodecCtx
+func (cc *CodecCtx) CopyExtra(ist *Stream) *CodecCtx {
+	codec := cc.avCodecCtx
 	icodec := ist.CodecCtx().avCodecCtx
 
 	codec.bits_per_raw_sample = icodec.bits_per_raw_sample
@@ -164,11 +196,11 @@ func (this *CodecCtx) CopyExtra(ist *Stream) *CodecCtx {
 
 	codec.has_b_frames = icodec.has_b_frames
 
-	return this
+	return cc
 }
 
-func (this *CodecCtx) CopyBasic(ist *Stream) *CodecCtx {
-	codec := this.avCodecCtx
+func (cc *CodecCtx) CopyBasic(ist *Stream) *CodecCtx {
+	codec := cc.avCodecCtx
 	icodec := ist.CodecCtx().avCodecCtx
 
 	codec.bit_rate = icodec.bit_rate
@@ -185,11 +217,11 @@ func (this *CodecCtx) CopyBasic(ist *Stream) *CodecCtx {
 
 	codec.channel_layout = icodec.channel_layout
 
-	return this
+	return cc
 }
 
-func (this *CodecCtx) Open(dict *Dict) error {
-	if this.IsOpen() {
+func (cc *CodecCtx) Open(dict *Dict) error {
+	if cc.IsOpen() {
 		return nil
 	}
 
@@ -198,167 +230,167 @@ func (this *CodecCtx) Open(dict *Dict) error {
 		avDict = dict.avDict
 	}
 
-	if averr := C.avcodec_open2(this.avCodecCtx, this.codec.avCodec, &avDict); averr < 0 {
-		return errors.New(fmt.Sprintf("Error opening codec '%s:%s', averror: %s", this.codec.Name(), this.codec.LongName(), AvError(int(averr))))
+	if averr := C.avcodec_open2(cc.avCodecCtx, cc.codec.avCodec, &avDict); averr < 0 {
+		return errors.New(fmt.Sprintf("Error opening codec '%s:%s', averror: %s", cc.codec.Name(), cc.codec.LongName(), AvError(int(averr))))
 	}
 
 	return nil
 }
 
-func (this *CodecCtx) Close() {
-	if nil != this.avCodecCtx {
-		C.avcodec_close(this.avCodecCtx)
-		this.avCodecCtx = nil
+func (cc *CodecCtx) Close() {
+	if nil != cc.avCodecCtx {
+		C.avcodec_close(cc.avCodecCtx)
+		cc.avCodecCtx = nil
 	}
 }
 
-func (this *CodecCtx) Free() {
-	this.CloseAndRelease()
+func (cc *CodecCtx) Free() {
+	cc.CloseAndRelease()
 }
 
-func (this *CodecCtx) CloseAndRelease() {
-	this.Close()
-	C.call_av_freep(this.avCodecCtx)
+func (cc *CodecCtx) CloseAndRelease() {
+	cc.Close()
+	C.call_av_freep(cc.avCodecCtx)
 }
 
 // @todo
-func (this *CodecCtx) SetOpt() {
+func (cc *CodecCtx) SetOpt() {
 	// mock
-	C.av_opt_set_int(unsafe.Pointer(this.avCodecCtx), C.CString("refcounted_frames"), 1, 0)
+	C.av_opt_set_int(unsafe.Pointer(cc.avCodecCtx), C.CString("refcounted_frames"), 1, 0)
 }
 
-func (this *CodecCtx) Codec() *Codec {
-	return &Codec{avCodec: this.avCodecCtx.codec}
+func (cc *CodecCtx) Codec() *Codec {
+	return &Codec{avCodec: cc.avCodecCtx.codec}
 }
 
-func (this *CodecCtx) Id() int {
-	return int(this.avCodecCtx.codec_id)
+func (cc *CodecCtx) Id() int {
+	return int(cc.avCodecCtx.codec_id)
 }
 
-func (this *CodecCtx) Type() int32 {
-	return int32(this.avCodecCtx.codec_type)
+func (cc *CodecCtx) Type() int32 {
+	return int32(cc.avCodecCtx.codec_type)
 }
 
-func (this *CodecCtx) Width() int {
-	return int(this.avCodecCtx.width)
+func (cc *CodecCtx) Width() int {
+	return int(cc.avCodecCtx.width)
 }
 
-func (this *CodecCtx) Height() int {
-	return int(this.avCodecCtx.height)
+func (cc *CodecCtx) Height() int {
+	return int(cc.avCodecCtx.height)
 }
 
-func (this *CodecCtx) PixFmt() int32 {
-	return int32(this.avCodecCtx.pix_fmt)
+func (cc *CodecCtx) PixFmt() int32 {
+	return int32(cc.avCodecCtx.pix_fmt)
 }
 
-func (this *CodecCtx) FrameSize() int {
-	return int(this.avCodecCtx.frame_size)
+func (cc *CodecCtx) FrameSize() int {
+	return int(cc.avCodecCtx.frame_size)
 }
 
-func (this *CodecCtx) SampleFmt() int32 {
-	return this.avCodecCtx.sample_fmt
+func (cc *CodecCtx) SampleFmt() int32 {
+	return cc.avCodecCtx.sample_fmt
 }
 
-func (this *CodecCtx) SampleRate() int {
-	return int(this.avCodecCtx.sample_rate)
+func (cc *CodecCtx) SampleRate() int {
+	return int(cc.avCodecCtx.sample_rate)
 }
 
-func (this *CodecCtx) Profile() int {
-	return int(this.avCodecCtx.profile)
+func (cc *CodecCtx) Profile() int {
+	return int(cc.avCodecCtx.profile)
 }
 
-func (this *CodecCtx) IsOpen() bool {
-	return (int(C.avcodec_is_open(this.avCodecCtx)) > 0)
+func (cc *CodecCtx) IsOpen() bool {
+	return (int(C.avcodec_is_open(cc.avCodecCtx)) > 0)
 }
 
-func (this *CodecCtx) SetProfile(profile int) *CodecCtx {
-	this.avCodecCtx.profile = C.int(profile)
-	return this
+func (cc *CodecCtx) SetProfile(profile int) *CodecCtx {
+	cc.avCodecCtx.profile = C.int(profile)
+	return cc
 }
 
-func (this *CodecCtx) TimeBase() AVRational {
-	return AVRational(this.avCodecCtx.time_base)
+func (cc *CodecCtx) TimeBase() AVRational {
+	return AVRational(cc.avCodecCtx.time_base)
 }
 
-func (this *CodecCtx) ChannelLayout() int {
-	return int(this.avCodecCtx.channel_layout)
+func (cc *CodecCtx) ChannelLayout() int {
+	return int(cc.avCodecCtx.channel_layout)
 }
-func (this *CodecCtx) SetChannelLayout(channelLayout int) {
-	this.avCodecCtx.channel_layout = C.uint64_t(channelLayout)
-}
-
-func (this *CodecCtx) BitRate() int {
-	return int(this.avCodecCtx.bit_rate)
+func (cc *CodecCtx) SetChannelLayout(channelLayout int) {
+	cc.avCodecCtx.channel_layout = C.uint64_t(channelLayout)
 }
 
-func (this *CodecCtx) Channels() int {
-	return int(this.avCodecCtx.channels)
+func (cc *CodecCtx) BitRate() int {
+	return int(cc.avCodecCtx.bit_rate)
 }
 
-func (this *CodecCtx) SetBitRate(val int) *CodecCtx {
-	this.avCodecCtx.bit_rate = C.int64_t(val)
-	return this
+func (cc *CodecCtx) Channels() int {
+	return int(cc.avCodecCtx.channels)
 }
 
-func (this *CodecCtx) SetWidth(val int) *CodecCtx {
-	this.avCodecCtx.width = C.int(val)
-	return this
+func (cc *CodecCtx) SetBitRate(val int) *CodecCtx {
+	cc.avCodecCtx.bit_rate = C.int64_t(val)
+	return cc
 }
 
-func (this *CodecCtx) SetHeight(val int) *CodecCtx {
-	this.avCodecCtx.height = C.int(val)
-	return this
+func (cc *CodecCtx) SetWidth(val int) *CodecCtx {
+	cc.avCodecCtx.width = C.int(val)
+	return cc
 }
 
-func (this *CodecCtx) SetDimension(w, h int) *CodecCtx {
-	this.avCodecCtx.width = C.int(w)
-	this.avCodecCtx.height = C.int(h)
-	return this
+func (cc *CodecCtx) SetHeight(val int) *CodecCtx {
+	cc.avCodecCtx.height = C.int(val)
+	return cc
 }
 
-func (this *CodecCtx) SetTimeBase(val AVR) *CodecCtx {
-	this.avCodecCtx.time_base.num = C.int(val.Num)
-	this.avCodecCtx.time_base.den = C.int(val.Den)
-	return this
+func (cc *CodecCtx) SetDimension(w, h int) *CodecCtx {
+	cc.avCodecCtx.width = C.int(w)
+	cc.avCodecCtx.height = C.int(h)
+	return cc
 }
 
-func (this *CodecCtx) SetGopSize(val int) *CodecCtx {
-	this.avCodecCtx.gop_size = C.int(val)
-	return this
+func (cc *CodecCtx) SetTimeBase(val AVR) *CodecCtx {
+	cc.avCodecCtx.time_base.num = C.int(val.Num)
+	cc.avCodecCtx.time_base.den = C.int(val.Den)
+	return cc
 }
 
-func (this *CodecCtx) SetMaxBFrames(val int) *CodecCtx {
-	this.avCodecCtx.max_b_frames = C.int(val)
-	return this
+func (cc *CodecCtx) SetGopSize(val int) *CodecCtx {
+	cc.avCodecCtx.gop_size = C.int(val)
+	return cc
 }
 
-func (this *CodecCtx) SetPixFmt(val int32) *CodecCtx {
-	this.avCodecCtx.pix_fmt = val
-	return this
+func (cc *CodecCtx) SetMaxBFrames(val int) *CodecCtx {
+	cc.avCodecCtx.max_b_frames = C.int(val)
+	return cc
 }
 
-func (this *CodecCtx) SetFlag(flag int) *CodecCtx {
-	this.avCodecCtx.flags |= C.int(flag)
-	return this
+func (cc *CodecCtx) SetPixFmt(val int32) *CodecCtx {
+	cc.avCodecCtx.pix_fmt = val
+	return cc
 }
 
-func (this *CodecCtx) SetMbDecision(val int) *CodecCtx {
-	this.avCodecCtx.mb_decision = C.int(val)
-	return this
+func (cc *CodecCtx) SetFlag(flag int) *CodecCtx {
+	cc.avCodecCtx.flags |= C.int(flag)
+	return cc
 }
 
-func (this *CodecCtx) SetSampleFmt(val int32) *CodecCtx {
-	if int(C.check_sample_fmt(this.codec.avCodec, val)) == 0 {
+func (cc *CodecCtx) SetMbDecision(val int) *CodecCtx {
+	cc.avCodecCtx.mb_decision = C.int(val)
+	return cc
+}
+
+func (cc *CodecCtx) SetSampleFmt(val int32) *CodecCtx {
+	if int(C.check_sample_fmt(cc.codec.avCodec, val)) == 0 {
 		panic(fmt.Sprintf("encoder doesn't support sample format %s", GetSampleFmtName(val)))
 	}
 
-	this.avCodecCtx.sample_fmt = val
-	return this
+	cc.avCodecCtx.sample_fmt = val
+	return cc
 }
 
-func (this *CodecCtx) SetSampleRate(val int) *CodecCtx {
-	this.avCodecCtx.sample_rate = C.int(val)
-	return this
+func (cc *CodecCtx) SetSampleRate(val int) *CodecCtx {
+	cc.avCodecCtx.sample_rate = C.int(val)
+	return cc
 }
 
 var (
@@ -369,33 +401,176 @@ var (
 	FF_COMPLIANCE_EXPERIMENTAL int = C.FF_COMPLIANCE_EXPERIMENTAL
 )
 
-func (this *CodecCtx) SetStrictCompliance(val int) *CodecCtx {
-	this.avCodecCtx.strict_std_compliance = C.int(val)
-	return this
+func (cc *CodecCtx) SetStrictCompliance(val int) *CodecCtx {
+	cc.avCodecCtx.strict_std_compliance = C.int(val)
+	return cc
 }
 
-func (this *CodecCtx) SetHasBframes(val int) *CodecCtx {
-	this.avCodecCtx.has_b_frames = C.int(val)
-	return this
+func (cc *CodecCtx) SetHasBframes(val int) *CodecCtx {
+	cc.avCodecCtx.has_b_frames = C.int(val)
+	return cc
 }
 
-func (this *CodecCtx) SetChannels(val int) *CodecCtx {
-	this.avCodecCtx.channels = C.int(val)
-	return this
+func (cc *CodecCtx) SetChannels(val int) *CodecCtx {
+	cc.avCodecCtx.channels = C.int(val)
+	return cc
 }
 
-func (this *CodecCtx) SelectSampleRate() int {
-	return int(C.select_sample_rate(this.codec.avCodec))
+func (cc *CodecCtx) SelectSampleRate() int {
+	return int(C.select_sample_rate(cc.codec.avCodec))
 }
 
-func (this *CodecCtx) SelectChannelLayout() int {
-	return int(C.select_channel_layout(this.codec.avCodec))
+func (cc *CodecCtx) SelectChannelLayout() int {
+	return int(C.select_channel_layout(cc.codec.avCodec))
 }
 
-func (this *CodecCtx) FlushBuffers() {
-	C.avcodec_flush_buffers(this.avCodecCtx)
+func (cc *CodecCtx) FlushBuffers() {
+	C.avcodec_flush_buffers(cc.avCodecCtx)
 }
 
-func (this *CodecCtx) Dump() {
-	fmt.Println(this.avCodecCtx)
+func (cc *CodecCtx) Dump() {
+	fmt.Println(cc.avCodecCtx)
+}
+
+func (cc *CodecCtx) GetFrameRate() AVRational {
+	return AVRational(cc.avCodecCtx.framerate)
+}
+
+func (cc *CodecCtx) GetProfileName() string {
+	return C.GoString(C.avcodec_profile_name(cc.avCodecCtx.codec_id, cc.avCodecCtx.profile))
+}
+
+func (cc *CodecCtx) GetMediaType() string {
+	return C.GoString(C.av_get_media_type_string(cc.avCodecCtx.codec_type))
+}
+
+func (cc *CodecCtx) GetCodecTag() uint32 {
+	return uint32(cc.avCodecCtx.codec_tag)
+}
+
+func (cc *CodecCtx) GetCodecTagName() string {
+	var (
+		ct     uint32 = uint32(cc.avCodecCtx.codec_tag)
+		result string
+	)
+
+	for i := 0; i < 4; i++ {
+		c := ct & 0xff
+		result += fmt.Sprintf("%c", c)
+		ct >>= 8
+	}
+
+	return fmt.Sprintf("%v", result)
+}
+
+func (cc *CodecCtx) GetCodedWith() int {
+	return int(cc.avCodecCtx.coded_width)
+}
+
+func (cc *CodecCtx) GetCodedHeight() int {
+	return int(cc.avCodecCtx.coded_height)
+}
+
+func (cc *CodecCtx) GetBFrames() int {
+	return int(cc.avCodecCtx.has_b_frames)
+}
+
+func (cc *CodecCtx) GetPixFmtName() string {
+	// return C.GoString(C.av_get_pix_fmt_name(cc.avCodecCtx.pix_fmt))
+	return "unknown"
+}
+
+func (cc *CodecCtx) GetColorRangeName() string {
+	return color_range_names[cc.avCodecCtx.color_range]
+}
+
+func (cc *CodecCtx) GetRefs() int {
+	return int(cc.avCodecCtx.refs)
+}
+
+func (cc *CodecCtx) GetSampleFmtName() string {
+	return C.GoString(C.av_get_sample_fmt_name(cc.avCodecCtx.sample_fmt))
+}
+
+func (cc *CodecCtx) GetChannelLayoutName() string {
+	str := C.GoString(C.gmf_get_channel_layout_name(C.int(cc.Channels()), C.int(cc.ChannelLayout())))
+
+	return str
+}
+
+func (cc *CodecCtx) GetBitsPerSample() int {
+	return int(C.av_get_bits_per_sample(cc.codec.avCodec.id))
+}
+
+func (cc *CodecCtx) Decode(pkt *Packet) ([]*Frame, error) {
+	var (
+		ret    int
+		result []*Frame = make([]*Frame, 0)
+	)
+
+	if pkt == nil {
+		ret = int(C.avcodec_send_packet(cc.avCodecCtx, nil))
+	} else {
+		ret = int(C.avcodec_send_packet(cc.avCodecCtx, &pkt.avPacket))
+	}
+	if ret < 0 {
+		return nil, AvError(ret)
+	}
+
+	for {
+		frame := NewFrame()
+
+		ret = int(C.avcodec_receive_frame(cc.avCodecCtx, frame.avFrame))
+		if AvErrno(ret) == syscall.EAGAIN || ret == AVERROR_EOF {
+			frame.Free()
+			break
+		} else if ret < 0 {
+			frame.Free()
+			return nil, AvError(ret)
+		}
+
+		frame.SetPictType()
+
+		result = append(result, frame)
+	}
+
+	return result, nil
+}
+
+func (cc *CodecCtx) Encode(frames []*Frame, drain int) ([]*Packet, error) {
+	var (
+		ret    int
+		result []*Packet = make([]*Packet, 0)
+	)
+
+	if len(frames) == 0 && drain >= 0 {
+		frames = append(frames, nil)
+	}
+
+	for _, frame := range frames {
+		if frame == nil {
+			ret = int(C.avcodec_send_frame(cc.avCodecCtx, nil))
+		} else {
+			ret = int(C.avcodec_send_frame(cc.avCodecCtx, frame.avFrame))
+		}
+		if ret < 0 {
+			return nil, fmt.Errorf("error during encoding - %s", AvError(ret))
+		}
+
+		for {
+			pkt := NewPacket()
+			ret = int(C.avcodec_receive_packet(cc.avCodecCtx, &pkt.avPacket))
+			if ret != 0 {
+				pkt.Free()
+				break
+			}
+
+			result = append(result, pkt)
+		}
+		if frame != nil {
+			frame.Free()
+		}
+	}
+
+	return result, nil
 }

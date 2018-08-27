@@ -71,7 +71,7 @@ func main() {
 	cc := NewCodecCtx(codec)
 	defer Release(cc)
 
-	cc.SetPixFmt(AV_PIX_FMT_RGB24).SetWidth(srcVideoStream.CodecCtx().Width()).SetHeight(srcVideoStream.CodecCtx().Height())
+	cc.SetPixFmt(AV_PIX_FMT_RGB24).SetWidth(srcVideoStream.CodecCtx().Width()).SetHeight(srcVideoStream.CodecCtx().Height()).SetTimeBase(AVR{1, 25})
 
 	if codec.IsExperimental() {
 		cc.SetStrictCompliance(FF_COMPLIANCE_EXPERIMENTAL)

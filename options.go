@@ -16,15 +16,12 @@ import (
 	"unsafe"
 )
 
-// @todo remove from code
-type Options struct{}
-
 type Option struct {
 	Key string
 	Val interface{}
 }
 
-func (this *Option) Set(ctx interface{}) {
+func (this Option) Set(ctx interface{}) {
 	ckey := C.CString(this.Key)
 	defer C.free(unsafe.Pointer(ckey))
 
@@ -32,19 +29,26 @@ func (this *Option) Set(ctx interface{}) {
 
 	switch t := this.Val.(type) {
 	case int:
-		ret = int(C.av_opt_set_int(unsafe.Pointer(reflect.ValueOf(ctx).Pointer()), ckey, C.int64_t(this.Val.(int)), 0))
+		log.Printf("===set as int\n")
+		ret = int(C.av_opt_set_int(unsafe.Pointer(reflect.ValueOf(ctx).Pointer()), ckey, C.int64_t(this.Val.(int)), C.AV_OPT_SEARCH_CHILDREN))
 
 	case SampleFmt:
-		ret = int(C.av_opt_set_sample_fmt(unsafe.Pointer(reflect.ValueOf(ctx).Pointer()), ckey, (int32)(this.Val.(SampleFmt)), 0))
+		ret = int(C.av_opt_set_sample_fmt(unsafe.Pointer(reflect.ValueOf(ctx).Pointer()), ckey, (int32)(this.Val.(SampleFmt)), C.AV_OPT_SEARCH_CHILDREN))
 
 	case float64:
-		ret = int(C.av_opt_set_double(unsafe.Pointer(reflect.ValueOf(ctx).Pointer()), ckey, (C.double)(this.Val.(float64)), 0))
+		log.Printf("===set as float\n")
+		ret = int(C.av_opt_set_double(unsafe.Pointer(reflect.ValueOf(ctx).Pointer()), ckey, (C.double)(this.Val.(float64)), C.AV_OPT_SEARCH_CHILDREN))
 
 	case AVR:
-		ret = int(C.av_opt_set_q(unsafe.Pointer(reflect.ValueOf(ctx).Pointer()), ckey, C.AVRational(this.Val.(AVR).AVRational()), 0))
+		ret = int(C.av_opt_set_q(unsafe.Pointer(reflect.ValueOf(ctx).Pointer()), ckey, C.AVRational(this.Val.(AVR).AVRational()), C.AV_OPT_SEARCH_CHILDREN))
 
 	case []byte:
-		ret = int(C.av_opt_set_bin(unsafe.Pointer(reflect.ValueOf(ctx).Pointer()), ckey, (*C.uint8_t)(unsafe.Pointer(&this.Val.([]byte)[0])), C.int(len(ctx.([]byte))), 0))
+		ret = int(C.av_opt_set_bin(unsafe.Pointer(reflect.ValueOf(ctx).Pointer()), ckey, (*C.uint8_t)(unsafe.Pointer(&this.Val.([]byte)[0])), C.int(len(ctx.([]byte))), C.AV_OPT_SEARCH_CHILDREN))
+
+	case string:
+		cval := C.CString(this.Val.(string))
+		defer C.free(unsafe.Pointer(cval))
+		ret = int(C.av_opt_set(unsafe.Pointer(reflect.ValueOf(ctx).Pointer()), ckey, cval, C.AV_OPT_SEARCH_CHILDREN))
 
 	case *Dict:
 		ret = int(C.av_opt_set_dict(unsafe.Pointer(reflect.ValueOf(ctx).Pointer()), &this.Val.(*Dict).avDict))
@@ -54,6 +58,6 @@ func (this *Option) Set(ctx interface{}) {
 	}
 
 	if ret < 0 {
-		log.Printf("unable to set key '%s' value '%d', error: %s\n", this.Key, this.Val.(int), AvError(int(ret)))
+		log.Printf("unable to set key '%s' value '%v', error: %s\n", this.Key, this.Val, AvError(int(ret)))
 	}
 }

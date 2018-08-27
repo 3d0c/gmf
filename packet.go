@@ -71,6 +71,44 @@ func (p *Packet) Frames(cc *CodecCtx) (*Frame, error) {
 	return nil, AvError(ret)
 }
 
+func (p *Packet) SendPacket(cc *CodecCtx) error {
+	var ret int
+
+	if p.frames[cc.Type()] == nil {
+		p.frames[cc.Type()] = &Frame{avFrame: C.av_frame_alloc(), mediaType: cc.Type()}
+	}
+
+	ret = int(C.avcodec_send_packet(cc.avCodecCtx, &p.avPacket))
+	if ret < 0 && ret != AVERROR_EOF {
+		return AvError(ret)
+	} else if ret < 0 {
+		return AvError(ret)
+	}
+
+	return nil
+}
+
+func (p *Packet) ReceiveFrame(cc *CodecCtx) (*Frame, int) {
+	var ret int
+
+	if p.frames[cc.Type()] == nil {
+		panic("frame is not initialized")
+	}
+	ret = int(C.avcodec_receive_frame(cc.avCodecCtx, p.frames[cc.Type()].avFrame))
+
+	return p.frames[cc.Type()], ret
+}
+
+func ReceiveFrame(cc *CodecCtx) (*Frame, int) {
+	var ret int
+
+	frame := NewFrame()
+
+	ret = int(C.avcodec_receive_frame(cc.avCodecCtx, frame.avFrame))
+
+	return frame, ret
+}
+
 func (p *Packet) Pts() int64 {
 	return int64(p.avPacket.pts)
 }
@@ -91,11 +129,11 @@ func (p *Packet) Flags() int {
 	return int(p.avPacket.flags)
 }
 
-func (p *Packet) Duration() int {
-	return int(p.avPacket.duration)
+func (p *Packet) Duration() int64 {
+	return int64(p.avPacket.duration)
 }
 
-func (p *Packet) SetDuration(duration int) {
+func (p *Packet) SetDuration(duration int64) {
 	p.avPacket.duration = C.int64_t(duration)
 }
 
@@ -124,8 +162,7 @@ func (p *Packet) Clone() *Packet {
 }
 
 func (p *Packet) Dump() {
-	fmt.Println(p.avPacket)
-	fmt.Printf("idx: %d\npts: %d\ndts: %d\nsize: %d\ndata: % x\n", p.StreamIndex(), p.avPacket.pts, p.avPacket.dts, p.avPacket.size, C.GoBytes(unsafe.Pointer(p.avPacket.data), 128))
+	fmt.Printf("idx: %d\npts: %d\ndts: %d\nsize: %d\nduration:%d\npos:%d\ndata: % x\n", p.StreamIndex(), p.avPacket.pts, p.avPacket.dts, p.avPacket.size, p.avPacket.duration, p.avPacket.pos, C.GoBytes(unsafe.Pointer(p.avPacket.data), 128))
 	fmt.Println("------------------------------")
 
 }
@@ -138,3 +175,7 @@ func (p *Packet) SetStreamIndex(val int) *Packet {
 func (p *Packet) Free() {
 	C.av_packet_unref(&p.avPacket)
 }
+
+// func (p *Packet) DurationMs() int64 {
+// 	return RescaleRnd(int64(p.avPacket.duration), int64(1000), int64(AV_TIME_BASE))
+// }
