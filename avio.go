@@ -70,7 +70,7 @@ func NewAVIOContext(ctx *FmtCtx, handlers *AVIOHandlers, size ...int) (*AVIOCont
 	if len(size) == 1 {
 		bufferSize = size[0]
 	}
-	fmt.Printf("Init buffer with %d\n", bufferSize)
+
 	buffer := (*C.uchar)(C.av_malloc(C.size_t(bufferSize)))
 
 	if buffer == nil {

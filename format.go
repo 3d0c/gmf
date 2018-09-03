@@ -560,6 +560,10 @@ func (this *FmtCtx) Position() int {
 	return int(this.avCtx.pb.pos)
 }
 
+func (this *FmtCtx) SetProbeSize(v int64) {
+	this.avCtx.probesize = C.int64_t(v)
+}
+
 type OutputFmt struct {
 	Filename    string
 	avOutputFmt *C.struct_AVOutputFormat

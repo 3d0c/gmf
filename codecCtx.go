@@ -171,6 +171,12 @@ func NewCodecCtx(codec *Codec, options ...[]*Option) *CodecCtx {
 	return result
 }
 
+func (cc *CodecCtx) SetOptions(options []Option) {
+	for _, option := range options {
+		option.Set(cc.avCodecCtx)
+	}
+}
+
 func (cc *CodecCtx) CopyExtra(ist *Stream) *CodecCtx {
 	codec := cc.avCodecCtx
 	icodec := ist.CodecCtx().avCodecCtx
@@ -436,6 +442,10 @@ func (cc *CodecCtx) GetFrameRate() AVRational {
 	return AVRational(cc.avCodecCtx.framerate)
 }
 
+func (cc *CodecCtx) GetProfile() int {
+	return int(cc.avCodecCtx.profile)
+}
+
 func (cc *CodecCtx) GetProfileName() string {
 	return C.GoString(C.avcodec_profile_name(cc.avCodecCtx.codec_id, cc.avCodecCtx.profile))
 }
@@ -500,6 +510,10 @@ func (cc *CodecCtx) GetChannelLayoutName() string {
 
 func (cc *CodecCtx) GetBitsPerSample() int {
 	return int(C.av_get_bits_per_sample(cc.codec.avCodec.id))
+}
+
+func (cc *CodecCtx) GetVideoSize() string {
+	return fmt.Sprintf("%dx%d", cc.Width(), cc.Height())
 }
 
 func (cc *CodecCtx) Decode(pkt *Packet) ([]*Frame, error) {
