@@ -77,10 +77,6 @@ func (f *Frame) SetPts(val int64) {
 	f.avFrame.pts = (_Ctype_int64_t)(val)
 }
 
-func (f *Frame) SetBestPts() {
-	f.avFrame.pts = C.av_frame_get_best_effort_timestamp(f.avFrame)
-}
-
 // AVPixelFormat for video frames, AVSampleFormat for audio
 func (f *Frame) Format() int {
 	return int(f.avFrame.format)
@@ -108,18 +104,6 @@ func (f *Frame) PktDts() int {
 
 func (f *Frame) SetPktDts(val int) {
 	f.avFrame.pkt_dts = (_Ctype_int64_t)(val)
-}
-
-func (f *Frame) TimeStamp() int {
-	return int(C.av_frame_get_best_effort_timestamp(f.avFrame))
-}
-
-func (f *Frame) PktPos() int {
-	return int(C.av_frame_get_pkt_pos(f.avFrame))
-}
-
-func (f *Frame) PktDuration() int {
-	return int(C.av_frame_get_pkt_duration(f.avFrame))
 }
 
 func (f *Frame) KeyFrame() int {
