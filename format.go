@@ -406,7 +406,7 @@ func (this *FmtCtx) NewStream(c *Codec) *Stream {
 	if st := C.avformat_new_stream(this.avCtx, avCodec); st == nil {
 		return nil
 	} else {
-		this.streams[int(st.index)] = &Stream{avStream: st, Pts: 0}
+		this.streams[int(st.index)] = &Stream{avStream: st}
 		Retain(this.streams[int(st.index)])
 		return this.streams[int(st.index)]
 	}
@@ -427,7 +427,9 @@ func (this *FmtCtx) GetStream(idx int) (*Stream, error) {
 	if _, ok := this.streams[idx]; !ok {
 		// create instance of Stream wrapper, when stream was initialized
 		// by demuxer. it means that this is an input context.
-		this.streams[idx] = &Stream{avStream: C.gmf_get_stream(this.avCtx, C.int(idx))}
+		this.streams[idx] = &Stream{
+			avStream: C.gmf_get_stream(this.avCtx, C.int(idx)),
+		}
 	}
 
 	return this.streams[idx], nil

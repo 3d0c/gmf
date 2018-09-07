@@ -9,15 +9,17 @@ package gmf
 */
 import "C"
 
+import (
+	"fmt"
+)
+
 type Stream struct {
 	avStream *C.struct_AVStream
 	cc       *CodecCtx
-	Pts      int64
 	CgoMemoryManage
 }
 
 func (s *Stream) Free() {
-	// nothing to do
 }
 
 func (s *Stream) DumpContexCodec(codec *CodecCtx) {
@@ -63,6 +65,15 @@ func (s *Stream) SetCodecCtx(cc *CodecCtx) {
 	if s.cc != nil {
 		s.cc.avCodecCtx = cc.avCodecCtx
 	}
+}
+
+func (s *Stream) SetCodecParameters(cp *CodecParameters) error {
+	if cp == nil || cp.avCodecParameters == nil {
+		return fmt.Errorf("codec parameters are not initialized")
+	}
+
+	s.avStream.codecpar = cp.avCodecParameters
+	return nil
 }
 
 func (s *Stream) IsCodecCtxSet() bool {
@@ -126,4 +137,20 @@ func (s *Stream) GetAvgFrameRate() AVRational {
 
 func (s *Stream) GetStartTime() int64 {
 	return int64(s.avStream.start_time)
+}
+
+func (s *Stream) GetCodecPar() *CodecParameters {
+	cp := NewCodecParameters()
+	cp.avCodecParameters = s.avStream.codecpar
+
+	return cp
+}
+
+func (s *Stream) CopyCodecPar(cp *CodecParameters) error {
+	ret := int(C.avcodec_parameters_copy(s.avStream.codecpar, cp.avCodecParameters))
+	if ret < 0 {
+		return AvError(ret)
+	}
+
+	return nil
 }

@@ -156,7 +156,7 @@ func (p *Packet) Data() []byte {
 func (p *Packet) Clone() *Packet {
 	np := NewPacket()
 
-	C.av_copy_packet(&np.avPacket, &p.avPacket)
+	C.av_packet_ref(&np.avPacket, &p.avPacket)
 
 	return np
 }
