@@ -16,10 +16,26 @@ import (
 type Stream struct {
 	avStream *C.struct_AVStream
 	cc       *CodecCtx
+	SwsCtx   *SwsCtx
+	SwrCtx   *SwrCtx
+	AvFifo   *AVAudioFifo
+	DstFrame *Frame
 	CgoMemoryManage
 }
 
 func (s *Stream) Free() {
+	if s.SwsCtx != nil {
+		s.SwsCtx.Free()
+	}
+	if s.DstFrame != nil {
+		s.DstFrame.Free()
+	}
+	if s.SwrCtx != nil {
+		s.SwrCtx.Free()
+	}
+	if s.AvFifo != nil {
+		s.AvFifo.Free()
+	}
 }
 
 func (s *Stream) DumpContexCodec(codec *CodecCtx) {

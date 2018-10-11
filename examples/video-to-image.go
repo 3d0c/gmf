@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/jpeg"
 	"log"
@@ -114,6 +115,10 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		f, _ := os.Create(fmt.Sprintf("tmp/%d.jp2", i))
+		f.Write(p.Data())
+		f.Close()
 
 		width, height := frame.Width(), frame.Height()
 		img := new(image.RGBA)

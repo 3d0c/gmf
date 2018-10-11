@@ -8,7 +8,7 @@ import (
 var codecsMap = make(map[int]*CodecDescriptor)
 
 func TestCodecs(t *testing.T) {
-	// Codecs glabal is initialized inside init() block in codec.go
+	InitDesc()
 	nbCodecs := len(Codecs)
 
 	if nbCodecs == 0 {
@@ -17,9 +17,3 @@ func TestCodecs(t *testing.T) {
 		log.Println(nbCodecs, "codec registered")
 	}
 }
-
-// func TestListCodecs(t *testing.T) {
-// 	for _, codecDesc := range Codecs {
-// 		log.Printf("%s, %s\n", codecDesc.Name(), codecDesc.LongName())
-// 	}
-// }

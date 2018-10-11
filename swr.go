@@ -11,13 +11,23 @@ package gmf
 #include <libavcodec/avcodec.h>
 #include <libavutil/frame.h>
 
-int gmf_sw_resample(SwrContext* ctx, AVFrame*dstFrame, AVFrame*srcFrame){
+int gmf_sw_resample(SwrContext* ctx, AVFrame* dstFrame, AVFrame* srcFrame){
 	return swr_convert(ctx, dstFrame->data, dstFrame->nb_samples,
 		(const uint8_t **)srcFrame->data, srcFrame->nb_samples);
 }
 
+int gmf_swr_flush(SwrContext* ctx, AVFrame* dstFrame) {
+	return swr_convert(ctx, dstFrame->data, dstFrame->nb_samples,
+		NULL, 0);
+}
+
 */
 import "C"
+
+import (
+	"fmt"
+	// "unsafe"
+)
 
 type SwrCtx struct {
 	swrCtx *C.struct_SwrContext
@@ -32,7 +42,8 @@ func NewSwrCtx(options []*Option, cc *CodecCtx) *SwrCtx {
 		option.Set(this.swrCtx)
 	}
 
-	if int(C.swr_init(this.swrCtx)) < 0 {
+	if ret := int(C.swr_init(this.swrCtx)); ret < 0 {
+		fmt.Printf("error swr_init: %s\n", AvError(ret))
 		return nil
 	}
 
@@ -47,18 +58,21 @@ func (this *SwrCtx) Convert(input *Frame) *Frame {
 	if this.cc == nil {
 		return nil
 	}
-	dstSamples := input.NbSamples()
+
+	srcSamples := input.NbSamples()
 	channels := this.cc.Channels()
 	format := this.cc.SampleFmt()
-	dstFrame, _ := NewAudioFrame(format, channels, dstSamples)
+	dstFrame, _ := NewAudioFrame(format, channels, srcSamples)
 
 	C.gmf_sw_resample(this.swrCtx, dstFrame.avFrame, input.avFrame)
-	// frame := NewFrame()
 
-	// dstNbSamples := C.av_rescale_rnd(C.swr_get_delay(this.swrCtx, this.cc.avCodecCtx.sample_rate)+input.avFrame.nb_samples, C.int64_t(this.cc.SampleRate()), this.cc.SampleRate(), C.AV_ROUND_UP)
+	return dstFrame
+}
 
-	// if dstNbSamples > input.NbSamples() {
-	// }
+func (this *SwrCtx) Flush(nbSamples int) *Frame {
+	dstFrame, _ := NewAudioFrame(this.cc.SampleFmt(), this.cc.Channels(), nbSamples)
+
+	C.gmf_swr_flush(this.swrCtx, dstFrame.avFrame)
 
 	return dstFrame
 }

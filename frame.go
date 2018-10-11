@@ -6,6 +6,7 @@ package gmf
 #include "libavcodec/avcodec.h"
 #include "libavutil/frame.h"
 #include "libavutil/imgutils.h"
+#include "libavutil/timestamp.h"
 
 void gmf_set_frame_data(AVFrame *frame, int idx, int l_size, uint8_t data) {
     if(!frame) {
@@ -211,4 +212,16 @@ func (f *Frame) SetQuality(val int) *Frame {
 
 func (f *Frame) SetPictType() {
 	f.avFrame.pict_type = C.AV_PICTURE_TYPE_NONE
+}
+
+func (f *Frame) IsNil() bool {
+	if f.avFrame == nil {
+		return true
+	}
+
+	return false
+}
+
+func (f *Frame) Time(timebase AVRational) int {
+	return int(float64(timebase.AVR().Num) / float64(timebase.AVR().Den) * float64(f.Pts()))
 }

@@ -73,6 +73,7 @@ static char * gmf_get_channel_layout_name(int channels, int layout) {
 
 	char *result = av_malloc(sizeof(char)*1024);
 
+	memset(&result, 0x00, sizeof(result));
 	memcpy(result, pbuf.str, pbuf.len);
 
 	av_bprint_clear(&pbuf);
@@ -139,7 +140,6 @@ var (
 	}
 )
 
-type SampleFmt int
 type avBprint C.struct_AVBprint
 
 type CodecCtx struct {

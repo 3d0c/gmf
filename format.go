@@ -93,7 +93,7 @@ type FmtCtx struct {
 }
 
 func init() {
-	C.av_register_all()
+	// C.av_register_all()
 	C.avformat_network_init()
 	C.avdevice_register_all()
 }

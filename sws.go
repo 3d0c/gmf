@@ -29,6 +29,9 @@ var (
 
 type SwsCtx struct {
 	swsCtx *C.struct_SwsContext
+	Width  int
+	Height int
+	PixFmt int32
 	CgoMemoryManage
 }
 
@@ -39,7 +42,12 @@ func NewSwsCtx(src *CodecCtx, dst *CodecCtx, method int) *SwsCtx {
 		return nil
 	}
 
-	return &SwsCtx{swsCtx: ctx}
+	return &SwsCtx{
+		swsCtx: ctx,
+		Width:  dst.Width(),
+		Height: dst.Height(),
+		PixFmt: dst.PixFmt(),
+	}
 }
 
 func NewPicSwsCtx(srcWidth int, srcHeight int, srcPixFmt int32, dst *CodecCtx, method int) *SwsCtx {
@@ -63,4 +71,23 @@ func (this *SwsCtx) Scale(src *Frame, dst *Frame) {
 		C.int(src.Height()),
 		(**C.uint8_t)(unsafe.Pointer(&dst.avFrame.data)),
 		(*_Ctype_int)(unsafe.Pointer(&dst.avFrame.linesize)))
+}
+
+func (this *SwsCtx) Scale2(src *Frame) (*Frame, error) {
+	dst := NewFrame().SetWidth(this.Width).SetHeight(this.Height).SetFormat(this.PixFmt)
+
+	if err := dst.ImgAlloc(); err != nil {
+		return nil, err
+	}
+
+	C.sws_scale(
+		this.swsCtx,
+		(**C.uint8_t)(unsafe.Pointer(&src.avFrame.data)),
+		(*_Ctype_int)(unsafe.Pointer(&src.avFrame.linesize)),
+		0,
+		C.int(src.Height()),
+		(**C.uint8_t)(unsafe.Pointer(&dst.avFrame.data)),
+		(*_Ctype_int)(unsafe.Pointer(&dst.avFrame.linesize)))
+
+	return dst, nil
 }

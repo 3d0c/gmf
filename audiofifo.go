@@ -44,6 +44,7 @@ int read_fifo(AVAudioFifo* fifo, AVFrame* frame, int nb_samples){
 }
 */
 import "C"
+import "fmt"
 
 type AVAudioFifo struct {
 	avAudioFifo  *C.struct_AVAudioFifo
@@ -54,6 +55,7 @@ type AVAudioFifo struct {
 func NewAVAudioFifo(sampleFormat int32, channels int, nb_samples int) *AVAudioFifo {
 	fifo := C.av_audio_fifo_alloc(sampleFormat, C.int(channels), C.int(nb_samples))
 	if fifo == nil {
+		fmt.Printf("unable to allocate fifo context\n")
 		return nil
 	}
 
@@ -67,32 +69,34 @@ func NewAVAudioFifo(sampleFormat int32, channels int, nb_samples int) *AVAudioFi
 func (this *AVAudioFifo) SamplesToRead() int {
 	return int(C.av_audio_fifo_size(this.avAudioFifo))
 }
+
 func (this *AVAudioFifo) SamplesCanWrite() int {
 	return int(C.av_audio_fifo_space(this.avAudioFifo))
 }
+
 func (this *AVAudioFifo) Write(frame *Frame) int {
-	return int(C.write_fifo(this.avAudioFifo,
-		frame.avFrame,
-		C.int(frame.NbSamples())))
+	return int(C.write_fifo(this.avAudioFifo, frame.avFrame, C.int(frame.NbSamples())))
 }
+
 func (this *AVAudioFifo) Read(sampleCount int) *Frame {
 	rsize := this.SamplesToRead()
 	size := rsize
+
 	if sampleCount <= rsize {
 		size = sampleCount
 	}
+
 	frame, err := NewAudioFrame(this.sampleFormat, this.channels, size)
 	if frame == nil || err != nil {
 		return nil
 	}
-	if int(C.read_fifo(this.avAudioFifo,
-		frame.avFrame,
-		C.int(size))) == size {
+
+	if int(C.read_fifo(this.avAudioFifo, frame.avFrame, C.int(size))) == size {
 		return frame
-	} else {
-		frame.Release()
-		return nil
 	}
+
+	frame.Release()
+	return nil
 }
 
 func (this *AVAudioFifo) Free() {

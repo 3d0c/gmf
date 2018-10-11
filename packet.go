@@ -176,6 +176,6 @@ func (p *Packet) Free() {
 	C.av_packet_unref(&p.avPacket)
 }
 
-// func (p *Packet) DurationMs() int64 {
-// 	return RescaleRnd(int64(p.avPacket.duration), int64(1000), int64(AV_TIME_BASE))
-// }
+func (p *Packet) Time(timebase AVRational) int {
+	return int(float64(timebase.AVR().Num) / float64(timebase.AVR().Den) * float64(p.Pts()))
+}

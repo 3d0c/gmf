@@ -112,8 +112,8 @@ var (
 )
 
 func init() {
-	C.avcodec_register_all()
-	InitDesc()
+	// C.avcodec_register_all()
+	// InitDesc()
 }
 
 type Codec struct {

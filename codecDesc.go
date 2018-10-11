@@ -11,6 +11,7 @@ import "C"
 
 import (
 	"log"
+	"unsafe"
 )
 
 type CodecDescriptor struct {
@@ -31,8 +32,10 @@ func InitDesc() {
 
 	Codecs = make([]*CodecDescriptor, 0)
 
+	var i int = 0
+
 	for {
-		if c = C.av_codec_next(c); c == nil {
+		if c = C.av_codec_iterate((*unsafe.Pointer)(unsafe.Pointer(&i))); c == nil {
 			break
 		}
 
@@ -48,7 +51,6 @@ func InitDesc() {
 
 		Codecs = append(Codecs, result)
 	}
-
 }
 
 func (this *CodecDescriptor) Id() int {

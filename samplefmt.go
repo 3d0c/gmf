@@ -19,14 +19,16 @@ import (
 // Unfinished.
 //
 
+type SampleFormat int
+
 type Sample struct {
 	data     **C.uint8_t
 	linesize *int
-	format   SampleFmt
+	format   SampleFormat
 	CgoMemoryManage
 }
 
-func NewSample(nbSamples, nbChannels int, format SampleFmt) error {
+func NewSample(nbSamples, nbChannels int, format SampleFormat) error {
 	panic("This stuff is unfinished.")
 	this := &Sample{format: format}
 
