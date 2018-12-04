@@ -23,13 +23,13 @@ func main() {
 
 	videoEncCtx := NewCodecCtx(codec)
 	if videoEncCtx == nil {
-		fatal("failed to create a new codec context")
+		fatal(errors.New("failed to create a new codec context"))
 	}
 	defer Release(videoEncCtx)
 
 	outputCtx, err := NewOutputCtx(outputfilename)
 	if err != nil {
-		fatal("failed to create a new output context")
+		fatal(errors.New("failed to create a new output context"))
 	}
 
 	videoEncCtx.
