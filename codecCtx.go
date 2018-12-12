@@ -516,6 +516,10 @@ func (cc *CodecCtx) GetVideoSize() string {
 	return fmt.Sprintf("%dx%d", cc.Width(), cc.Height())
 }
 
+func (cc *CodecCtx) GetAspectRation() AVRational {
+	return AVRational(cc.avCodecCtx.sample_aspect_ratio)
+}
+
 func (cc *CodecCtx) Decode(pkt *Packet) ([]*Frame, error) {
 	var (
 		ret    int
@@ -542,8 +546,6 @@ func (cc *CodecCtx) Decode(pkt *Packet) ([]*Frame, error) {
 			frame.Free()
 			return nil, AvError(ret)
 		}
-
-		frame.SetPictType()
 
 		result = append(result, frame)
 	}

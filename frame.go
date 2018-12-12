@@ -182,6 +182,10 @@ func (f *Frame) LineSize(idx int) int {
 	return int(C.gmf_get_frame_line_size(f.avFrame, C.int(idx)))
 }
 
+func (f *Frame) Dump() {
+	fmt.Printf("%v\n", f.avFrame)
+}
+
 func (f *Frame) CloneNewFrame() *Frame {
 	return &Frame{avFrame: C.av_frame_clone(f.avFrame)}
 }
@@ -224,4 +228,9 @@ func (f *Frame) IsNil() bool {
 
 func (f *Frame) Time(timebase AVRational) int {
 	return int(float64(timebase.AVR().Num) / float64(timebase.AVR().Den) * float64(f.Pts()))
+}
+
+// temp. export unexported. remove it
+func (f *Frame) GetAVFrame() *C.struct_AVFrame {
+	return f.avFrame
 }

@@ -59,9 +59,11 @@ func NewPicSwsCtx(srcWidth int, srcHeight int, srcPixFmt int32, dst *CodecCtx, m
 
 	return &SwsCtx{swsCtx: ctx}
 }
+
 func (this *SwsCtx) Free() {
 	C.sws_freeContext(this.swsCtx)
 }
+
 func (this *SwsCtx) Scale(src *Frame, dst *Frame) {
 	C.sws_scale(
 		this.swsCtx,
