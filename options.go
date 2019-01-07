@@ -31,6 +31,9 @@ func (this Option) Set(ctx interface{}) {
 	case int:
 		ret = int(C.av_opt_set_int(unsafe.Pointer(reflect.ValueOf(ctx).Pointer()), ckey, C.int64_t(this.Val.(int)), C.AV_OPT_SEARCH_CHILDREN))
 
+	case []int32:
+		ret = int(C.av_opt_set_bin(unsafe.Pointer(reflect.ValueOf(ctx).Pointer()), ckey, (*C.uchar)(unsafe.Pointer(&this.Val.([]int)[0])), C.int(this.Val.([]int)[0]), C.AV_OPT_SEARCH_CHILDREN))
+
 	case int32:
 		ret = int(C.av_opt_set_int(unsafe.Pointer(reflect.ValueOf(ctx).Pointer()), ckey, C.int64_t(this.Val.(int32)), C.AV_OPT_SEARCH_CHILDREN))
 

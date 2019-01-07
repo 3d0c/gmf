@@ -516,6 +516,10 @@ func (cc *CodecCtx) GetVideoSize() string {
 	return fmt.Sprintf("%dx%d", cc.Width(), cc.Height())
 }
 
+func (cc *CodecCtx) GetAspectRation() AVRational {
+	return AVRational(cc.avCodecCtx.sample_aspect_ratio)
+}
+
 func (cc *CodecCtx) Decode(pkt *Packet) ([]*Frame, error) {
 	var (
 		ret    int
@@ -542,8 +546,6 @@ func (cc *CodecCtx) Decode(pkt *Packet) ([]*Frame, error) {
 			frame.Free()
 			return nil, AvError(ret)
 		}
-
-		frame.SetPictType()
 
 		result = append(result, frame)
 	}
@@ -587,4 +589,27 @@ func (cc *CodecCtx) Encode(frames []*Frame, drain int) ([]*Packet, error) {
 	}
 
 	return result, nil
+}
+
+func (cc *CodecCtx) Decode2(pkt *Packet) (*Frame, int) {
+	var (
+		ret int
+	)
+
+	if pkt == nil {
+		ret = int(C.avcodec_send_packet(cc.avCodecCtx, nil))
+	} else {
+		ret = int(C.avcodec_send_packet(cc.avCodecCtx, &pkt.avPacket))
+	}
+	if ret < 0 {
+		return nil, ret
+	}
+
+	frame := NewFrame()
+
+	if ret = int(C.avcodec_receive_frame(cc.avCodecCtx, frame.avFrame)); ret < 0 {
+		return nil, ret
+	}
+
+	return frame, 0
 }

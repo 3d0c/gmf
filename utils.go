@@ -9,9 +9,15 @@ package gmf
 #include "libavutil/rational.h"
 #include "libavutil/samplefmt.h"
 #include "libavcodec/avcodec.h"
+#include "libavutil/imgutils.h"
 
 uint32_t return_int (int num) {
 	return (uint32_t)(num);
+}
+
+uint8_t * gmf_alloc_buffer(int32_t fmt, int width, int height) {
+	int numBytes = av_image_get_buffer_size(fmt, width, height, 0);
+	return (uint8_t *) av_malloc(numBytes*sizeof(uint8_t));
 }
 
 */
