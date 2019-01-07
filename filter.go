@@ -9,23 +9,6 @@ package gmf
 #include <libavfilter/buffersrc.h>
 #include <libavutil/pixdesc.h>
 
-int gmf_create_filter(AVFilterContext **filt_ctx, const AVFilter *filt, const char *name, const char *args, void *opaque, AVFilterGraph *graph_ctx, int i) {
-	return avfilter_graph_create_filter(&filt_ctx[i], filt, name, args, opaque, graph_ctx);
-}
-
-int gmf_av_buffersrc_add_frame_flags(AVFilterContext **filt_ctx, AVFrame *frame, int flags, int i) {
-	return av_buffersrc_add_frame_flags(filt_ctx[i], frame, flags);
-}
-
-// XXX PTS! Pass actual pts instead of 0.
-int gmf_av_buffersrc_close(AVFilterContext **filt_ctx, int i) {
-	return av_buffersrc_close(filt_ctx[i], 0, AV_BUFFERSRC_FLAG_PUSH);
-}
-
-AVFilterContext *gmf_get_current(AVFilterContext **filt_ctx, int i) {
-	return filt_ctx[i];
-}
-
 */
 import "C"
 

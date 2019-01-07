@@ -229,8 +229,3 @@ func (f *Frame) IsNil() bool {
 func (f *Frame) Time(timebase AVRational) int {
 	return int(float64(timebase.AVR().Num) / float64(timebase.AVR().Den) * float64(f.Pts()))
 }
-
-// temp. export unexported. remove it
-func (f *Frame) GetAVFrame() *C.struct_AVFrame {
-	return f.avFrame
-}
