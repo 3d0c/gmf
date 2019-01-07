@@ -17,6 +17,11 @@ int gmf_av_buffersrc_add_frame_flags(AVFilterContext **filt_ctx, AVFrame *frame,
 	return av_buffersrc_add_frame_flags(filt_ctx[i], frame, flags);
 }
 
+// XXX PTS! Pass actual pts instead of 0.
+int gmf_av_buffersrc_close(AVFilterContext **filt_ctx, int i) {
+	return av_buffersrc_close(filt_ctx[i], 0, AV_BUFFERSRC_FLAG_PUSH);
+}
+
 AVFilterContext *gmf_get_current(AVFilterContext **filt_ctx, int i) {
 	return filt_ctx[i];
 }
@@ -31,19 +36,22 @@ import (
 )
 
 const (
+	AV_BUFFERSINK_FLAG_PEEK       = 1
 	AV_BUFFERSINK_FLAG_NO_REQUEST = 2
 	AV_BUFFERSRC_FLAG_PUSH        = 4
 )
 
 type Filter struct {
-	bufferCtx   **_Ctype_AVFilterContext
+	bufferCtx   []*_Ctype_AVFilterContext
 	sinkCtx     *_Ctype_AVFilterContext
 	filterGraph *_Ctype_AVFilterGraph
-	bufferCtxNb int
 }
 
 func NewFilter(desc string, srcStreams []*Stream, ost *Stream, options []*Option) (*Filter, error) {
-	f := &Filter{}
+	f := &Filter{
+		filterGraph: C.avfilter_graph_alloc(),
+		bufferCtx:   make([]*_Ctype_AVFilterContext, 0),
+	}
 
 	var (
 		ret, i  int
@@ -52,18 +60,7 @@ func NewFilter(desc string, srcStreams []*Stream, ost *Stream, options []*Option
 		outputs *_Ctype_AVFilterInOut
 		curr    *_Ctype_AVFilterInOut
 		last    *_Ctype_AVFilterContext
-		format  *_Ctype_AVFilterContext
 	)
-
-	cnameOut := C.CString("out")
-	defer C.free(unsafe.Pointer(cnameOut))
-
-	f.filterGraph = C.avfilter_graph_alloc()
-
-	f.bufferCtxNb = len(srcStreams)
-	csz := C.ulong(f.bufferCtxNb)
-
-	f.bufferCtx = (**_Ctype_struct_AVFilterContext)(C.av_calloc(csz, C.sizeof_AVFilterContext))
 
 	cdesc := C.CString(desc)
 	defer C.free(unsafe.Pointer(cdesc))
@@ -74,98 +71,104 @@ func NewFilter(desc string, srcStreams []*Stream, ost *Stream, options []*Option
 		&inputs,
 		&outputs,
 	)); ret < 0 {
-		return nil, fmt.Errorf("error parsing filter graph - %s", AvError(ret))
+		return f, fmt.Errorf("error parsing filter graph - %s", AvError(ret))
 	}
+	defer C.avfilter_inout_free(&inputs)
+	defer C.avfilter_inout_free(&outputs)
 
 	for curr = inputs; curr != nil; curr = curr.next {
 		if len(srcStreams) < i {
 			return nil, fmt.Errorf("not enough of source streams")
 		}
-		srcStream := srcStreams[i]
 
-		args = fmt.Sprintf("video_size=%s:pix_fmt=%d:time_base=%s:pixel_aspect=%s:sws_param=flags=%d", srcStream.CodecCtx().GetVideoSize(), srcStream.CodecCtx().PixFmt(), srcStream.TimeBase().AVR(), srcStream.CodecCtx().GetAspectRation().AVR(), SWS_BILINEAR)
+		src := srcStreams[i]
 
-		cargs := C.CString(args)
+		args = fmt.Sprintf("video_size=%s:pix_fmt=%d:time_base=%s:pixel_aspect=%s:sws_param=flags=%d:frame_rate=%s", src.CodecCtx().GetVideoSize(), src.CodecCtx().PixFmt(), src.TimeBase().AVR(), src.CodecCtx().GetAspectRation().AVR(), SWS_BILINEAR, src.GetRFrameRate().AVR().String())
 
-		ci := C.int(i)
-
-		name := fmt.Sprintf("in_%d", i)
-		cname := C.CString(name)
-
-		fmt.Printf("args: %s\n", args)
-
-		if ret = int(C.gmf_create_filter(
-			f.bufferCtx,
-			C.avfilter_get_by_name(C.CString("buffer")),
-			cname,
-			cargs,
-			nil,
-			f.filterGraph,
-			ci)); ret < 0 {
-			return nil, fmt.Errorf("error creating filter 'buffer' - %s", AvError(ret))
+		if last, ret = f.create("buffer", fmt.Sprintf("in_%d", i), args); ret < 0 {
+			return f, fmt.Errorf("error creating input buffer - %s", AvError(ret))
 		}
 
-		last = C.gmf_get_current(f.bufferCtx, ci)
+		f.bufferCtx = append(f.bufferCtx, last)
 
 		if ret = int(C.avfilter_link(last, 0, curr.filter_ctx, C.uint(i))); ret < 0 {
-			return nil, fmt.Errorf("error linking filters - %s", AvError(ret))
+			return f, fmt.Errorf("error linking filters - %s", AvError(ret))
 		}
 
 		i++
 	}
 
-	if ret = int(C.avfilter_graph_create_filter(
-		&f.sinkCtx,
-		C.avfilter_get_by_name(C.CString("buffersink")),
-		cnameOut,
-		nil,
-		nil,
-		f.filterGraph)); ret < 0 {
-		return nil, fmt.Errorf("error creating filter 'buffersink' - %s", AvError(ret))
+	if f.sinkCtx, ret = f.create("buffersink", "out", ""); ret < 0 {
+		return f, fmt.Errorf("error creating filter 'buffersink' - %s", AvError(ret))
 	}
 
-	// XXX PIXFMT!
-	if ret = int(C.avfilter_graph_create_filter(
-		&format,
-		C.avfilter_get_by_name(C.CString("format")),
-		C.CString("format"),
-		C.CString("yuv420p"),
-		nil,
-		f.filterGraph)); ret < 0 {
-		return nil, fmt.Errorf("error creating filter 'buffer' - %s", AvError(ret))
+	// XXX hardcoded PIXFMT!
+	if last, ret = f.create("format", "format", "yuv420p"); ret < 0 {
+		return f, fmt.Errorf("error creating format filter - %s", AvError(ret))
 	}
 
-	if ret = int(C.avfilter_link(outputs.filter_ctx, 0, format, 0)); ret < 0 {
-		return nil, fmt.Errorf("error linking output filters - %s", AvError(ret))
+	if ret = int(C.avfilter_link(outputs.filter_ctx, 0, last, 0)); ret < 0 {
+		return f, fmt.Errorf("error linking output filters - %s", AvError(ret))
 	}
 
-	if ret = int(C.avfilter_link(format, 0, f.sinkCtx, 0)); ret < 0 {
-		return nil, fmt.Errorf("error linking output filters - %s", AvError(ret))
+	if ret = int(C.avfilter_link(last, 0, f.sinkCtx, 0)); ret < 0 {
+		return f, fmt.Errorf("error linking output filters - %s", AvError(ret))
 	}
 
 	if ret = int(C.avfilter_graph_config(f.filterGraph, nil)); ret < 0 {
-		return nil, fmt.Errorf("graph config error - %s", AvError(ret))
+		return f, fmt.Errorf("graph config error - %s", AvError(ret))
 	}
-
-	fmt.Printf("%s\n", C.GoString(C.avfilter_graph_dump(f.filterGraph, nil)))
-
-	C.avfilter_inout_free(&inputs)
-	C.avfilter_inout_free(&outputs)
 
 	return f, nil
 }
 
-func (f *Filter) AddFrame(frame *Frame, istIdx int) error {
+func (f *Filter) create(filter, name, args string) (*_Ctype_AVFilterContext, int) {
+	var (
+		ctx *_Ctype_AVFilterContext
+		ret int
+	)
+
+	cfilter := C.CString(filter)
+	cname := C.CString(name)
+	cargs := C.CString(args)
+
+	ret = int(C.avfilter_graph_create_filter(
+		&ctx,
+		C.avfilter_get_by_name(cfilter),
+		cname,
+		cargs,
+		nil,
+		f.filterGraph))
+
+	C.free(unsafe.Pointer(cfilter))
+	C.free(unsafe.Pointer(cname))
+	C.free(unsafe.Pointer(cargs))
+
+	return ctx, ret
+}
+
+func (f *Filter) AddFrame(frame *Frame, istIdx int, flag int) error {
 	var ret int
 
-	fmt.Printf("AddFrame: i=%d, width=%d, height=%d\n", istIdx, frame.Width(), frame.Height())
+	if istIdx >= len(f.bufferCtx) {
+		return fmt.Errorf("unexpected stream index #%d", istIdx)
+	}
 
-	if ret = int(C.gmf_av_buffersrc_add_frame_flags(
-		f.bufferCtx,
+	if ret = int(C.av_buffersrc_add_frame_flags(
+		f.bufferCtx[istIdx],
 		frame.avFrame,
-		AV_BUFFERSRC_FLAG_PUSH,
-		C.int(istIdx)),
+		C.int(flag)),
 	); ret < 0 {
+		return AvError(ret)
+	}
+
+	return nil
+}
+
+func (f *Filter) Close(istIdx int) error {
+	var ret int
+
+	if ret = int(C.av_buffersrc_close(f.bufferCtx[istIdx], 0, AV_BUFFERSRC_FLAG_PUSH)); ret < 0 {
 		return AvError(ret)
 	}
 
@@ -182,7 +185,6 @@ func (f *Filter) GetFrame() ([]*Frame, error) {
 		frame := NewFrame()
 
 		ret = int(C.av_buffersink_get_frame_flags(f.sinkCtx, frame.avFrame, AV_BUFFERSINK_FLAG_NO_REQUEST))
-		fmt.Printf("ret=%d\n", ret)
 		if AvErrno(ret) == syscall.EAGAIN || ret == AVERROR_EOF {
 			frame.Free()
 			break
@@ -194,26 +196,9 @@ func (f *Filter) GetFrame() ([]*Frame, error) {
 		result = append(result, frame)
 	}
 
-	return result, nil
-}
+	f.RequestOldest()
 
-func (f *Filter) GetFrame2() ([]*Frame, int) {
-	var (
-		ret    int
-		result []*Frame = make([]*Frame, 0)
-	)
-
-	for {
-		frame := NewFrame()
-
-		if ret = int(C.av_buffersink_get_frame_flags(f.sinkCtx, frame.avFrame, AV_BUFFERSINK_FLAG_NO_REQUEST)); ret < 0 {
-			return nil, ret
-		}
-
-		result = append(result, frame)
-	}
-
-	return result, ret
+	return result, AvError(ret)
 }
 
 func (f *Filter) RequestOldest() error {
@@ -224,4 +209,20 @@ func (f *Filter) RequestOldest() error {
 	}
 
 	return nil
+}
+
+func (f *Filter) Dump() {
+	fmt.Println(C.GoString(C.avfilter_graph_dump(f.filterGraph, nil)))
+}
+
+func (f *Filter) Release() {
+	if f.sinkCtx != nil {
+		C.avfilter_free(f.sinkCtx)
+	}
+
+	for i, _ := range f.bufferCtx {
+		C.avfilter_free(f.bufferCtx[i])
+	}
+
+	C.avfilter_graph_free(&f.filterGraph)
 }

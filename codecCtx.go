@@ -590,3 +590,26 @@ func (cc *CodecCtx) Encode(frames []*Frame, drain int) ([]*Packet, error) {
 
 	return result, nil
 }
+
+func (cc *CodecCtx) Decode2(pkt *Packet) (*Frame, int) {
+	var (
+		ret int
+	)
+
+	if pkt == nil {
+		ret = int(C.avcodec_send_packet(cc.avCodecCtx, nil))
+	} else {
+		ret = int(C.avcodec_send_packet(cc.avCodecCtx, &pkt.avPacket))
+	}
+	if ret < 0 {
+		return nil, ret
+	}
+
+	frame := NewFrame()
+
+	if ret = int(C.avcodec_receive_frame(cc.avCodecCtx, frame.avFrame)); ret < 0 {
+		return nil, ret
+	}
+
+	return frame, 0
+}

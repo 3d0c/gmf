@@ -3,6 +3,7 @@
 *.mpg
 *.exe
 !examples/tests-sample.mp4
+!examples/bbb.mp4
 remuxing
 transcode
 *.ts
