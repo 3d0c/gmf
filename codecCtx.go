@@ -71,9 +71,8 @@ static char * gmf_get_channel_layout_name(int channels, int layout) {
 	av_bprint_init(&pbuf, 0, 1);
     av_bprint_channel_layout(&pbuf, channels, layout);
 
-	char *result = av_malloc(sizeof(char)*1024);
+	char *result = av_mallocz(pbuf.len);
 
-	memset(&result, 0x00, sizeof(result));
 	memcpy(result, pbuf.str, pbuf.len);
 
 	av_bprint_clear(&pbuf);
