@@ -569,13 +569,13 @@ func (cc *CodecCtx) Encode(frames []*Frame, drain int) ([]*Packet, error) {
 			ret = int(C.avcodec_send_frame(cc.avCodecCtx, frame.avFrame))
 		}
 		if ret < 0 {
-			return nil, fmt.Errorf("error during encoding - %s", AvError(ret))
+			return nil, AvError(ret)
 		}
 
 		for {
 			pkt := NewPacket()
 			ret = int(C.avcodec_receive_packet(cc.avCodecCtx, &pkt.avPacket))
-			if ret != 0 {
+			if ret < 0 {
 				pkt.Free()
 				break
 			}

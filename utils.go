@@ -109,10 +109,6 @@ func GetSampleFmtName(fmt int32) string {
 	return C.GoString(C.av_get_sample_fmt_name(fmt))
 }
 
-// func RescaleRnd(a, b, c int64) int64 {
-// 	return int64(C.av_rescale_rnd(C.int64_t(a), C.int64_t(b), C.int64_t(c), 3))
-// }
-
 func AvInvQ(q AVRational) AVRational {
 	avr := q.AVR()
 	return AVRational{C.int(avr.Den), C.int(avr.Num)}
