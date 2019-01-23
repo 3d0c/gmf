@@ -1,10 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"runtime/debug"
-	"strconv"
 
 	. "github.com/3d0c/gmf"
 )
@@ -22,10 +22,10 @@ func assert(i interface{}, err error) interface{} {
 	return i
 }
 
-var i int = 0
+var i, j int = 0, 0
 
 func writeFile(b []byte) {
-	name := "./tmp/" + strconv.Itoa(i) + ".jpg"
+	name := fmt.Sprintf("./tmp/%d%d.png", j, i)
 
 	fp, err := os.Create(name)
 	if err != nil {
@@ -37,6 +37,10 @@ func writeFile(b []byte) {
 			fatal(err)
 		}
 		i++
+		if i == 9 {
+			i = 0
+			j++
+		}
 	}()
 
 	if n, err := fp.Write(b); err != nil {
@@ -63,7 +67,7 @@ func main() {
 		log.Println("No video stream found in", srcFileName)
 	}
 
-	codec, err := FindEncoder(AV_CODEC_ID_JPEG2000)
+	codec, err := FindEncoder(AV_CODEC_ID_PNG)
 	if err != nil {
 		fatal(err)
 	}
