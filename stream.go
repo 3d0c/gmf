@@ -14,12 +14,15 @@ import (
 )
 
 type Stream struct {
-	avStream *C.struct_AVStream
-	cc       *CodecCtx
-	SwsCtx   *SwsCtx
-	SwrCtx   *SwrCtx
-	AvFifo   *AVAudioFifo
-	DstFrame *Frame
+	avStream  *C.struct_AVStream
+	cc        *CodecCtx
+	SwsCtx    *SwsCtx
+	SwrCtx    *SwrCtx
+	AvFifo    *AVAudioFifo
+	DstFrame  *Frame
+	Pts       int64
+	Resampler func(*Stream, []*Frame, bool) []*Frame
+	Rescaler  func(*Stream, []*Frame) []*Frame
 	CgoMemoryManage
 }
 

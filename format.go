@@ -49,6 +49,7 @@ import "C"
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"syscall"
 	"time"
@@ -358,6 +359,9 @@ func (this *FmtCtx) GetNextPacket() (*Packet, error) {
 			time.Sleep(10000 * time.Microsecond)
 			continue
 		}
+		if ret == AVERROR_EOF {
+			return nil, io.EOF
+		}
 		if ret < 0 {
 			return nil, AvError(ret)
 		}
@@ -420,7 +424,7 @@ func (this *FmtCtx) StreamsCnt() int {
 }
 
 func (this *FmtCtx) GetStream(idx int) (*Stream, error) {
-	if idx > this.StreamsCnt() || this.StreamsCnt() == 0 {
+	if idx > this.StreamsCnt()-1 || this.StreamsCnt() == 0 {
 		return nil, errors.New(fmt.Sprintf("Stream index '%d' is out of range. There is only '%d' streams.", idx, this.StreamsCnt()))
 	}
 
@@ -564,6 +568,10 @@ func (this *FmtCtx) Position() int {
 
 func (this *FmtCtx) SetProbeSize(v int64) {
 	this.avCtx.probesize = C.int64_t(v)
+}
+
+func (this *FmtCtx) GetProbeSize() int64 {
+	return int64(this.avCtx.probesize)
 }
 
 type OutputFmt struct {
