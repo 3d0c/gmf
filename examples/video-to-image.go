@@ -104,10 +104,16 @@ func main() {
 			continue
 		}
 
+	decode:
 		frame, err := packet.Frames(codecCtx)
 		if err != nil {
+			// Retry if EAGAIN
+			if err.Error() == "Resource temporarily unavailable" {
+				goto decode
+			}
 			log.Fatal(err)
 		}
+
 		swsCtx.Scale(frame, dstFrame)
 
 		p, err := dstFrame.Encode(cc)
