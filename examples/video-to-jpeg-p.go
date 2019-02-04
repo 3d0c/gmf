@@ -50,7 +50,7 @@ func writeFile(b []byte) {
 	}
 }
 
-func encodeWorker(data chan *Frame, wg *sync.WaitGroup, srcCtx *CodecCtx) {
+func encodeWorker(data chan *Frame, wg *sync.WaitGroup, srcCtx *CodecCtx, timeBase AVR) {
 	defer wg.Done()
 	log.Println("worker started")
 	codec, err := FindEncoder(AV_CODEC_ID_JPEG2000)
@@ -63,7 +63,7 @@ func encodeWorker(data chan *Frame, wg *sync.WaitGroup, srcCtx *CodecCtx) {
 
 	w, h := srcCtx.Width(), srcCtx.Height()
 
-	cc.SetPixFmt(AV_PIX_FMT_RGB24).SetWidth(w).SetHeight(h)
+	cc.SetPixFmt(AV_PIX_FMT_RGB24).SetWidth(w).SetHeight(h).SetTimeBase(timeBase)
 
 	if codec.IsExperimental() {
 		cc.SetStrictCompliance(FF_COMPLIANCE_EXPERIMENTAL)
@@ -112,7 +112,11 @@ func main() {
 	os.Mkdir("./tmp", 0755)
 
 	wnum := flag.Int("wnum", 10, "number of workers")
-	srcFileName := flag.String("input", "tests-sample.mp4", "input file")
+
+	srcFileName := "tests-sample.mp4"
+	if len(os.Args) > 1 {
+		srcFileName = os.Args[1]
+	}
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stdout, "Usage: %s [OPTIONS]\n", os.Args[0])
@@ -121,7 +125,7 @@ func main() {
 
 	flag.Parse()
 
-	inputCtx := assert(NewInputCtx(*srcFileName)).(*FmtCtx)
+	inputCtx := assert(NewInputCtx(srcFileName)).(*FmtCtx)
 	defer inputCtx.CloseInputAndRelease()
 
 	srcVideoStream, err := inputCtx.GetBestStream(AVMEDIA_TYPE_VIDEO)
@@ -135,7 +139,7 @@ func main() {
 
 	for i := 0; i < *wnum; i++ {
 		wg.Add(1)
-		go encodeWorker(dataChan, wg, srcVideoStream.CodecCtx())
+		go encodeWorker(dataChan, wg, srcVideoStream.CodecCtx(), srcVideoStream.TimeBase().AVR())
 	}
 
 	for packet := range inputCtx.GetNewPackets() {
@@ -146,8 +150,13 @@ func main() {
 
 		ist := assert(inputCtx.GetStream(packet.StreamIndex())).(*Stream)
 
+	decode:
 		frame, err := packet.Frames(ist.CodecCtx())
 		if err != nil {
+			// Retry if EAGAIN
+			if err.Error() == "Resource temporarily unavailable" {
+				goto decode
+			}
 			log.Fatal(err)
 		}
 

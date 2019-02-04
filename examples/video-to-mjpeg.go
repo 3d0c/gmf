@@ -84,6 +84,19 @@ func main() {
 		fatal(err)
 	}
 
+	swsCtx := NewSwsCtx(srcVideoStream.CodecCtx(), cc, SWS_BICUBIC)
+	defer Release(swsCtx)
+
+	dstFrame := NewFrame().
+		SetWidth(srcVideoStream.CodecCtx().Width()).
+		SetHeight(srcVideoStream.CodecCtx().Height()).
+		SetFormat(AV_PIX_FMT_YUVJ420P) // see above
+	defer Release(dstFrame)
+
+	if err := dstFrame.ImgAlloc(); err != nil {
+		fatal(err)
+	}
+
 	for packet := range inputCtx.GetNewPackets() {
 		if packet.StreamIndex() != srcVideoStream.Index() {
 			// skip non video streams
@@ -91,12 +104,19 @@ func main() {
 		}
 		ist := assert(inputCtx.GetStream(packet.StreamIndex())).(*Stream)
 
+	decode:
 		frame, err := packet.Frames(ist.CodecCtx())
 		if err != nil {
+			// Retry if EAGAIN
+			if err.Error() == "Resource temporarily unavailable" {
+				goto decode
+			}
 			log.Fatal(err)
 		}
 
-		p, err := frame.Encode(cc)
+		swsCtx.Scale(frame, dstFrame)
+
+		p, err := dstFrame.Encode(cc)
 		if err != nil {
 			Release(p)
 			fatal(err)
@@ -105,6 +125,7 @@ func main() {
 		writeFile(p.Data())
 
 		Release(p)
+		Release(frame)
 		Release(packet)
 	}
 }

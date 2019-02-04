@@ -105,8 +105,13 @@ func main() {
 		}
 		ist := assert(inputCtx.GetStream(packet.StreamIndex())).(*Stream)
 
+	decode:
 		frame, err := packet.Frames(ist.CodecCtx())
 		if err != nil {
+			// Retry if EAGAIN
+			if err.Error() == "Resource temporarily unavailable" {
+				goto decode
+			}
 			log.Fatal(err)
 		}
 

@@ -141,8 +141,13 @@ func main() {
 
 		fmt.Println(p)
 
+	decode:
 		frame, err := p.Frames(ist.CodecCtx())
 		if err != nil {
+			// Retry if EAGAIN
+			if err.Error() == "Resource temporarily unavailable" {
+				goto decode
+			}
 			log.Fatal(err)
 		}
 
