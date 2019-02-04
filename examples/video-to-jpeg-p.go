@@ -112,7 +112,11 @@ func main() {
 	os.Mkdir("./tmp", 0755)
 
 	wnum := flag.Int("wnum", 10, "number of workers")
-	srcFileName := flag.String("input", "tests-sample.mp4", "input file")
+
+	srcFileName := "tests-sample.mp4"
+	if len(os.Args) > 1 {
+		srcFileName = os.Args[1]
+	}
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stdout, "Usage: %s [OPTIONS]\n", os.Args[0])
@@ -121,7 +125,7 @@ func main() {
 
 	flag.Parse()
 
-	inputCtx := assert(NewInputCtx(*srcFileName)).(*FmtCtx)
+	inputCtx := assert(NewInputCtx(srcFileName)).(*FmtCtx)
 	defer inputCtx.CloseInputAndRelease()
 
 	srcVideoStream, err := inputCtx.GetBestStream(AVMEDIA_TYPE_VIDEO)
