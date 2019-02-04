@@ -50,7 +50,7 @@ func writeFile(b []byte) {
 	}
 }
 
-func encodeWorker(data chan *Frame, wg *sync.WaitGroup, srcCtx *CodecCtx) {
+func encodeWorker(data chan *Frame, wg *sync.WaitGroup, srcCtx *CodecCtx, timeBase AVR) {
 	defer wg.Done()
 	log.Println("worker started")
 	codec, err := FindEncoder(AV_CODEC_ID_JPEG2000)
@@ -63,7 +63,7 @@ func encodeWorker(data chan *Frame, wg *sync.WaitGroup, srcCtx *CodecCtx) {
 
 	w, h := srcCtx.Width(), srcCtx.Height()
 
-	cc.SetPixFmt(AV_PIX_FMT_RGB24).SetWidth(w).SetHeight(h)
+	cc.SetPixFmt(AV_PIX_FMT_RGB24).SetWidth(w).SetHeight(h).SetTimeBase(timeBase)
 
 	if codec.IsExperimental() {
 		cc.SetStrictCompliance(FF_COMPLIANCE_EXPERIMENTAL)
@@ -135,7 +135,7 @@ func main() {
 
 	for i := 0; i < *wnum; i++ {
 		wg.Add(1)
-		go encodeWorker(dataChan, wg, srcVideoStream.CodecCtx())
+		go encodeWorker(dataChan, wg, srcVideoStream.CodecCtx(), srcVideoStream.TimeBase().AVR())
 	}
 
 	for packet := range inputCtx.GetNewPackets() {
