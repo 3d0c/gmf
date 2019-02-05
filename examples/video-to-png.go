@@ -22,10 +22,11 @@ func assert(i interface{}, err error) interface{} {
 	return i
 }
 
-var i, j int = 0, 0
+var frameIndex int = 0
 
 func writeFile(b []byte) {
-	name := fmt.Sprintf("./tmp/%d%d.png", j, i)
+	name := fmt.Sprintf("./tmp/%03d.png", frameIndex)
+	frameIndex++
 
 	fp, err := os.Create(name)
 	if err != nil {
@@ -35,11 +36,6 @@ func writeFile(b []byte) {
 	defer func() {
 		if err := fp.Close(); err != nil {
 			fatal(err)
-		}
-		i++
-		if i == 9 {
-			i = 0
-			j++
 		}
 	}()
 
