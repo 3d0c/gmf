@@ -100,13 +100,14 @@ func main() {
 			continue
 		}
 
-	decode:
+		// decode:
 		var errorCode int
 		frame, errorCode := srcVideoStream.CodecCtx().Decode2(packet)
 		if errorCode != 0 {
 			// Retry if EAGAIN
 			if errorCode == -35 {
-				goto decode
+				continue
+				// goto decode
 			}
 
 			log.Fatal(errorCode)
@@ -124,6 +125,23 @@ func main() {
 		Release(packet)
 	}
 
-	Release(dstFrame)
+	// Try decoding until EOF
+	for {
+		println("flushing...")
+		frame, errorCode := srcVideoStream.CodecCtx().Decode2(nil)
+		if errorCode == AVERROR_EOF {
+			break
+		}
 
+		swsCtx.Scale(frame, dstFrame)
+
+		if p, err := dstFrame.Encode(cc); p != nil {
+			writeFile(p.Data())
+			defer Release(p)
+		} else if err != nil {
+			fatal(err)
+		}
+	}
+
+	Release(dstFrame)
 }
