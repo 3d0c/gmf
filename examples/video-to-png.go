@@ -103,16 +103,17 @@ func main() {
 			// skip non video streams
 			continue
 		}
-		ist := assert(inputCtx.GetStream(packet.StreamIndex())).(*Stream)
 
 	decode:
-		frame, err := packet.Frames(ist.CodecCtx())
-		if err != nil {
+		var errorCode int
+		frame, errorCode := srcVideoStream.CodecCtx().Decode2(packet)
+		if errorCode != 0 {
 			// Retry if EAGAIN
-			if err.Error() == "Resource temporarily unavailable" {
+			if errorCode == -35 {
 				goto decode
 			}
-			log.Fatal(err)
+
+			log.Fatal(errorCode)
 		}
 
 		swsCtx.Scale(frame, dstFrame)

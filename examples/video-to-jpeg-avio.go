@@ -142,13 +142,13 @@ func main() {
 		fmt.Println(p)
 
 	decode:
-		frame, err := p.Frames(ist.CodecCtx())
-		if err != nil {
+		frame, errorCode := ist.codecCtx().Decode2(p)
+		if errorCode != 0 {
 			// Retry if EAGAIN
-			if err.Error() == "Resource temporarily unavailable" {
+			if errorCode == -35 {
 				goto decode
 			}
-			log.Fatal(err)
+			log.Fatal(errorCode)
 		}
 
 		swsCtx.Scale(frame, dstFrame)
