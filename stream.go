@@ -2,9 +2,10 @@ package gmf
 
 /*
 
-#cgo pkg-config: libavformat
+#cgo pkg-config: libavformat libavcodec
 
 #include "libavformat/avformat.h"
+#include "libavcodec/avcodec.h"
 
 */
 import "C"
@@ -42,7 +43,7 @@ func (s *Stream) Free() {
 }
 
 func (s *Stream) DumpContexCodec(codec *CodecCtx) {
-	ret := C.avcodec_copy_context(s.avStream.codec, codec.avCodecCtx)
+	ret := C.avcodec_parameters_from_context(s.avStream.codecpar, codec.avCodecCtx)
 	if ret < 0 {
 		panic("Failed to copy context from input to output stream codec context\n")
 	}
