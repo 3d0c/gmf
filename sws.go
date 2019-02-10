@@ -10,6 +10,7 @@ package gmf
 import "C"
 
 import (
+	"log"
 	"unsafe"
 )
 
@@ -92,4 +93,39 @@ func (this *SwsCtx) Scale2(src *Frame) (*Frame, error) {
 		(*_Ctype_int)(unsafe.Pointer(&dst.avFrame.linesize)))
 
 	return dst, nil
+}
+
+func DefaultRescaler(st *Stream, frames []*Frame) []*Frame {
+	var (
+		result   []*Frame = make([]*Frame, 0)
+		tmpFrame *Frame
+		err      error
+	)
+
+	if st.SwsCtx == nil {
+		return frames
+	}
+
+	for i, _ := range frames {
+		if tmpFrame, err = st.SwsCtx.Scale2(frames[i]); err != nil {
+			log.Printf("Error scaling frame - %s\n", err)
+			tmpFrame.Free()
+			continue
+		}
+
+		tmpFrame.SetPts(frames[i].Pts())
+		tmpFrame.SetPktDts(frames[i].PktDts())
+
+		result = append(result, tmpFrame)
+	}
+
+	for i := 0; i < len(frames); i++ {
+		if frames[i] != nil {
+			frames[i].Free()
+		}
+	}
+
+	frames = nil
+
+	return result
 }

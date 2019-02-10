@@ -191,7 +191,9 @@ func (f *Frame) CloneNewFrame() *Frame {
 }
 
 func (f *Frame) Free() {
-	C.av_frame_free(&f.avFrame)
+	if f.avFrame != nil {
+		C.av_frame_free(&f.avFrame)
+	}
 }
 
 func (f *Frame) SetNbSamples(val int) *Frame {
