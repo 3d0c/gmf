@@ -1,56 +1,32 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"image"
 	"image/jpeg"
+	"io"
 	"log"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/3d0c/gmf"
 )
 
-func assert(i interface{}, err error) interface{} {
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return i
-}
-
-var i int = 0
-
-func writeFile(b image.Image) {
-	name := "./tmp/" + strconv.Itoa(i) + ".jpg"
-
-	fp, err := os.Create(name)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = jpeg.Encode(fp, b, &jpeg.Options{Quality: 100})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := fp.Close(); err != nil {
-		log.Fatal(err)
-	}
-	i++
-}
+var fileCount int = 0
 
 func main() {
-	srcFileName := "tests-sample.mp4"
+	var srcFileName string
+
+	flag.StringVar(&srcFileName, "src", "tests-sample.mp4", "source video")
+	flag.Parse()
 
 	os.MkdirAll("./tmp", 0755)
 
-	if len(os.Args) > 1 {
-		srcFileName = os.Args[1]
+	inputCtx, err := gmf.NewInputCtx(srcFileName)
+	if err != nil {
+		log.Fatalf("Error creating context - %s\n", err)
 	}
-
-	inputCtx := assert(gmf.NewInputCtx(srcFileName)).(*gmf.FmtCtx)
 	defer inputCtx.CloseInputAndRelease()
 
 	srcVideoStream, err := inputCtx.GetBestStream(gmf.AVMEDIA_TYPE_VIDEO)
@@ -68,8 +44,7 @@ func main() {
 
 	cc.SetTimeBase(gmf.AVR{Num: 1, Den: 1})
 
-	// This should really be AV_PIX_FMT_RGB32, but then red and blue channels are switched
-	cc.SetPixFmt(gmf.AV_PIX_FMT_BGR32).SetWidth(srcVideoStream.CodecCtx().Width()).SetHeight(srcVideoStream.CodecCtx().Height())
+	cc.SetPixFmt(gmf.AV_PIX_FMT_RGBA).SetWidth(srcVideoStream.CodecCtx().Width()).SetHeight(srcVideoStream.CodecCtx().Height())
 	if codec.IsExperimental() {
 		cc.SetStrictCompliance(gmf.FF_COMPLIANCE_EXPERIMENTAL)
 	}
@@ -78,73 +53,121 @@ func main() {
 		log.Fatal(err)
 	}
 
-	swsCtx := gmf.NewSwsCtx(srcVideoStream.CodecCtx(), cc, gmf.SWS_BICUBIC)
-	defer gmf.Release(swsCtx)
-
-	dstFrame := gmf.NewFrame().
-		SetWidth(srcVideoStream.CodecCtx().Width()).
-		SetHeight(srcVideoStream.CodecCtx().Height()).
-		SetFormat(gmf.AV_PIX_FMT_BGR32) // see above
-
-	if err := dstFrame.ImgAlloc(); err != nil {
-		log.Fatal(err)
+	ist, err := inputCtx.GetStream(srcVideoStream.Index())
+	if err != nil {
+		log.Fatalf("Error getting stream - %s\n", err)
 	}
-
-	ist := assert(inputCtx.GetStream(srcVideoStream.Index())).(*gmf.Stream)
 	defer gmf.Release(ist)
 
 	codecCtx := ist.CodecCtx()
 	defer gmf.Release(codecCtx)
 
+	// convert source pix_fmt into AV_PIX_FMT_RGBA
+	// which is set up by codec context above
+	ist.SwsCtx = gmf.NewSwsCtx(srcVideoStream.CodecCtx(), cc, gmf.SWS_BICUBIC)
+	// gmf.Stream.Rescaler is a function pointer
+	// default handler is "DefaultRescaler"
+	ist.Rescaler = gmf.DefaultRescaler
+
 	start := time.Now()
 
-	for packet := range inputCtx.GetNewPackets() {
-		if packet.StreamIndex() != srcVideoStream.Index() {
-			// skip non video streams
+	var (
+		pkt        *gmf.Packet
+		frames     []*gmf.Frame
+		drain      int = -1
+		frameCount int = 0
+	)
+
+	for {
+		if drain >= 0 {
+			break
+		}
+
+		pkt, err = inputCtx.GetNextPacket()
+		if err != nil && err != io.EOF {
+			if pkt != nil {
+				pkt.Free()
+			}
+			log.Printf("error getting next packet - %s", err)
+			break
+		} else if err != nil && pkt == nil {
+			drain = 0
+		}
+
+		if pkt != nil && pkt.StreamIndex() != srcVideoStream.Index() {
 			continue
 		}
 
-	decode:
-		frame, err := packet.Frames(codecCtx)
+		frames, err = ist.CodecCtx().Decode(pkt)
 		if err != nil {
-			// Retry if EAGAIN
-			if err.Error() == "Resource temporarily unavailable" {
-				goto decode
-			}
-			log.Fatal(err)
+			log.Printf("Fatal error during decoding - %s\n", err)
+			break
 		}
 
-		swsCtx.Scale(frame, dstFrame)
-
-		p, err := dstFrame.Encode(cc)
-
-		if err != nil {
-			log.Fatal(err)
+		// Decode() method doesn't treat EAGAIN and EOF as errors
+		// it returns empty frames slice instead. Countinue until
+		// input EOF or frames received.
+		if len(frames) == 0 && drain < 0 {
+			continue
 		}
 
-		f, _ := os.Create(fmt.Sprintf("tmp/%d.jp2", i))
-		f.Write(p.Data())
-		f.Close()
+		frames = ist.Rescaler(ist, frames)
 
-		width, height := frame.Width(), frame.Height()
+		encode(cc, frames, drain)
+
+		for i, _ := range frames {
+			frames[i].Free()
+			frameCount++
+		}
+
+		if pkt != nil {
+			pkt.Free()
+			pkt = nil
+		}
+	}
+
+	since := time.Since(start)
+	log.Printf("Finished in %v, avg %.2f fps", since, float64(frameCount)/since.Seconds())
+}
+
+func encode(cc *gmf.CodecCtx, frames []*gmf.Frame, drain int) {
+	packets, err := cc.Encode(frames, drain)
+	if err != nil {
+		log.Fatalf("Error encoding - %s\n", err)
+	}
+	if len(packets) == 0 {
+		return
+	}
+
+	for _, p := range packets {
+		width, height := cc.Width(), cc.Height()
+
 		img := new(image.RGBA)
 		img.Pix = p.Data()
-		img.Stride = 4 * width // 4 bytes per pixel (RGBA), width times per row
+		img.Stride = 4 * width
 		img.Rect = image.Rect(0, 0, width, height)
 
 		writeFile(img)
 
-		i++
-		gmf.Release(p)
-
-		gmf.Release(frame)
-
-		gmf.Release(packet)
+		p.Free()
 	}
 
-	since := time.Since(start)
-	log.Printf("Average %.2f fps", float64(i)/since.Seconds())
-	log.Println("Total time ", since)
+	return
+}
 
-	gmf.Release(dstFrame)
+func writeFile(b image.Image) {
+	name := fmt.Sprintf("tmp/%d.jpg", fileCount)
+	fp, err := os.OpenFile(name, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatalf("Error opening file '%s' - %s\n", name, err)
+	}
+	defer fp.Close()
+
+	fileCount++
+
+	log.Printf("Saving file %s\n", name)
+
+	if err = jpeg.Encode(fp, b, &jpeg.Options{Quality: 80}); err != nil {
+		log.Fatal(err)
+	}
 }
