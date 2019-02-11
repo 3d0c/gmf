@@ -1,42 +1,68 @@
-### Examples
-##### encoding.go
-is a port of ffmpeg/doc/examples/encoding-decoding.c
+## Examples
 
-```sh
-go run encoding.go
-```
+NOTE. Examples not included in this list are old and might not working. (Under developing now)
 
-##### encoding-multiple.go
-is an experimental stuff, which is producing three different output at once. It creates three workers with different codecs settings and passes them synthetic generated frames. As a result you will get three files, encoded with mpeg1, mpeg2 and mpeg4.
+### video-to-image.go
 
-```sh
-go run encoding-multiple.go 
-```
+Save video frames as images. Generates sortable images in corresponding format inside `./tmp` directory (useful for `images-to-video.go` example).
 
-##### transcode.go 
-is a simple transcoder. It gets two best streams (video and audio) from input and converts them to mpeg4 and aac.
-
-```sh
-go run transcode [input] [output.mp4]
-```
-
-#### video-to-jpeg.go
-extracts frames and encodes them to jpeg files. 
-
-```sh
-# if no args specified, default test-sample.mp4 will be used
-go run video-to-jpeg.go [input_video]
-```
-
-#### video-to-jpeg-p.go
-faster parallel version.
-
-```sh
-# available options:
-# -wnum=  number of workers
-# -input= input video  file
-
-go run video-to-jpeg.go
-
-```
+Options:  
   
+  ```
+  -ext string
+    	destination type, e.g.: png, jpg, tiff, whatever encoder you have (default
+    	 "png")
+  -src string
+    	source video (default "tests-sample.mp4")
+  ```    
+
+### video-to-goImage.go
+
+Same as above but using Golang `image/jpeg` package. 
+
+Options:  
+  
+  ```
+  -src string
+    	source video (default "tests-sample.mp4")
+  ```    
+  
+### images-to-video.go
+
+Generate video from sequence of images.
+
+Options:  
+  
+  ```
+  -dst string
+    	destination file (default "result.mp4")
+  -src string
+    	source images folder (default "./tmp")
+  ```
+  
+### watermark.go
+
+Add watermark to video using complex filter.
+
+Options:
+
+```
+  -dst string
+    	destination file, e.g. -dst=result.mp4
+  -src value
+    	source files, e.g.: -src=1.mp4 -src=image.png
+```
+_Note, applying image should be the last in "-src" option._
+
+### mp4s-to-flv.go
+
+Concat video files into single "flv".
+
+```
+  -dst string
+    	destination file, e.g. -dst=result.mp4
+  -src value
+    	source files, e.g.: -src=1.mp4 -src=2.mp4
+```
+
+
