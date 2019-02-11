@@ -3,27 +3,22 @@ package main
 import (
 	"flag"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"io"
 	"log"
-	"math"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/3d0c/gmf"
 )
 
-var (
-	extention string
-	format    string
-	fileCount int
-)
+var fileCount int = 0
 
 func main() {
 	var srcFileName string
 
 	flag.StringVar(&srcFileName, "src", "tests-sample.mp4", "source video")
-	flag.StringVar(&extention, "ext", "png", "destination type, e.g.: png, jpg, tiff, whatever encoder you have")
 	flag.Parse()
 
 	os.MkdirAll("./tmp", 0755)
@@ -40,7 +35,7 @@ func main() {
 		return
 	}
 
-	codec, err := gmf.FindEncoder(extention)
+	codec, err := gmf.FindEncoder(gmf.AV_CODEC_ID_RAWVIDEO)
 	if err != nil {
 		log.Fatalf("%s\n", err)
 	}
@@ -74,10 +69,6 @@ func main() {
 	// gmf.Stream.Rescaler is a function pointer
 	// default handler is "DefaultRescaler"
 	ist.Rescaler = gmf.DefaultRescaler
-
-	// irrelevant stuff. needed only for sortable names generator
-	ln := int(math.Log10(float64(ist.NbFrames()))) + 1
-	format = "./tmp/" + "%0" + strconv.Itoa(ln) + "d." + extention
 
 	start := time.Now()
 
@@ -150,27 +141,34 @@ func encode(cc *gmf.CodecCtx, frames []*gmf.Frame, drain int) {
 	}
 
 	for _, p := range packets {
-		writeFile(p.Data())
+		width, height := cc.Width(), cc.Height()
+
+		img := new(image.RGBA)
+		img.Pix = p.Data()
+		img.Stride = 4 * width
+		img.Rect = image.Rect(0, 0, width, height)
+
+		writeFile(img)
+
 		p.Free()
 	}
 
 	return
 }
 
-func writeFile(b []byte) {
-	name := fmt.Sprintf(format, fileCount)
-
+func writeFile(b image.Image) {
+	name := fmt.Sprintf("tmp/%d.jpg", fileCount)
 	fp, err := os.OpenFile(name, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Fatalf("%s\n", err)
+		log.Fatalf("Error opening file '%s' - %s\n", name, err)
 	}
+	defer fp.Close()
 
-	if n, err := fp.Write(b); err != nil {
-		log.Fatalf("%s\n", err)
-	} else {
-		log.Printf("%d bytes written to '%s'", n, name)
-	}
-
-	fp.Close()
 	fileCount++
+
+	log.Printf("Saving file %s\n", name)
+
+	if err = jpeg.Encode(fp, b, &jpeg.Options{Quality: 80}); err != nil {
+		log.Fatal(err)
+	}
 }
