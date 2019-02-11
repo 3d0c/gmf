@@ -228,6 +228,10 @@ func (f *Frame) IsNil() bool {
 	return false
 }
 
+func (f *Frame) GetRawFrame() *C.struct_AVFrame {
+	return f.avFrame
+}
+
 func (f *Frame) Time(timebase AVRational) int {
 	return int(float64(timebase.AVR().Num) / float64(timebase.AVR().Den) * float64(f.Pts()))
 }
