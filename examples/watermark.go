@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"flag"
+	"io"
 	"log"
 	"strings"
 	"syscall"
@@ -57,16 +58,9 @@ func addStream(codecName string, oc *gmf.FmtCtx, ist *gmf.Stream) (int, int) {
 
 	codec := assert(gmf.FindEncoder(codecName)).(*gmf.Codec)
 
-	// Create Video stream in output context
-	if ost = oc.NewStream(codec); ost == nil {
-		log.Fatal(errors.New("unable to create stream in output context"))
-	}
-	defer gmf.Release(ost)
-
 	if cc = gmf.NewCodecCtx(codec); cc == nil {
 		log.Fatal(errors.New("unable to create codec context"))
 	}
-	defer gmf.Release(cc)
 
 	if oc.IsGlobalHeader() {
 		cc.SetFlag(gmf.CODEC_FLAG_GLOBAL_HEADER)
@@ -87,18 +81,28 @@ func addStream(codecName string, oc *gmf.FmtCtx, ist *gmf.Stream) (int, int) {
 
 	if cc.Type() == gmf.AVMEDIA_TYPE_VIDEO {
 		cc.SetTimeBase(gmf.AVR{1, 25})
-		ost.SetTimeBase(gmf.AVR{1, 25})
 		cc.SetProfile(gmf.FF_PROFILE_MPEG4_SIMPLE)
 		cc.SetDimension(ist.CodecCtx().Width(), ist.CodecCtx().Height())
 		cc.SetPixFmt(ist.CodecCtx().PixFmt())
-		// cc.SetOptions([]gmf.Option{gmf.Option{Key: "b", Val: 100000}})
 	}
 
 	if err := cc.Open(nil); err != nil {
 		log.Fatal(err)
 	}
 
+	par := gmf.NewCodecParameters()
+	if err := par.FromContext(cc); err != nil {
+		log.Fatalf("error creating codec parameters from context - %s", err)
+	}
+
+	if ost = oc.NewStream(codec); ost == nil {
+		log.Fatal(errors.New("unable to create stream in output context"))
+	}
+
+	ost.SetCodecParameters(par)
 	ost.SetCodecCtx(cc)
+	ost.SetTimeBase(gmf.AVR{Num: 1, Den: 25})
+	ost.SetRFrameRate(gmf.AVR{Num: 25, Den: 1})
 
 	return ist.Index(), ost.Index()
 }
@@ -112,7 +116,7 @@ func main() {
 
 	log.SetFlags(log.Lshortfile)
 
-	flag.Var(&src, "src", "source files, e.g.: -src=1.mp4 -src=image.png")
+	flag.Var(&src, "src", "source files, e.g.: -src=bbb.mp4 -src=image.png")
 	flag.StringVar(&dst, "dst", "", "destination file, e.g. -dst=result.mp4")
 	flag.Parse()
 
@@ -223,7 +227,7 @@ func main() {
 		ictx := inputs[i].ctx
 
 		pkt, err = ictx.GetNextPacket()
-		if err != nil && err.Error() != "End of file" {
+		if err != nil && err != io.EOF {
 			log.Fatalf("error getting next packet - %s", err)
 		} else if err != nil && pkt == nil {
 			if !inputs[i].finished {
@@ -253,6 +257,9 @@ func main() {
 		} else if ret < 0 {
 			log.Fatalf("Unexpected error - %s\n", gmf.AvError(ret))
 		}
+
+		frame.SetPts(ist.Pts)
+		ist.Pts++
 
 		if frame != nil && !init {
 			if err := filter.AddFrame(frame, i, 0); err != nil {
@@ -284,7 +291,7 @@ func main() {
 		}
 
 		for _, op := range packets {
-			gmf.RescaleTs(op, ist.TimeBase(), ost.TimeBase())
+			gmf.RescaleTs(op, ost.CodecCtx().TimeBase(), ost.TimeBase())
 			op.SetStreamIndex(ost.Index())
 
 			if err = octx.WritePacket(op); err != nil {

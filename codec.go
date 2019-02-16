@@ -112,11 +112,6 @@ var (
 	FF_PROFILE_HEVC_REXT               int = C.FF_PROFILE_HEVC_REXT
 )
 
-func init() {
-	// C.avcodec_register_all()
-	// InitDesc()
-}
-
 type Codec struct {
 	avCodec *C.struct_AVCodec
 	CgoMemoryManage

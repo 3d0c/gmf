@@ -54,37 +54,38 @@ func (s *Stream) SetCodecFlags() {
 }
 
 func (s *Stream) CodecCtx() *CodecCtx {
+	// Supposed that output context is set and opened by user
 	if s.IsCodecCtxSet() {
 		return s.cc
 	}
 
+	// Open input codec context
 	c, err := FindDecoder(int(s.avStream.codec.codec_id))
 	if err != nil {
 		return nil
-		// return fmt.Errorf("error initializing codec for stream '%d' - %s", s.Index(), err)
 	}
 
-	s.cc = &CodecCtx{
-		codec:      c,
-		avCodecCtx: s.avStream.codec,
+	if s.cc = NewCodecCtx(c); s.cc == nil {
+		panic("error allocating codec context")
 	}
 
-	s.cc.Open(nil)
+	ret := int(C.avcodec_parameters_to_context(s.cc.avCodecCtx, s.avStream.codecpar))
+	if ret < 0 {
+		panic("error copying parameters to codec context")
+	}
+
+	if err := s.cc.Open(nil); err != nil {
+		panic("error opening codec context")
+	}
+
+	s.cc.avCodecCtx.time_base = s.avStream.codec.time_base
 
 	return s.cc
 }
 
 func (s *Stream) SetCodecCtx(cc *CodecCtx) {
-	if cc == nil {
-		panic("Codec context is not initialized.")
-	}
-
-	Retain(cc) //just Retain .not need Release,it can free memory by C.avformat_free_context() @ format.go Free().
+	s.cc = cc
 	s.avStream.codec = cc.avCodecCtx
-
-	if s.cc != nil {
-		s.cc.avCodecCtx = cc.avCodecCtx
-	}
 }
 
 func (s *Stream) SetCodecParameters(cp *CodecParameters) error {
@@ -149,6 +150,11 @@ func (s *Stream) GetRFrameRate() AVRational {
 func (s *Stream) SetRFrameRate(val AVR) {
 	s.avStream.r_frame_rate.num = C.int(val.Num)
 	s.avStream.r_frame_rate.den = C.int(val.Den)
+}
+
+func (s *Stream) SetAvgFrameRate(val AVR) {
+	s.avStream.avg_frame_rate.num = C.int(val.Num)
+	s.avStream.avg_frame_rate.den = C.int(val.Den)
 }
 
 func (s *Stream) GetAvgFrameRate() AVRational {
