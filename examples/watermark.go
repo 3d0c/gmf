@@ -142,6 +142,11 @@ func main() {
 
 		log.Printf("Source #%d - %s\n", i, name)
 	}
+	defer func() {
+		for i, _ := range inputs {
+			inputs[i].ctx.Free()
+		}
+	}()
 
 	srcVideoStream, err := inputs[0].ctx.GetBestStream(gmf.AVMEDIA_TYPE_VIDEO)
 	if err != nil {
@@ -201,6 +206,7 @@ func main() {
 	if err := octx.WriteHeader(); err != nil {
 		log.Fatalf("error writing header - %s\n", err)
 	}
+	defer octx.Free()
 
 	init := false
 

@@ -56,13 +56,7 @@ import (
 	"unsafe"
 )
 
-var (
-	AVFMT_FLAG_GENPTS int = C.AVFMT_FLAG_GENPTS
-	AVFMTCTX_NOHEADER int = C.AVFMTCTX_NOHEADER
-)
-
 const (
-	// Logging levels
 	AV_LOG_QUIET   int = C.AV_LOG_QUIET
 	AV_LOG_PANIC   int = C.AV_LOG_PANIC
 	AV_LOG_FATAL   int = C.AV_LOG_FATAL
@@ -71,10 +65,11 @@ const (
 	AV_LOG_INFO    int = C.AV_LOG_INFO
 	AV_LOG_VERBOSE int = C.AV_LOG_VERBOSE
 	AV_LOG_DEBUG   int = C.AV_LOG_DEBUG
-)
 
-const (
 	FF_MOV_FLAG_FASTSTART = (1 << 7)
+
+	AVFMT_FLAG_GENPTS int = C.AVFMT_FLAG_GENPTS
+	AVFMTCTX_NOHEADER int = C.AVFMTCTX_NOHEADER
 )
 
 const (
@@ -90,11 +85,9 @@ type FmtCtx struct {
 	ofmt     *OutputFmt
 	streams  map[int]*Stream
 	customPb bool
-	CgoMemoryManage
 }
 
 func init() {
-	// C.av_register_all()
 	C.avformat_network_init()
 	C.avdevice_register_all()
 }
@@ -251,7 +244,6 @@ func (this *FmtCtx) AddStreamWithCodeCtx(codeCtx *CodecCtx) (*Stream, error) {
 	if ost = this.NewStream(codeCtx.Codec()); ost == nil {
 		return nil, fmt.Errorf("unable to create stream in context, filename: %s", this.Filename)
 	}
-	defer Release(ost)
 
 	ost.DumpContexCodec(codeCtx)
 
@@ -262,26 +254,8 @@ func (this *FmtCtx) AddStreamWithCodeCtx(codeCtx *CodecCtx) (*Stream, error) {
 	return ost, nil
 }
 
-func (this *FmtCtx) CloseOutputAndRelease() {
-	if this.avCtx == nil || this.IsNoFile() {
-		return
-	}
-
-	if this.avCtx.pb != nil && !this.customPb {
-		this.WriteTrailer()
-		C.avio_close(this.avCtx.pb)
-	}
-
-	Release(this)
-}
-
 func (this *FmtCtx) WriteTrailer() {
 	C.av_write_trailer(this.avCtx)
-}
-
-func (this *FmtCtx) CloseInputAndRelease() {
-	C.avformat_close_input(&this.avCtx)
-	Release(this)
 }
 
 func (this *FmtCtx) IsNoFile() bool {
@@ -372,34 +346,6 @@ func (this *FmtCtx) GetNextPacket() (*Packet, error) {
 	return p, nil
 }
 
-func (this *FmtCtx) GetNewPackets() chan *Packet {
-	yield := make(chan *Packet)
-
-	go func() {
-		for {
-			p := NewPacket()
-
-			if ret := C.av_read_frame(this.avCtx, &p.avPacket); int(ret) < 0 {
-				break
-			}
-
-			yield <- p
-		}
-
-		close(yield)
-	}()
-
-	return yield
-}
-
-func (this *FmtCtx) GetNewPacket() (*Packet, error) {
-	p := NewPacket()
-
-	ret := int(C.av_read_frame(this.avCtx, &p.avPacket))
-
-	return p, AvError(ret)
-}
-
 func (this *FmtCtx) NewStream(c *Codec) *Stream {
 	var avCodec *C.struct_AVCodec = nil
 
@@ -471,7 +417,33 @@ func (this *FmtCtx) SetInputFormat(name string) error {
 	return nil
 }
 
+func (this *FmtCtx) Close() {
+	if this.ofmt == nil {
+		this.CloseInput()
+	} else {
+		this.CloseOutput()
+	}
+}
+
+func (this *FmtCtx) CloseInput() {
+	if this.avCtx != nil {
+		C.avformat_close_input(&this.avCtx)
+	}
+}
+
+func (this *FmtCtx) CloseOutput() {
+	if this.avCtx == nil || this.IsNoFile() {
+		return
+	}
+
+	if this.avCtx.pb != nil && !this.customPb {
+		C.avio_close(this.avCtx.pb)
+	}
+}
+
 func (this *FmtCtx) Free() {
+	this.Close()
+
 	if this.avCtx != nil {
 		C.avformat_free_context(this.avCtx)
 	}
