@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"strings"
 
@@ -32,15 +33,9 @@ func addStream(name string, oc *gmf.FmtCtx, ist *gmf.Stream) (int, int, error) {
 		return 0, 0, err
 	}
 
-	if ost = oc.NewStream(codec); ost == nil {
-		return 0, 0, fmt.Errorf("unable to create new stream in output context")
-	}
-	defer gmf.Release(ost)
-
 	if cc = gmf.NewCodecCtx(codec); cc == nil {
 		return 0, 0, fmt.Errorf("unable to create codec context")
 	}
-	defer gmf.Release(cc)
 
 	if oc.IsGlobalHeader() {
 		cc.SetFlag(gmf.CODEC_FLAG_GLOBAL_HEADER)
@@ -65,35 +60,14 @@ func addStream(name string, oc *gmf.FmtCtx, ist *gmf.Stream) (int, int, error) {
 	}
 
 	if cc.Type() == gmf.AVMEDIA_TYPE_VIDEO {
-		istAvr := ist.GetRFrameRate().AVR()
-
-		if istAvr.Num == 0 {
-			options = append(
-				[]gmf.Option{
-					{Key: "time_base", Val: gmf.AVR{Num: 1, Den: 25}},
-				},
-			)
-
-			ost.SetTimeBase(gmf.AVR{Num: 1, Den: 25})
-			ost.SetRFrameRate(gmf.AVR{Num: 25, Den: 1})
-		} else {
-			options = append(
-				[]gmf.Option{
-					{Key: "time_base", Val: ist.CodecCtx().TimeBase().AVR()},
-				},
-			)
-
-			ost.SetTimeBase(ist.TimeBase().AVR())
-			ost.SetRFrameRate(istAvr)
-		}
-
 		options = append(
 			[]gmf.Option{
+				{Key: "time_base", Val: gmf.AVR{Num: 1, Den: 25}},
 				{Key: "pixel_format", Val: gmf.AV_PIX_FMT_YUV420P},
 				// Save original
 				{Key: "video_size", Val: ist.CodecCtx().GetVideoSize()},
+				{Key: "b", Val: 500000},
 			},
-			options...,
 		)
 
 		cc.SetProfile(ist.CodecCtx().GetProfile())
@@ -105,13 +79,24 @@ func addStream(name string, oc *gmf.FmtCtx, ist *gmf.Stream) (int, int, error) {
 		return 0, 0, err
 	}
 
+	par := gmf.NewCodecParameters()
+	if err = par.FromContext(cc); err != nil {
+		return 0, 0, fmt.Errorf("error creating codec parameters from context - %s", err)
+	}
+
+	if ost = oc.NewStream(codec); ost == nil {
+		return 0, 0, fmt.Errorf("unable to create new stream in output context")
+	}
+
+	ost.SetCodecParameters(par)
 	ost.SetCodecCtx(cc)
 
-	return ist.Index(), ost.Index(), nil
-}
+	if cc.Type() == gmf.AVMEDIA_TYPE_VIDEO {
+		ost.SetTimeBase(gmf.AVR{Num: 1, Den: 25})
+		ost.SetRFrameRate(gmf.AVR{Num: 25, Den: 1})
+	}
 
-type PtsMap struct {
-	m map[int]int64
+	return ist.Index(), ost.Index(), nil
 }
 
 func main() {
@@ -119,7 +104,7 @@ func main() {
 		src       arrayFlags
 		dst       string
 		streamMap map[int]int = make(map[int]int)
-		ptsMap    []PtsMap
+		pts       int64       = 0
 	)
 
 	flag.Var(&src, "src", "source files, e.g.: -src=1.mp4 -src=2.mp4")
@@ -135,16 +120,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ptsMap = make([]PtsMap, 0)
-
-	for i := 0; i < len(src); i++ {
-		p := PtsMap{
-			m: make(map[int]int64),
-		}
-		ptsMap = append(ptsMap, p)
-	}
-
-	for fileNum, name := range src {
+	for _, name := range src {
 		log.Printf("Processing file %s\n", name)
 
 		ictx, err := gmf.NewInputCtx(name)
@@ -185,13 +161,12 @@ func main() {
 			ist, ost  *gmf.Stream
 			streamIdx int
 			flush     int = -1
-			// flushEnc  int = -1
 		)
 
 		for {
 			if flush < 0 {
 				pkt, err = ictx.GetNextPacket()
-				if err != nil && err.Error() != "End of file" {
+				if err != nil && err != io.EOF {
 					if pkt != nil {
 						pkt.Free()
 					}
@@ -239,36 +214,19 @@ func main() {
 			}
 
 			frames, err := ist.CodecCtx().Decode(pkt)
-			if len(frames) > 1 {
-				log.Printf("frames - %d\n", len(frames))
-			}
-			if err != nil && err.Error() != "End of file" {
-				if pkt != nil {
-					pkt.Free()
-				}
-				// XXX release frames in real case
+			if err != nil {
 				log.Fatalf("error decoding - %s\n", err)
 			}
 
 			for _, frame := range frames {
-				pts := frame.Pts()
-
-				if fileNum > 0 {
-					pts = ptsMap[fileNum-1].m[ist.Index()] + int64(frame.Pts())
-					frame.SetPts(pts)
-					frame.SetPktPts(pts)
-					frame.SetPktDts(int(pts))
-				}
-
-				ptsMap[fileNum].m[ist.Index()] = pts
+				frame.SetPts(pts)
+				pts++
 			}
 
 			packets, err := ost.CodecCtx().Encode(frames, flush)
-			if len(packets) > 1 {
-				fmt.Printf("packets - %d\n", len(packets))
-			}
+
 			for _, op := range packets {
-				gmf.RescaleTs(op, ist.TimeBase(), ost.TimeBase())
+				gmf.RescaleTs(op, ost.CodecCtx().TimeBase(), ost.TimeBase())
 				op.SetStreamIndex(ost.Index())
 
 				if err = octx.WritePacket(op); err != nil {
@@ -292,6 +250,7 @@ func main() {
 		ictx.Free()
 	}
 
+	octx.WriteTrailer()
 	octx.Free()
 
 }

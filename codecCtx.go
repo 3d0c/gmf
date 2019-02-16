@@ -167,6 +167,8 @@ func NewCodecCtx(codec *Codec, options ...[]*Option) *CodecCtx {
 		}
 	}
 
+	result.avCodecCtx.codec_id = codec.avCodec.id
+
 	return result
 }
 
@@ -204,26 +206,26 @@ func (cc *CodecCtx) CopyExtra(ist *Stream) *CodecCtx {
 	return cc
 }
 
-func (cc *CodecCtx) CopyBasic(ist *Stream) *CodecCtx {
-	codec := cc.avCodecCtx
-	icodec := ist.CodecCtx().avCodecCtx
+// func (cc *CodecCtx) CopyBasic(ist *Stream) *CodecCtx {
+// 	codec := cc.avCodecCtx
+// 	icodec := ist.CodecCtx().avCodecCtx
 
-	codec.bit_rate = icodec.bit_rate
-	codec.pix_fmt = icodec.pix_fmt
-	codec.width = icodec.width
-	codec.height = icodec.height
+// 	codec.bit_rate = icodec.bit_rate
+// 	codec.pix_fmt = icodec.pix_fmt
+// 	codec.width = icodec.width
+// 	codec.height = icodec.height
 
-	codec.time_base = icodec.time_base
-	codec.time_base.num *= icodec.ticks_per_frame
+// 	codec.time_base = icodec.time_base
+// 	codec.time_base.num *= icodec.ticks_per_frame
 
-	codec.sample_fmt = icodec.sample_fmt
-	codec.sample_rate = icodec.sample_rate
-	codec.channels = icodec.channels
+// 	codec.sample_fmt = icodec.sample_fmt
+// 	codec.sample_rate = icodec.sample_rate
+// 	codec.channels = icodec.channels
 
-	codec.channel_layout = icodec.channel_layout
+// 	codec.channel_layout = icodec.channel_layout
 
-	return cc
-}
+// 	return cc
+// }
 
 func (cc *CodecCtx) Open(dict *Dict) error {
 	if cc.IsOpen() {
@@ -418,6 +420,17 @@ func (cc *CodecCtx) SetHasBframes(val int) *CodecCtx {
 
 func (cc *CodecCtx) SetChannels(val int) *CodecCtx {
 	cc.avCodecCtx.channels = C.int(val)
+	return cc
+}
+
+func (cc *CodecCtx) SetFrameRate(r AVR) *CodecCtx {
+	cc.avCodecCtx.framerate.num = C.int(r.Num)
+	cc.avCodecCtx.framerate.den = C.int(r.Den)
+	return cc
+}
+
+func (cc *CodecCtx) SetBitsPerRawSample(val int) *CodecCtx {
+	cc.avCodecCtx.bits_per_raw_sample = C.int(val)
 	return cc
 }
 

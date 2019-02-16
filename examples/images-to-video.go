@@ -24,14 +24,9 @@ func initOst(name string, oc *gmf.FmtCtx, ist *gmf.Stream) (*gmf.Stream, error) 
 		return nil, err
 	}
 
-	if ost = oc.NewStream(codec); ost == nil {
-		return nil, fmt.Errorf("unable to create new stream in output context")
-	}
-
 	if cc = gmf.NewCodecCtx(codec); cc == nil {
 		return nil, fmt.Errorf("unable to create codec context")
 	}
-	defer gmf.Release(cc)
 
 	if oc.IsGlobalHeader() {
 		cc.SetFlag(gmf.CODEC_FLAG_GLOBAL_HEADER)
@@ -47,9 +42,6 @@ func initOst(name string, oc *gmf.FmtCtx, ist *gmf.Stream) (*gmf.Stream, error) 
 		},
 	)
 
-	ost.SetTimeBase(gmf.AVR{Num: 1, Den: 25})
-	ost.SetRFrameRate(gmf.AVR{Num: 25, Den: 1})
-
 	options = append(
 		[]gmf.Option{
 			{Key: "pixel_format", Val: gmf.AV_PIX_FMT_YUV420P},
@@ -59,14 +51,25 @@ func initOst(name string, oc *gmf.FmtCtx, ist *gmf.Stream) (*gmf.Stream, error) 
 	)
 
 	cc.SetProfile(gmf.FF_PROFILE_H264_MAIN)
-
 	cc.SetOptions(options)
 
 	if err := cc.Open(nil); err != nil {
 		return nil, err
 	}
 
+	par := gmf.NewCodecParameters()
+	if err = par.FromContext(cc); err != nil {
+		return nil, fmt.Errorf("error creating codec parameters from context - %s", err)
+	}
+
+	if ost = oc.NewStream(codec); ost == nil {
+		return nil, fmt.Errorf("unable to create new stream in output context")
+	}
+
+	ost.SetCodecParameters(par)
 	ost.SetCodecCtx(cc)
+	ost.SetTimeBase(gmf.AVR{Num: 1, Den: 25})
+	ost.SetRFrameRate(gmf.AVR{Num: 25, Den: 1})
 
 	return ost, nil
 }

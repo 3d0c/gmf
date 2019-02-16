@@ -7,3 +7,7 @@
 remuxing
 transcode
 *.ts
+examples/watermark
+examples/video-to-image
+examples/video-to-goImage
+examples/images-to-video
