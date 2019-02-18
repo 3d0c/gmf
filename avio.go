@@ -61,7 +61,7 @@ type AVIOContext struct {
 	CgoMemoryManage
 }
 
-// AVIOContext constructor. Use it only if You need custom IO behaviour!
+// NewAVIOContext constructor. Use it only if You need custom IO behaviour!
 func NewAVIOContext(ctx *FmtCtx, handlers *AVIOHandlers, size ...int) (*AVIOContext, error) {
 	this := &AVIOContext{}
 

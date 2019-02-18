@@ -78,7 +78,7 @@ func (f *Frame) SetPts(val int64) {
 	f.avFrame.pts = (_Ctype_int64_t)(val)
 }
 
-// AVPixelFormat for video frames, AVSampleFormat for audio
+// Format for video frames, AVSampleFormat for audio
 func (f *Frame) Format() int {
 	return int(f.avFrame.format)
 }
