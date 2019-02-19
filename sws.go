@@ -10,7 +10,7 @@ package gmf
 import "C"
 
 import (
-	"log"
+	"fmt"
 	"unsafe"
 )
 
@@ -30,44 +30,37 @@ var (
 
 type SwsCtx struct {
 	swsCtx *C.struct_SwsContext
-	Width  int
-	Height int
-	PixFmt int32
-	CgoMemoryManage
+	width  int
+	height int
+	pixfmt int32
 }
 
-func NewSwsCtx(src *CodecCtx, dst *CodecCtx, method int) *SwsCtx {
-	ctx := C.sws_getContext(C.int(src.Width()), C.int(src.Height()), src.PixFmt(), C.int(dst.Width()), C.int(dst.Height()), dst.PixFmt(), C.int(method), nil, nil, nil)
+func NewSwsCtx(srcW, srcH int, srcPixFmt int32, dstW, dstH int, dstPixFmt int32, method int) (*SwsCtx, error) {
+	ctx := C.sws_getContext(
+		C.int(srcW),
+		C.int(srcH),
+		srcPixFmt,
+		C.int(dstW),
+		C.int(dstH),
+		dstPixFmt,
+		C.int(method), nil, nil, nil,
+	)
 
 	if ctx == nil {
-		return nil
+		return nil, fmt.Errorf("error creating sws context\n")
 	}
 
 	return &SwsCtx{
 		swsCtx: ctx,
-		Width:  dst.Width(),
-		Height: dst.Height(),
-		PixFmt: dst.PixFmt(),
-	}
+		width:  dstW,
+		height: dstH,
+		pixfmt: dstPixFmt,
+	}, nil
 }
 
-func NewPicSwsCtx(srcWidth int, srcHeight int, srcPixFmt int32, dst *CodecCtx, method int) *SwsCtx {
-	ctx := C.sws_getContext(C.int(srcWidth), C.int(srcHeight), srcPixFmt, C.int(dst.Width()), C.int(dst.Height()), dst.PixFmt(), C.int(method), nil, nil, nil)
-
-	if ctx == nil {
-		return nil
-	}
-
-	return &SwsCtx{swsCtx: ctx}
-}
-
-func (this *SwsCtx) Free() {
-	C.sws_freeContext(this.swsCtx)
-}
-
-func (this *SwsCtx) Scale(src *Frame, dst *Frame) {
+func (ctx *SwsCtx) Scale(src *Frame, dst *Frame) {
 	C.sws_scale(
-		this.swsCtx,
+		ctx.swsCtx,
 		(**C.uint8_t)(unsafe.Pointer(&src.avFrame.data)),
 		(*_Ctype_int)(unsafe.Pointer(&src.avFrame.linesize)),
 		0,
@@ -76,47 +69,31 @@ func (this *SwsCtx) Scale(src *Frame, dst *Frame) {
 		(*_Ctype_int)(unsafe.Pointer(&dst.avFrame.linesize)))
 }
 
-func (this *SwsCtx) Scale2(src *Frame) (*Frame, error) {
-	dst := NewFrame().SetWidth(this.Width).SetHeight(this.Height).SetFormat(this.PixFmt)
-
-	if err := dst.ImgAlloc(); err != nil {
-		return nil, err
+func (ctx *SwsCtx) Free() {
+	if ctx.swsCtx != nil {
+		C.sws_freeContext(ctx.swsCtx)
 	}
-
-	C.sws_scale(
-		this.swsCtx,
-		(**C.uint8_t)(unsafe.Pointer(&src.avFrame.data)),
-		(*_Ctype_int)(unsafe.Pointer(&src.avFrame.linesize)),
-		0,
-		C.int(src.Height()),
-		(**C.uint8_t)(unsafe.Pointer(&dst.avFrame.data)),
-		(*_Ctype_int)(unsafe.Pointer(&dst.avFrame.linesize)))
-
-	return dst, nil
 }
 
-func DefaultRescaler(st *Stream, frames []*Frame) []*Frame {
+func DefaultRescaler(ctx *SwsCtx, frames []*Frame) ([]*Frame, error) {
 	var (
-		result   []*Frame = make([]*Frame, 0)
-		tmpFrame *Frame
-		err      error
+		result []*Frame = make([]*Frame, 0)
+		tmp    *Frame
+		err    error
 	)
 
-	if st.SwsCtx == nil {
-		return frames
-	}
-
 	for i, _ := range frames {
-		if tmpFrame, err = st.SwsCtx.Scale2(frames[i]); err != nil {
-			log.Printf("Error scaling frame - %s\n", err)
-			tmpFrame.Free()
-			continue
+		tmp = NewFrame().SetWidth(ctx.width).SetHeight(ctx.height).SetFormat(ctx.pixfmt)
+		if err = tmp.ImgAlloc(); err != nil {
+			return nil, fmt.Errorf("error allocation tmp frame - %s", err)
 		}
 
-		tmpFrame.SetPts(frames[i].Pts())
-		tmpFrame.SetPktDts(frames[i].PktDts())
+		ctx.Scale(frames[i], tmp)
 
-		result = append(result, tmpFrame)
+		tmp.SetPts(frames[i].Pts())
+		tmp.SetPktDts(frames[i].PktDts())
+
+		result = append(result, tmp)
 	}
 
 	for i := 0; i < len(frames); i++ {
@@ -125,7 +102,5 @@ func DefaultRescaler(st *Stream, frames []*Frame) []*Frame {
 		}
 	}
 
-	frames = nil
-
-	return result
+	return result, nil
 }

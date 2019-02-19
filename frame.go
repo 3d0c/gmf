@@ -19,6 +19,11 @@ void gmf_set_frame_data(AVFrame *frame, int idx, int l_size, uint8_t data) {
 int gmf_get_frame_line_size(AVFrame *frame, int idx) {
 	return frame->linesize[idx];
 }
+
+void gmf_free_data(AVFrame *frame) {
+	av_freep(&frame->data[0]);
+}
+
 */
 import "C"
 
@@ -31,9 +36,10 @@ import (
 
 type Frame struct {
 	avFrame   *C.struct_AVFrame
+	samples   *_Ctype_uint8_t
 	mediaType int32
 	err       error
-	CgoMemoryManage
+	freeData  bool
 }
 
 func NewFrame() *Frame {
@@ -142,6 +148,8 @@ func (f *Frame) ImgAlloc() error {
 		return errors.New(fmt.Sprintf("Unable to allocate raw image buffer: %v", AvError(ret)))
 	}
 
+	f.freeData = true
+
 	return nil
 }
 
@@ -150,28 +158,33 @@ func NewAudioFrame(sampleFormat int32, channels, nb_samples int) (*Frame, error)
 	f.mediaType = AVMEDIA_TYPE_AUDIO
 	f.SetNbSamples(nb_samples)
 	f.SetFormat(sampleFormat)
-	f.SetChannelLayout(channels)
+	f.SetChannels(channels)
 
 	//the codec gives us the frame size, in samples,
 	//we calculate the size of the samples buffer in bytes
 	size := C.av_samples_get_buffer_size(nil, C.int(channels), C.int(nb_samples),
 		sampleFormat, 0)
 	if size < 0 {
-		return nil, errors.New("Could not get sample buffer size")
+		return nil, errors.New("could not get sample buffer size")
 	}
-	samples := (*_Ctype_uint8_t)(C.av_malloc(C.size_t(size)))
-	if samples == nil {
-		return nil, errors.New(fmt.Sprintf("Could not allocate %d bytes for samples buffer", size))
+
+	f.samples = (*_Ctype_uint8_t)(C.av_malloc(C.size_t(size)))
+	if f.samples == nil {
+		return nil, errors.New(fmt.Sprintf("could not allocate %d bytes for samples buffer", size))
 	}
 
 	//setup the data pointers in the AVFrame
 	ret := int(C.avcodec_fill_audio_frame(f.avFrame, C.int(channels), sampleFormat,
-		samples, C.int(size), 0))
+		f.samples, C.int(size), 0))
 	if ret < 0 {
-		return nil, errors.New("Could not setup audio frame")
+		return nil, errors.New("could not setup audio frame")
 	}
+
+	f.freeData = true
+
 	return f, nil
 }
+
 func (f *Frame) SetData(idx int, lineSize int, data int) *Frame {
 	C.gmf_set_frame_data(f.avFrame, C.int(idx), C.int(lineSize), (_Ctype_uint8_t)(data))
 
@@ -191,6 +204,9 @@ func (f *Frame) CloneNewFrame() *Frame {
 }
 
 func (f *Frame) Free() {
+	if f.freeData && f.avFrame != nil {
+		C.gmf_free_data(f.avFrame)
+	}
 	if f.avFrame != nil {
 		C.av_frame_free(&f.avFrame)
 	}
@@ -204,6 +220,10 @@ func (f *Frame) SetNbSamples(val int) *Frame {
 func (f *Frame) SetChannelLayout(val int) *Frame {
 	f.avFrame.channel_layout = (_Ctype_uint64_t)(val)
 	return f
+}
+
+func (f *Frame) GetChannelLayout() int {
+	return int(f.avFrame.channel_layout)
 }
 
 func (f *Frame) SetChannels(val int) *Frame {

@@ -48,20 +48,24 @@ var (
 	AV_TIME_BASE_Q AVRational = AVRational{1, C.int(AV_TIME_BASE)}
 )
 
-func (this AVR) AVRational() AVRational {
-	return AVRational{C.int(this.Num), C.int(this.Den)}
+func (a AVR) AVRational() AVRational {
+	return AVRational{C.int(a.Num), C.int(a.Den)}
 }
 
-func (this AVR) String() string {
-	return fmt.Sprintf("%d/%d", this.Num, this.Den)
+func (a AVR) String() string {
+	return fmt.Sprintf("%d/%d", a.Num, a.Den)
 }
 
-func (this AVR) Av2qd() float64 {
-	return float64(this.Num) / float64(this.Den)
+func (a AVR) Av2qd() float64 {
+	return float64(a.Num) / float64(a.Den)
 }
 
-func (this AVRational) AVR() AVR {
-	return AVR{Num: int(this.num), Den: int(this.den)}
+func (a AVR) Invert() AVR {
+	return AVR{Num: a.Den, Den: a.Num}
+}
+
+func (a AVRational) AVR() AVR {
+	return AVR{Num: int(a.num), Den: int(a.den)}
 }
 
 func AvError(averr int) error {

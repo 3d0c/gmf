@@ -94,12 +94,13 @@ func addStream(codecName string, oc *gmf.FmtCtx, ist *gmf.Stream) (int, int) {
 	if err := par.FromContext(cc); err != nil {
 		log.Fatalf("error creating codec parameters from context - %s", err)
 	}
+	defer par.Free()
 
 	if ost = oc.NewStream(codec); ost == nil {
 		log.Fatal(errors.New("unable to create stream in output context"))
 	}
 
-	ost.SetCodecParameters(par)
+	ost.CopyCodecPar(par)
 	ost.SetCodecCtx(cc)
 	ost.SetTimeBase(gmf.AVR{Num: 1, Den: 25})
 	ost.SetRFrameRate(gmf.AVR{Num: 25, Den: 1})
@@ -174,12 +175,6 @@ func main() {
 	}
 
 	options := []*gmf.Option{}
-	/*
-			{
-				Key: "pix_fmts", Val: []int32{gmf.AV_PIX_FMT_YUV420P},
-			},
-		}
-	*/
 
 	var (
 		i, ret int = 0, 0
@@ -280,6 +275,8 @@ func main() {
 			log.Fatalf("%s\n", err)
 		}
 
+		frame.Free()
+
 		if ff, err = filter.GetFrame(); err != nil && len(ff) == 0 {
 			log.Printf("GetFrame() returned '%s', continue\n", err)
 			i++
@@ -294,6 +291,10 @@ func main() {
 		packets, err := ost.CodecCtx().Encode(ff, -1)
 		if err != nil {
 			log.Fatalf("%s\n", err)
+		}
+
+		for _, f := range ff {
+			f.Free()
 		}
 
 		for _, op := range packets {
@@ -311,4 +312,15 @@ func main() {
 	}
 
 	octx.WriteTrailer()
+
+	ost.CodecCtx().Free()
+	ost.Free()
+
+	for _, v := range inputs {
+		for i := 0; i < v.ctx.StreamsCnt(); i++ {
+			st, _ := v.ctx.GetStream(i)
+			st.CodecCtx().Free()
+			st.Free()
+		}
+	}
 }

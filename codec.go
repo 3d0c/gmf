@@ -170,7 +170,6 @@ func FindEncoder(i interface{}) (*Codec, error) {
 }
 
 func (this *Codec) Free() {
-	//nothing to do
 }
 func (this *Codec) Id() int {
 	return int(this.avCodec.id)

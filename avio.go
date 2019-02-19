@@ -59,6 +59,7 @@ type AVIOContext struct {
 	// avAVIOContext *C.struct_AVIOContext
 	handlerKey uintptr
 	CgoMemoryManage
+	buffer *C.uchar
 }
 
 // AVIOContext constructor. Use it only if You need custom IO behaviour!
@@ -71,9 +72,9 @@ func NewAVIOContext(ctx *FmtCtx, handlers *AVIOHandlers, size ...int) (*AVIOCont
 		bufferSize = size[0]
 	}
 
-	buffer := (*C.uchar)(C.av_malloc(C.size_t(bufferSize)))
+	this.buffer = (*C.uchar)(C.av_malloc(C.size_t(bufferSize)))
 
-	if buffer == nil {
+	if this.buffer == nil {
 		return nil, errors.New("unable to allocate buffer")
 	}
 
@@ -109,7 +110,7 @@ func NewAVIOContext(ctx *FmtCtx, handlers *AVIOHandlers, size ...int) (*AVIOCont
 		flag = AVIO_FLAG_READ_WRITE
 	}
 
-	if this.avAVIOContext = C.avio_alloc_context(buffer, C.int(bufferSize), C.int(flag), unsafe.Pointer(ctx.avCtx), ptrRead, ptrWrite, ptrSeek); this.avAVIOContext == nil {
+	if this.avAVIOContext = C.avio_alloc_context(this.buffer, C.int(bufferSize), C.int(flag), unsafe.Pointer(ctx.avCtx), ptrRead, ptrWrite, ptrSeek); this.avAVIOContext == nil {
 		C.av_free(unsafe.Pointer(this.avAVIOContext.buffer))
 		return nil, errors.New("unable to initialize avio context")
 	}
