@@ -1,3 +1,5 @@
+// +build go1.12
+
 package gmf
 
 /*
@@ -55,7 +57,7 @@ type AVIOHandlers struct {
 var handlersMap map[uintptr]*AVIOHandlers
 
 type AVIOContext struct {
-	avAVIOContext *_Ctype_AVIOContext
+	avAVIOContext *C.AVIOContext
 	// avAVIOContext *C.struct_AVIOContext
 	handlerKey uintptr
 	CgoMemoryManage
