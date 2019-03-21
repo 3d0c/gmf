@@ -1,5 +1,16 @@
 package main
 
+/* Valgrind report summary
+
+==13531== LEAK SUMMARY:
+==13531==    definitely lost: 0 bytes in 0 blocks
+==13531==    indirectly lost: 0 bytes in 0 blocks
+==13531==      possibly lost: 1,440 bytes in 5 blocks
+==13531==    still reachable: 0 bytes in 0 blocks
+==13531==         suppressed: 0 bytes in 0 blocks
+
+*/
+
 import (
 	"flag"
 	"fmt"
@@ -16,7 +27,10 @@ import (
 var fileCount int = 0
 
 func main() {
-	var srcFileName string
+	var (
+		srcFileName string
+		swsctx      *gmf.SwsCtx
+	)
 
 	flag.StringVar(&srcFileName, "src", "tests-sample.mp4", "source video")
 	flag.Parse()
@@ -53,22 +67,21 @@ func main() {
 	if err := cc.Open(nil); err != nil {
 		log.Fatal(err)
 	}
+	defer cc.Free()
 
 	ist, err := inputCtx.GetStream(srcVideoStream.Index())
 	if err != nil {
 		log.Fatalf("Error getting stream - %s\n", err)
 	}
-	defer gmf.Release(ist)
-
-	codecCtx := ist.CodecCtx()
-	defer gmf.Release(codecCtx)
+	defer ist.Free()
 
 	// convert source pix_fmt into AV_PIX_FMT_RGBA
 	// which is set up by codec context above
-	ist.SwsCtx = gmf.NewSwsCtx(srcVideoStream.CodecCtx(), cc, gmf.SWS_BICUBIC)
-	// gmf.Stream.Rescaler is a function pointer
-	// default handler is "DefaultRescaler"
-	ist.Rescaler = gmf.DefaultRescaler
+	icc := srcVideoStream.CodecCtx()
+	if swsctx, err = gmf.NewSwsCtx(icc.Width(), icc.Height(), icc.PixFmt(), cc.Width(), cc.Height(), cc.PixFmt(), gmf.SWS_BICUBIC); err != nil {
+		panic(err)
+	}
+	defer swsctx.Free()
 
 	start := time.Now()
 
@@ -112,7 +125,9 @@ func main() {
 			continue
 		}
 
-		frames = ist.Rescaler(ist, frames)
+		if frames, err = gmf.DefaultRescaler(swsctx, frames); err != nil {
+			panic(err)
+		}
 
 		encode(cc, frames, drain)
 
@@ -125,6 +140,12 @@ func main() {
 			pkt.Free()
 			pkt = nil
 		}
+	}
+
+	for i := 0; i < inputCtx.StreamsCnt(); i++ {
+		st, _ := inputCtx.GetStream(i)
+		st.CodecCtx().Free()
+		st.Free()
 	}
 
 	since := time.Since(start)

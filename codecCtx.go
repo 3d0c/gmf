@@ -155,8 +155,6 @@ func NewCodecCtx(codec *Codec, options ...[]*Option) *CodecCtx {
 		return nil
 	}
 
-	C.avcodec_get_context_defaults3(codecctx, codec.avCodec)
-
 	result.avCodecCtx = codecctx
 
 	// we're really expecting only one options-array —
@@ -206,27 +204,6 @@ func (cc *CodecCtx) CopyExtra(ist *Stream) *CodecCtx {
 	return cc
 }
 
-// func (cc *CodecCtx) CopyBasic(ist *Stream) *CodecCtx {
-// 	codec := cc.avCodecCtx
-// 	icodec := ist.CodecCtx().avCodecCtx
-
-// 	codec.bit_rate = icodec.bit_rate
-// 	codec.pix_fmt = icodec.pix_fmt
-// 	codec.width = icodec.width
-// 	codec.height = icodec.height
-
-// 	codec.time_base = icodec.time_base
-// 	codec.time_base.num *= icodec.ticks_per_frame
-
-// 	codec.sample_fmt = icodec.sample_fmt
-// 	codec.sample_rate = icodec.sample_rate
-// 	codec.channels = icodec.channels
-
-// 	codec.channel_layout = icodec.channel_layout
-
-// 	return cc
-// }
-
 func (cc *CodecCtx) Open(dict *Dict) error {
 	if cc.IsOpen() {
 		return nil
@@ -244,20 +221,18 @@ func (cc *CodecCtx) Open(dict *Dict) error {
 	return nil
 }
 
-func (cc *CodecCtx) Close() {
-	if nil != cc.avCodecCtx {
-		C.avcodec_close(cc.avCodecCtx)
-		cc.avCodecCtx = nil
-	}
-}
-
+// codec context is freed by avformat_free_context()
 func (cc *CodecCtx) Free() {
-	cc.CloseAndRelease()
+	C.avcodec_free_context(&cc.avCodecCtx)
+	cc.codec.Free()
 }
 
 func (cc *CodecCtx) CloseAndRelease() {
-	cc.Close()
-	C.call_av_freep(cc.avCodecCtx)
+	panic("(CodecCtx)CloseAndRelease() is deprecated")
+}
+
+func (cc *CodecCtx) Close() {
+	C.avcodec_close(cc.avCodecCtx)
 }
 
 // @todo
@@ -518,6 +493,10 @@ func (cc *CodecCtx) GetChannelLayoutName() string {
 	str := C.GoString(C.gmf_get_channel_layout_name(C.int(cc.Channels()), C.int(cc.ChannelLayout())))
 
 	return str
+}
+
+func (this *CodecCtx) GetDefaultChannelLayout(ac int) int {
+	return int(C.av_get_default_channel_layout(C.int(ac)))
 }
 
 func (cc *CodecCtx) GetBitsPerSample() int {

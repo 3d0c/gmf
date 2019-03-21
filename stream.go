@@ -15,24 +15,18 @@ import (
 )
 
 type Stream struct {
-	avStream  *C.struct_AVStream
-	cc        *CodecCtx
-	SwsCtx    *SwsCtx
-	SwrCtx    *SwrCtx
-	AvFifo    *AVAudioFifo
-	DstFrame  *Frame
-	Pts       int64
-	Resampler func(*Stream, []*Frame, bool) []*Frame
-	Rescaler  func(*Stream, []*Frame) []*Frame
+	avStream *C.struct_AVStream
+	SwsCtx   *SwsCtx
+	SwrCtx   *SwrCtx
+	AvFifo   *AVAudioFifo
+	cc       *CodecCtx
+	Pts      int64
 	CgoMemoryManage
 }
 
 func (s *Stream) Free() {
 	if s.SwsCtx != nil {
 		s.SwsCtx.Free()
-	}
-	if s.DstFrame != nil {
-		s.DstFrame.Free()
 	}
 	if s.SwrCtx != nil {
 		s.SwrCtx.Free()
@@ -85,7 +79,6 @@ func (s *Stream) CodecCtx() *CodecCtx {
 
 func (s *Stream) SetCodecCtx(cc *CodecCtx) {
 	s.cc = cc
-	s.avStream.codec = cc.avCodecCtx
 }
 
 func (s *Stream) SetCodecParameters(cp *CodecParameters) error {

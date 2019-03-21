@@ -80,8 +80,9 @@ const (
 )
 
 type FmtCtx struct {
-	avCtx    *C.struct_AVFormatContext
 	Filename string
+
+	avCtx    *C.struct_AVFormatContext
 	ofmt     *OutputFmt
 	streams  map[int]*Stream
 	customPb bool
@@ -247,7 +248,7 @@ func (this *FmtCtx) AddStreamWithCodeCtx(codeCtx *CodecCtx) (*Stream, error) {
 
 	ost.DumpContexCodec(codeCtx)
 
-	if int(this.avCtx.oformat.flags&C.AVFMT_GLOBALHEADER) > 0 {
+	if this.avCtx.oformat != nil && int(this.avCtx.oformat.flags&C.AVFMT_GLOBALHEADER) > 0 {
 		ost.SetCodecFlags()
 	}
 
@@ -325,9 +326,10 @@ func (this *FmtCtx) DumpAv() {
 }
 
 func (this *FmtCtx) GetNextPacket() (*Packet, error) {
-	p := NewPacket()
+	pkt := NewPacket()
+
 	for {
-		ret := int(C.av_read_frame(this.avCtx, &p.avPacket))
+		ret := int(C.av_read_frame(this.avCtx, &pkt.avPacket))
 
 		if AvErrno(ret) == syscall.EAGAIN {
 			time.Sleep(10000 * time.Microsecond)
@@ -343,7 +345,7 @@ func (this *FmtCtx) GetNextPacket() (*Packet, error) {
 		break
 	}
 
-	return p, nil
+	return pkt, nil
 }
 
 func (this *FmtCtx) NewStream(c *Codec) *Stream {
@@ -432,7 +434,10 @@ func (this *FmtCtx) CloseInput() {
 }
 
 func (this *FmtCtx) CloseOutput() {
-	if this.avCtx == nil || this.IsNoFile() {
+	if this.avCtx == nil {
+		return
+	}
+	if this.IsNoFile() {
 		return
 	}
 
@@ -576,7 +581,7 @@ func FindOutputFmt(format string, filename string, mime string) *OutputFmt {
 }
 
 func (this *OutputFmt) Free() {
-	//nothing to done.
+	fmt.Printf("(this *OutputFmt)Free()\n")
 }
 
 func (this *OutputFmt) Name() string {

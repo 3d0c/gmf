@@ -83,12 +83,13 @@ func addStream(name string, oc *gmf.FmtCtx, ist *gmf.Stream) (int, int, error) {
 	if err = par.FromContext(cc); err != nil {
 		return 0, 0, fmt.Errorf("error creating codec parameters from context - %s", err)
 	}
+	defer par.Free()
 
 	if ost = oc.NewStream(codec); ost == nil {
 		return 0, 0, fmt.Errorf("unable to create new stream in output context")
 	}
 
-	ost.SetCodecParameters(par)
+	ost.CopyCodecPar(par)
 	ost.SetCodecCtx(cc)
 
 	if cc.Type() == gmf.AVMEDIA_TYPE_VIDEO {
@@ -119,6 +120,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer octx.Free()
 
 	for _, name := range src {
 		log.Printf("Processing file %s\n", name)
@@ -247,10 +249,21 @@ func main() {
 			}
 		}
 
+		for i := 0; i < ictx.StreamsCnt(); i++ {
+			st, _ := ictx.GetStream(i)
+			st.CodecCtx().Free()
+			st.Free()
+		}
+
 		ictx.Free()
+
 	}
 
 	octx.WriteTrailer()
-	octx.Free()
 
+	for i := 0; i < octx.StreamsCnt(); i++ {
+		st, _ := octx.GetStream(i)
+		st.CodecCtx().Free()
+		st.Free()
+	}
 }

@@ -44,7 +44,6 @@ int read_fifo(AVAudioFifo* fifo, AVFrame* frame, int nb_samples){
 }
 */
 import "C"
-import "fmt"
 
 type AVAudioFifo struct {
 	avAudioFifo  *C.struct_AVAudioFifo
@@ -55,7 +54,7 @@ type AVAudioFifo struct {
 func NewAVAudioFifo(sampleFormat int32, channels int, nb_samples int) *AVAudioFifo {
 	fifo := C.av_audio_fifo_alloc(sampleFormat, C.int(channels), C.int(nb_samples))
 	if fifo == nil {
-		fmt.Printf("unable to allocate fifo context\n")
+		panic("unable to allocate fifo context\n")
 		return nil
 	}
 
@@ -95,7 +94,7 @@ func (this *AVAudioFifo) Read(sampleCount int) *Frame {
 		return frame
 	}
 
-	frame.Release()
+	frame.Free()
 	return nil
 }
 

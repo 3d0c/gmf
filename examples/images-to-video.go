@@ -1,5 +1,16 @@
 package main
 
+/* Valgrind report summary
+
+==6002== LEAK SUMMARY:
+==6002==    definitely lost: 0 bytes in 0 blocks
+==6002==    indirectly lost: 0 bytes in 0 blocks
+==6002==      possibly lost: 1,152 bytes in 4 blocks
+==6002==    still reachable: 0 bytes in 0 blocks
+==6002==         suppressed: 0 bytes in 0 blocks
+
+*/
+
 import (
 	"flag"
 	"fmt"
@@ -61,12 +72,13 @@ func initOst(name string, oc *gmf.FmtCtx, ist *gmf.Stream) (*gmf.Stream, error) 
 	if err = par.FromContext(cc); err != nil {
 		return nil, fmt.Errorf("error creating codec parameters from context - %s", err)
 	}
+	defer par.Free()
 
 	if ost = oc.NewStream(codec); ost == nil {
 		return nil, fmt.Errorf("unable to create new stream in output context")
 	}
 
-	ost.SetCodecParameters(par)
+	ost.CopyCodecPar(par)
 	ost.SetCodecCtx(cc)
 	ost.SetTimeBase(gmf.AVR{Num: 1, Den: 25})
 	ost.SetRFrameRate(gmf.AVR{Num: 25, Den: 1})
@@ -76,14 +88,14 @@ func initOst(name string, oc *gmf.FmtCtx, ist *gmf.Stream) (*gmf.Stream, error) 
 
 func main() {
 	var (
-		src             string
-		dst             string
-		ost             *gmf.Stream
-		pkt             *gmf.Packet
-		frame, dstFrame *gmf.Frame
-		swsCtx          *gmf.SwsCtx
-		ret             int
-		sources         []string = make([]string, 0)
+		src     string
+		dst     string
+		ost     *gmf.Stream
+		pkt     *gmf.Packet
+		frame   *gmf.Frame
+		swsCtx  *gmf.SwsCtx
+		ret     int
+		sources []string = make([]string, 0)
 	)
 
 	flag.StringVar(&src, "src", "./tmp", "source images folder")
@@ -139,7 +151,12 @@ func main() {
 		}
 
 		if swsCtx == nil {
-			swsCtx = gmf.NewSwsCtx(ist.CodecCtx(), ost.CodecCtx(), gmf.SWS_FAST_BILINEAR)
+			icc := ist.CodecCtx()
+			occ := ost.CodecCtx()
+			if swsCtx, err = gmf.NewSwsCtx(icc.Width(), icc.Height(), icc.PixFmt(), occ.Width(), occ.Height(), occ.PixFmt(), gmf.SWS_BICUBIC); err != nil {
+				panic(err)
+			}
+			defer swsCtx.Free()
 		}
 
 		if pkt, err = ictx.GetNextPacket(); err != nil {
@@ -151,18 +168,26 @@ func main() {
 			log.Fatalf("Unexpected error - %s\n", gmf.AvError(ret))
 		}
 
-		if dstFrame, err = swsCtx.Scale2(frame); err != nil {
+		dstFrames, err := gmf.DefaultRescaler(swsCtx, []*gmf.Frame{frame})
+		if err != nil {
 			log.Fatalf("Error scaling - %s\n", err)
 		}
 
-		encode(octx, ost, dstFrame, -1)
+		encode(octx, ost, dstFrames[0], -1)
 
 		pkt.Free()
-		ictx.Free()
 		frame.Free()
+		dstFrames[0].Free()
+
+		ist.CodecCtx().Free()
+		ist.Free()
+		ictx.Free()
 	}
 
 	encode(octx, ost, nil, 1)
+
+	ost.CodecCtx().Free()
+	ost.Free()
 
 	octx.WriteTrailer()
 }
