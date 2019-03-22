@@ -2,10 +2,9 @@
 
 #### Installation
 ##### Prerequisites
-Current master branch requires `go 1.6`.  
-Older versions available in branches go1.2 and go1.5.
+Current master branch supports all major Go versions, starting from 1.6.   
 
-##### Build
+##### Build/install FFmpeg
 build lastest version of ffmpeg, obtained from [https://github.com/FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg)  
 There is one required option, which is disabled by default, you should turn on: `--enable-shared`  
 
@@ -41,8 +40,14 @@ go get github.com/3d0c/gmf
 ##### Other methods
 This package uses pkg-config way to obtain flags, includes and libraries path, so if you have ffmpeg installed, just ensure, that your installation has them (pkgconfig/ folder with proper `pc` files).
 
+#### Docker containers
+Thanks to @ergoz you can try a docker container [riftbit/ffalpine](https://hub.docker.com/r/riftbit/ffalpine)
+
+Thanks to @denismakogon there is one more project, worth to mention
+[https://github.com/denismakogon/ffmpeg-debian](https://github.com/denismakogon/ffmpeg-debian)
+
 #### Usage
-Please see [examples](examples/) and tests. 
+Please see [examples](examples/).
 
 #### Support and Contribution
 If something doesn't work, just fix it. Do not hesitate to pull request.
