@@ -41,9 +41,9 @@ go get github.com/3d0c/gmf
 This package uses pkg-config way to obtain flags, includes and libraries path, so if you have ffmpeg installed, just ensure, that your installation has them (pkgconfig/ folder with proper `pc` files).
 
 #### Docker containers
-Thanks to @ergoz you can try a docker container [riftbit/ffalpine](https://hub.docker.com/r/riftbit/ffalpine)
+Thanks to [@ergoz](https://github.com/ergoz) you can try a docker container [riftbit/ffalpine](https://hub.docker.com/r/riftbit/ffalpine)
 
-Thanks to @denismakogon there is one more project, worth to mention
+Thanks to [@denismakogon](https://github.com/denismakogon) there is one more project, worth to mention
 [https://github.com/denismakogon/ffmpeg-debian](https://github.com/denismakogon/ffmpeg-debian)
 
 #### Usage
