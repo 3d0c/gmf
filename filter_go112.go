@@ -1,3 +1,5 @@
+// +build go1.12
+
 package gmf
 
 /*
@@ -25,24 +27,24 @@ const (
 )
 
 type Filter struct {
-	bufferCtx   []*_Ctype_AVFilterContext
-	sinkCtx     *_Ctype_AVFilterContext
-	filterGraph *_Ctype_AVFilterGraph
+	bufferCtx   []*C.AVFilterContext
+	sinkCtx     *C.AVFilterContext
+	filterGraph *C.AVFilterGraph
 }
 
 func NewFilter(desc string, srcStreams []*Stream, ost *Stream, options []*Option) (*Filter, error) {
 	f := &Filter{
 		filterGraph: C.avfilter_graph_alloc(),
-		bufferCtx:   make([]*_Ctype_AVFilterContext, 0),
+		bufferCtx:   make([]*C.AVFilterContext, 0),
 	}
 
 	var (
 		ret, i  int
 		args    string
-		inputs  *_Ctype_AVFilterInOut
-		outputs *_Ctype_AVFilterInOut
-		curr    *_Ctype_AVFilterInOut
-		last    *_Ctype_AVFilterContext
+		inputs  *C.AVFilterInOut
+		outputs *C.AVFilterInOut
+		curr    *C.AVFilterInOut
+		last    *C.AVFilterContext
 	)
 
 	cdesc := C.CString(desc)
@@ -105,9 +107,9 @@ func NewFilter(desc string, srcStreams []*Stream, ost *Stream, options []*Option
 	return f, nil
 }
 
-func (f *Filter) create(filter, name, args string) (*_Ctype_AVFilterContext, int) {
+func (f *Filter) create(filter, name, args string) (*C.AVFilterContext, int) {
 	var (
-		ctx *_Ctype_AVFilterContext
+		ctx *C.AVFilterContext
 		ret int
 	)
 

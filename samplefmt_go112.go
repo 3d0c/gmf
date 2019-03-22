@@ -1,3 +1,5 @@
+// +build go1.12
+
 package gmf
 
 /*
@@ -34,7 +36,7 @@ func NewSample(nbSamples, nbChannels int, format SampleFormat) error {
 
 	if ret := int(C.av_samples_alloc_array_and_samples(
 		&this.data,
-		(*_Ctype_int)(unsafe.Pointer(&this.linesize)),
+		(*C.int)(unsafe.Pointer(&this.linesize)),
 		C.int(nbChannels), C.int(nbSamples), int32(format), 0)); ret < 0 {
 		return errors.New(fmt.Sprintf("Unable to allocate array and samples: %v", AvError(ret)))
 	}
@@ -45,7 +47,7 @@ func NewSample(nbSamples, nbChannels int, format SampleFormat) error {
 func (this *Sample) SampleRealloc(nbSamples, nbChannels int) error {
 	if ret := int(C.av_samples_alloc(
 		this.data,
-		(*_Ctype_int)(unsafe.Pointer(&this.linesize)),
+		(*C.int)(unsafe.Pointer(&this.linesize)),
 		C.int(nbChannels), C.int(nbSamples), int32(this.format), 0)); ret < 0 {
 		return errors.New(fmt.Sprintf("Unable to allocate samples: %v", AvError(ret)))
 	}

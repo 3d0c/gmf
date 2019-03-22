@@ -1,3 +1,5 @@
+// +build go1.12
+
 // Format.
 package gmf
 
@@ -216,7 +218,7 @@ func (this *FmtCtx) SetOptions(options []*Option) {
 
 func (this *FmtCtx) OpenInput(filename string) error {
 	var (
-		cfilename *_Ctype_char
+		cfilename *C.char
 		options   *C.struct_AVDictionary = nil
 	)
 
