@@ -195,7 +195,7 @@ func (cc *CodecCtx) CopyExtra(ist *Stream) *CodecCtx {
 
 	codec.field_order = icodec.field_order
 
-	codec.extradata = (*Ctype_uint8_t)(C.av_mallocz((_Ctype_size_t)((C.uint64_t)(icodec.extradata_size) + C.AV_INPUT_BUFFER_PADDING_SIZE)))
+	codec.extradata = (*_Ctype_uint8_t)(C.av_mallocz((_Ctype_size_t)((C.uint64_t)(icodec.extradata_size) + C.AV_INPUT_BUFFER_PADDING_SIZE)))
 
 	C.memcpy(unsafe.Pointer(codec.extradata), unsafe.Pointer(icodec.extradata), (_Ctype_size_t)(icodec.extradata_size))
 	codec.extradata_size = icodec.extradata_size
