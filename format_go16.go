@@ -457,12 +457,6 @@ func (this *FmtCtx) Free() {
 }
 
 func (this *FmtCtx) Duration() float64 {
-	//To avoid fmt.Printf in Console and also to return float64 value for duration rather than int.
-	//In case of having duration as int will return original value 3.99 sec as 3 sec which is not valid
-	
-	//us := int(this.avCtx.duration) % AV_TIME_BASE
-	//fmt.Printf("us: %v\n", us)
-	//fmt.Printf("duration: %v\n", int(this.avCtx.duration))
 	return float64(this.avCtx.duration) / float64(AV_TIME_BASE)
 }
 
