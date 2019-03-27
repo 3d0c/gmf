@@ -455,12 +455,8 @@ func (this *FmtCtx) Free() {
 		C.avformat_free_context(this.avCtx)
 	}
 }
-
-func (this *FmtCtx) Duration() int {
-	us := int(this.avCtx.duration) % AV_TIME_BASE
-	fmt.Printf("us: %v\n", us)
-	fmt.Printf("duration: %v\n", int(this.avCtx.duration))
-	return int(this.avCtx.duration) / AV_TIME_BASE
+func (this *FmtCtx) Duration() float64 {
+	return float64(this.avCtx.duration) / float64(AV_TIME_BASE)
 }
 
 // Total stream bitrate in bit/s
