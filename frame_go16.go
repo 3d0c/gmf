@@ -36,6 +36,17 @@ import (
 	"unsafe"
 )
 
+const (
+	AV_PICTURE_TYPE_NONE = iota // Undefined
+	AV_PICTURE_TYPE_I           // Intra
+	AV_PICTURE_TYPE_P           // Predicted
+	AV_PICTURE_TYPE_B           // Bi-dir predicted
+	AV_PICTURE_TYPE_S           // S(GMC)-VOP MPEG-4
+	AV_PICTURE_TYPE_SI          // Switching Intra
+	AV_PICTURE_TYPE_SP          // Switching Predicted
+	AV_PICTURE_TYPE_BI          // BI type
+)
+
 type Frame struct {
 	avFrame   *C.struct_AVFrame
 	samples   *_Ctype_uint8_t
@@ -238,8 +249,8 @@ func (f *Frame) SetQuality(val int) *Frame {
 	return f
 }
 
-func (f *Frame) SetPictType() {
-	f.avFrame.pict_type = C.AV_PICTURE_TYPE_NONE
+func (f *Frame) SetPictType(val int32) {
+	f.avFrame.pict_type = uint32(val)
 }
 
 func (f *Frame) IsNil() bool {

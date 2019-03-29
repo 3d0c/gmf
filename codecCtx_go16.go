@@ -343,6 +343,10 @@ func (cc *CodecCtx) SetGopSize(val int) *CodecCtx {
 	return cc
 }
 
+func (cc *CodecCtx) GetGopSize() int {
+	return int(cc.avCodecCtx.gop_size)
+}
+
 func (cc *CodecCtx) SetMaxBFrames(val int) *CodecCtx {
 	cc.avCodecCtx.max_b_frames = C.int(val)
 	return cc
