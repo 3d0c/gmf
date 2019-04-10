@@ -350,6 +350,26 @@ func (this *FmtCtx) GetNextPacket() (*Packet, error) {
 	return pkt, nil
 }
 
+func (this *FmtCtx) GetNewPackets() chan *Packet {
+	yield := make(chan *Packet)
+
+	go func() {
+		for {
+			p := NewPacket()
+
+			if ret := C.av_read_frame(this.avCtx, &p.avPacket); int(ret) < 0 {
+				break
+			}
+
+			yield <- p
+		}
+
+		close(yield)
+	}()
+
+	return yield
+}
+
 func (this *FmtCtx) NewStream(c *Codec) *Stream {
 	var avCodec *C.struct_AVCodec = nil
 
