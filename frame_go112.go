@@ -265,6 +265,10 @@ func (f *Frame) GetRawFrame() *C.struct_AVFrame {
 	return f.avFrame
 }
 
+func (f *Frame) GetRawAudioData(plane int) []byte {
+	return C.GoBytes(unsafe.Pointer(f.avFrame.data[plane]), C.int(f.LineSize(plane)))
+}
+
 func (f *Frame) Time(timebase AVRational) int {
 	return int(float64(timebase.AVR().Num) / float64(timebase.AVR().Den) * float64(f.Pts()))
 }
