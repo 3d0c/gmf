@@ -115,6 +115,7 @@ var (
 type Codec struct {
 	avCodec *C.struct_AVCodec
 	CgoMemoryManage
+	decoder bool
 }
 
 func FindDecoder(i interface{}) (*Codec, error) {
@@ -140,7 +141,7 @@ func FindDecoder(i interface{}) (*Codec, error) {
 		return nil, errors.New(fmt.Sprintf("Unable to find codec by value '%v'", i))
 	}
 
-	return &Codec{avCodec: avc}, nil
+	return &Codec{avCodec: avc, decoder: true}, nil
 }
 
 func FindEncoder(i interface{}) (*Codec, error) {
@@ -191,4 +192,8 @@ func (this *Codec) Type() int {
 
 func (this *Codec) IsExperimental() bool {
 	return bool((this.avCodec.capabilities & C.AV_CODEC_CAP_EXPERIMENTAL) != 0)
+}
+
+func (this *Codec) IsDecoder() bool {
+	return this.decoder
 }

@@ -16,6 +16,17 @@ package gmf
 #include "libavutil/mem.h"
 #include "libavutil/bprint.h"
 
+#define HAVE_THREADS 1
+
+static int32_t gmf_select_sample_fmt(AVCodec *codec)
+{
+    if (codec && codec->sample_fmts) {
+        return codec->sample_fmts[0];
+    }
+
+    return -1;
+}
+
 static int check_sample_fmt(AVCodec *codec, enum AVSampleFormat sample_fmt) {
     const enum AVSampleFormat *p = codec->sample_fmts;
 
@@ -40,6 +51,22 @@ static int select_sample_rate(AVCodec *codec) {
         p++;
     }
     return best_samplerate;
+}
+
+static int gmf_check_sample_rate(AVCodec *codec, int input_sample_rate) {
+    const int *p;
+
+    if ((p = codec->supported_samplerates) == NULL) {
+        return 1;
+    }
+
+    while (*p) {
+        if (*p == input_sample_rate) {
+            return 1;
+        }
+        p++;
+    }
+    return 0;
 }
 
 static int select_channel_layout(AVCodec *codec) {
@@ -68,18 +95,18 @@ static void call_av_freep(AVCodecContext *out){
 }
 
 static char * gmf_get_channel_layout_name(int channels, int layout) {
-	AVBPrint pbuf;
+    AVBPrint pbuf;
 
-	av_bprint_init(&pbuf, 0, 1);
+    av_bprint_init(&pbuf, 0, 1);
     av_bprint_channel_layout(&pbuf, channels, layout);
 
-	char *result = av_mallocz(pbuf.len);
+    char *result = av_mallocz(pbuf.len);
 
-	memcpy(result, pbuf.str, pbuf.len);
+    memcpy(result, pbuf.str, pbuf.len);
 
-	av_bprint_clear(&pbuf);
+    av_bprint_clear(&pbuf);
 
-	return result;
+    return result;
 }
 
 */
@@ -117,10 +144,14 @@ var (
 	AV_CODEC_ID_GIF        int = C.AV_CODEC_ID_GIF
 	AV_CODEC_ID_RAWVIDEO   int = C.AV_CODEC_ID_RAWVIDEO
 
-	CODEC_FLAG_GLOBAL_HEADER int = C.AV_CODEC_FLAG_GLOBAL_HEADER
-	FF_MB_DECISION_SIMPLE    int = C.FF_MB_DECISION_SIMPLE
-	FF_MB_DECISION_BITS      int = C.FF_MB_DECISION_BITS
-	FF_MB_DECISION_RD        int = C.FF_MB_DECISION_RD
+	CODEC_FLAG_GLOBAL_HEADER int   = C.AV_CODEC_FLAG_GLOBAL_HEADER
+	AV_CODEC_FLAG_QSCALE     int32 = C.AV_CODEC_FLAG_QSCALE
+
+	FF_MB_DECISION_SIMPLE int = C.FF_MB_DECISION_SIMPLE
+	FF_MB_DECISION_BITS   int = C.FF_MB_DECISION_BITS
+	FF_MB_DECISION_RD     int = C.FF_MB_DECISION_RD
+
+	FF_QP2LAMBDA int = C.FF_QP2LAMBDA
 
 	AV_SAMPLE_FMT_U8  int32 = C.AV_SAMPLE_FMT_U8
 	AV_SAMPLE_FMT_S16 int32 = C.AV_SAMPLE_FMT_S16
@@ -216,6 +247,11 @@ func (cc *CodecCtx) Open(dict *Dict) error {
 		avDict = dict.avDict
 	}
 
+	if cc.Codec().IsDecoder() {
+		cc.avCodecCtx.thread_count = 4
+		cc.avCodecCtx.thread_type = 3
+	}
+
 	if averr := C.avcodec_open2(cc.avCodecCtx, cc.codec.avCodec, &avDict); averr < 0 {
 		return errors.New(fmt.Sprintf("Error opening codec '%s:%s', averror: %s", cc.codec.Name(), cc.codec.LongName(), AvError(int(averr))))
 	}
@@ -225,8 +261,9 @@ func (cc *CodecCtx) Open(dict *Dict) error {
 
 // codec context is freed by avformat_free_context()
 func (cc *CodecCtx) Free() {
-	C.avcodec_free_context(&cc.avCodecCtx)
-	cc.codec.Free()
+	if cc.avCodecCtx != nil {
+		C.avcodec_free_context(&cc.avCodecCtx)
+	}
 }
 
 func (cc *CodecCtx) CloseAndRelease() {
@@ -341,6 +378,10 @@ func (cc *CodecCtx) SetTimeBase(val AVR) *CodecCtx {
 func (cc *CodecCtx) SetGopSize(val int) *CodecCtx {
 	cc.avCodecCtx.gop_size = C.int(val)
 	return cc
+}
+
+func (cc *CodecCtx) GetGopSize() int {
+	return int(cc.avCodecCtx.gop_size)
 }
 
 func (cc *CodecCtx) SetMaxBFrames(val int) *CodecCtx {
@@ -605,4 +646,25 @@ func (cc *CodecCtx) Decode2(pkt *Packet) (*Frame, int) {
 	}
 
 	return frame, 0
+}
+
+func (cc *CodecCtx) SelectSampleFmt() int32 {
+	return int32(C.gmf_select_sample_fmt(cc.codec.avCodec))
+}
+
+func (cc *CodecCtx) SupportedSampleRate(val int) bool {
+	return int(C.gmf_check_sample_rate(cc.codec.avCodec, C.int(val))) == 1
+}
+
+func (cc *CodecCtx) SetGlobalQuality(val int) {
+	cc.avCodecCtx.global_quality = C.int(val)
+}
+
+func (cc *CodecCtx) SetPktTimeBase(val AVR) {
+	cc.avCodecCtx.pkt_timebase.num = C.int(val.Num)
+	cc.avCodecCtx.pkt_timebase.den = C.int(val.Den)
+}
+
+func (cc *CodecCtx) SetThreadCount(val int) {
+	cc.avCodecCtx.thread_count = C.int(val)
 }

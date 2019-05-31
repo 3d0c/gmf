@@ -114,6 +114,10 @@ func (f *Frame) PktPts() int64 {
 	return int64(f.avFrame.pkt_pts)
 }
 
+func (f *Frame) PktPos() int64 {
+	return int64(f.avFrame.pkt_pos)
+}
+
 func (f *Frame) SetPktPts(val int64) {
 	f.avFrame.pkt_pts = (C.int64_t)(val)
 }
