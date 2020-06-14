@@ -218,7 +218,7 @@ func (this *FmtCtx) SetOptions(options []*Option) {
 
 func (this *FmtCtx) OpenInputWithOption(filename string, inputOptions *Option) error {
 	var (
-		cfilename *_Ctype_char
+		cfilename *C.char
 		options   *C.struct_AVDictionary = inputOptions.Val.(*Dict).avDict
 	)
 
@@ -241,6 +241,9 @@ func (this *FmtCtx) OpenInputWithOption(filename string, inputOptions *Option) e
 }
 
 func (this *FmtCtx) OpenInput(filename string) error {
+	//Create an empty Option object to pass to the open input
+	inputOptionsDict := NewDict([]Pair{})
+	inputOption := &Option{Key: "input_options", Val: inputOptionsDict}
 	if err := this.OpenInputWithOption(filename, nil); err != nil {
 		return err
 	}
