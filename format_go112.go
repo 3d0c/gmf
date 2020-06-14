@@ -244,7 +244,7 @@ func (this *FmtCtx) OpenInput(filename string) error {
 	//Create an empty Option object to pass to the open input
 	inputOptionsDict := NewDict([]Pair{})
 	inputOption := &Option{Key: "input_options", Val: inputOptionsDict}
-	if err := this.OpenInputWithOption(filename, nil); err != nil {
+	if err := this.OpenInputWithOption(filename, inputOption); err != nil {
 		return err
 	}
 
