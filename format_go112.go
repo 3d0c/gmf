@@ -216,10 +216,10 @@ func (this *FmtCtx) SetOptions(options []*Option) {
 	}
 }
 
-func (this *FmtCtx) OpenInput(filename string) error {
+func (this *FmtCtx) OpenInputWithOption(filename string, inputOptions *Option) error {
 	var (
 		cfilename *C.char
-		options   *C.struct_AVDictionary = nil
+		options   *C.struct_AVDictionary = inputOptions.Val.(*Dict).avDict
 	)
 
 	if filename == "" {
@@ -235,6 +235,17 @@ func (this *FmtCtx) OpenInput(filename string) error {
 
 	if averr := C.avformat_find_stream_info(this.avCtx, nil); averr < 0 {
 		return errors.New(fmt.Sprintf("Unable to find stream info: %s", AvError(int(averr))))
+	}
+
+	return nil
+}
+
+func (this *FmtCtx) OpenInput(filename string) error {
+	//Create an empty Option object to pass to the open input
+	inputOptionsDict := NewDict([]Pair{})
+	inputOption := &Option{Key: "input_options", Val: inputOptionsDict}
+	if err := this.OpenInputWithOption(filename, inputOption); err != nil {
+		return err
 	}
 
 	return nil
