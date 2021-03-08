@@ -88,7 +88,7 @@ func (p *Packet) SetData(data []byte) *Packet {
 	p.avPacket.size = C.int(len(data))
 	p.avPacket.data = (*C.uint8_t)(C.av_mallocz((C.size_t)(len(data))))
 	tmp := unsafe.Pointer(C.CBytes(data))
-	C.memcpy(unsafe.Pointer(p.avPacket.data), unsafe.Pointer(C.CBytes(data)), (C.size_t)(p.avPacket.size))
+	C.memcpy(unsafe.Pointer(p.avPacket.data), tmp, (C.size_t)(p.avPacket.size))
 	C.free(tmp)
 	return p
 }
