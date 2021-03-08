@@ -237,6 +237,16 @@ func (cc *CodecCtx) CopyExtra(ist *Stream) *CodecCtx {
 	return cc
 }
 
+func (cc *CodecCtx) SetExtradata(extradata []byte) *CodecCtx {
+	codec := cc.avCodecCtx
+	codec.extradata_size = C.int(len(extradata))
+	codec.extradata = (*C.uint8_t)(C.av_mallocz((C.size_t)((C.uint64_t)(len(extradata)) + C.AV_INPUT_BUFFER_PADDING_SIZE)))
+	tmp := unsafe.Pointer(C.CBytes(extradata))
+	C.memcpy(unsafe.Pointer(codec.extradata), tmp, (C.size_t)(codec.extradata_size))
+	C.free(tmp)
+	return cc
+}
+
 func (cc *CodecCtx) Open(dict *Dict) error {
 	if cc.IsOpen() {
 		return nil

@@ -41,16 +41,18 @@ func (p *Packet) Pts() int64 {
 	return int64(p.avPacket.pts)
 }
 
-func (p *Packet) SetPts(pts int64) {
+func (p *Packet) SetPts(pts int64) *Packet {
 	p.avPacket.pts = C.int64_t(pts)
+	return p
 }
 
 func (p *Packet) Dts() int64 {
 	return int64(p.avPacket.dts)
 }
 
-func (p *Packet) SetDts(val int64) {
+func (p *Packet) SetDts(val int64) *Packet {
 	p.avPacket.dts = C.int64_t(val)
+	return p
 }
 
 func (p *Packet) Flags() int {
@@ -61,8 +63,9 @@ func (p *Packet) Duration() int64 {
 	return int64(p.avPacket.duration)
 }
 
-func (p *Packet) SetDuration(duration int64) {
+func (p *Packet) SetDuration(duration int64) *Packet {
 	p.avPacket.duration = C.int64_t(duration)
+	return p
 }
 
 func (p *Packet) StreamIndex() int {
@@ -79,6 +82,15 @@ func (p *Packet) Pos() int64 {
 
 func (p *Packet) Data() []byte {
 	return C.GoBytes(unsafe.Pointer(p.avPacket.data), C.int(p.avPacket.size))
+}
+
+func (p *Packet) SetData(data []byte) *Packet {
+	p.avPacket.size = C.int(len(data))
+	p.avPacket.data = (*C.uint8_t)(C.av_mallocz((C.size_t)(len(data))))
+	tmp := unsafe.Pointer(C.CBytes(data))
+	C.memcpy(unsafe.Pointer(p.avPacket.data), unsafe.Pointer(C.CBytes(data)), (C.size_t)(p.avPacket.size))
+	C.free(tmp)
+	return p
 }
 
 func (p *Packet) Clone() *Packet {
