@@ -237,6 +237,8 @@ func (cc *CodecCtx) CopyExtra(ist *Stream) *CodecCtx {
 	return cc
 }
 
+// SetExtradata TODO: Improving performance
+//   Free or avcodec_free_context can free extradata
 func (cc *CodecCtx) SetExtradata(extradata []byte) *CodecCtx {
 	codec := cc.avCodecCtx
 	codec.extradata_size = C.int(len(extradata))
@@ -331,7 +333,7 @@ func (cc *CodecCtx) Profile() int {
 }
 
 func (cc *CodecCtx) IsOpen() bool {
-	return (int(C.avcodec_is_open(cc.avCodecCtx)) > 0)
+	return int(C.avcodec_is_open(cc.avCodecCtx)) > 0
 }
 
 func (cc *CodecCtx) SetProfile(profile int) *CodecCtx {
@@ -548,7 +550,7 @@ func (cc *CodecCtx) GetChannelLayoutName() string {
 	return str
 }
 
-func (this *CodecCtx) GetDefaultChannelLayout(ac int) int {
+func (cc *CodecCtx) GetDefaultChannelLayout(ac int) int {
 	return int(C.av_get_default_channel_layout(C.int(ac)))
 }
 

@@ -37,6 +37,21 @@ func NewPacket() *Packet {
 	return p
 }
 
+// Init same to NewPacket and av_init_packet
+//   Initialize optional fields of a packet with default values.
+//   Note, this does not touch the data and size members, which have to be
+//   initialized separately.
+func Init() *Packet {
+	p := &Packet{}
+
+	C.av_init_packet(&p.avPacket)
+
+	p.avPacket.data = nil
+	p.avPacket.size = 0
+
+	return p
+}
+
 func (p *Packet) Pts() int64 {
 	return int64(p.avPacket.pts)
 }
@@ -84,12 +99,28 @@ func (p *Packet) Data() []byte {
 	return C.GoBytes(unsafe.Pointer(p.avPacket.data), C.int(p.avPacket.size))
 }
 
+// SetData [NOT SUGGESTED] should free data later
+//   p := gmf.NewPacket()
+//   defer p.Free()
+//   p.SetData([]byte{0x00, 0x00, 0x00, 0x01, 0x67})
+//   defer p.FreeData()
 func (p *Packet) SetData(data []byte) *Packet {
 	p.avPacket.size = C.int(len(data))
-	p.avPacket.data = (*C.uint8_t)(C.av_mallocz((C.size_t)(len(data))))
-	tmp := unsafe.Pointer(C.CBytes(data))
-	C.memcpy(unsafe.Pointer(p.avPacket.data), tmp, (C.size_t)(p.avPacket.size))
-	C.free(tmp)
+	p.avPacket.data = (*C.uint8_t)(C.CBytes(data))
+	return p
+}
+
+// FreeData free data when use SetData
+//   p := gmf.NewPacket()
+//   defer p.Free()
+//   p.SetData([]byte{0x00, 0x00, 0x00, 0x01, 0x67})
+//   defer p.FreeData()
+func (p *Packet) FreeData() *Packet {
+	if p.avPacket.data != nil {
+		C.free(p.avPacket.data)
+		p.avPacket.data = nil
+		p.avPacket.size = 0
+	}
 	return p
 }
 
