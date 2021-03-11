@@ -117,7 +117,7 @@ func (p *Packet) SetData(data []byte) *Packet {
 //   defer p.FreeData()
 func (p *Packet) FreeData() *Packet {
 	if p.avPacket.data != nil {
-		C.free(p.avPacket.data)
+		C.free(unsafe.Pointer(p.avPacket.data))
 		p.avPacket.data = nil
 		p.avPacket.size = 0
 	}
