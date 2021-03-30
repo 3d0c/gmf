@@ -1,23 +1,24 @@
-package gmf
+package gmf_test
 
 import (
+	"github.com/3d0c/gmf"
 	"log"
 	"testing"
 )
 
 func TestStream(t *testing.T) {
-	ctx := NewCtx()
+	ctx := gmf.NewCtx()
 
-	vc, err := FindEncoder("mpeg4")
+	vc, err := gmf.FindEncoder("mpeg4")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cc := NewCodecCtx(vc)
+	cc := gmf.NewCodecCtx(vc)
 	if cc == nil {
 		t.Fatal("Unable to allocate codec context")
 	}
-	defer Release(cc)
+	defer cc.Free()
 
 	if ctx.NewStream(vc) == nil {
 		t.Fatal("Unable to create new stream")
@@ -31,7 +32,7 @@ func TestStream(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	st := assert(ctx.GetStream(0)).(*Stream)
+	st := assert(ctx.GetStream(0)).(*gmf.Stream)
 
 	st.SetCodecCtx(cc)
 
@@ -45,12 +46,12 @@ func TestStream(t *testing.T) {
 }
 
 func TestStreamInputCtx(t *testing.T) {
-	inputCtx, err := NewInputCtx(inputSampleFilename)
+	inputCtx, err := gmf.NewInputCtx(inputSampleFilename)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ist := assert(inputCtx.GetStream(0)).(*Stream)
+	ist := assert(inputCtx.GetStream(0)).(*gmf.Stream)
 
 	if ist.CodecCtx().Width() != inputSampleWidth || ist.CodecCtx().Height() != inputSampleHeight {
 		t.Fatalf("Expected dimension = %dx%d, %dx%d got\n", inputSampleWidth, inputSampleHeight, ist.CodecCtx().Width(), ist.CodecCtx().Height())
@@ -58,5 +59,5 @@ func TestStreamInputCtx(t *testing.T) {
 
 	log.Printf("Input stream is OK, cnt: %d, %dx%d\n", inputCtx.StreamsCnt(), ist.CodecCtx().Width(), ist.CodecCtx().Height())
 
-	inputCtx.CloseInputAndRelease()
+	inputCtx.Free()
 }

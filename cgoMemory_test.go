@@ -19,13 +19,13 @@ type Data struct {
 var dataIsFree bool = false
 var subDataIsFree bool = false
 
-func (this *Data) Free() {
-	//	log.Printf(" Data Free(%p) retainCount=%d",this,this.RetainCount())
+func (d *Data) Free() {
+	//	log.Printf(" Data Free(%p) retainCount=%d",d,d.RetainCount())
 	dataIsFree = true
 }
 
-func (this *SubData) Free() {
-	//	log.Printf(" SubData Free(%p) retainCount=%d",this,this.RetainCount())
+func (d *SubData) Free() {
+	//	log.Printf(" SubData Free(%p) retainCount=%d",d,d.RetainCount())
 	subDataIsFree = true
 }
 

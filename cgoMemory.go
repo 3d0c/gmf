@@ -38,19 +38,19 @@ func debugLogf(functionname string, c *CgoMemoryManage) {
 	}
 }
 
-func (this *CgoMemoryManage) Retain() {
-	atomic.AddInt32(&this.retainCount, 1)
-	debugLogf("Retain", this)
+func (c *CgoMemoryManage) Retain() {
+	atomic.AddInt32(&c.retainCount, 1)
+	debugLogf("Retain", c)
 }
 
-func (this *CgoMemoryManage) RetainCount() int32 {
-	return this.retainCount + 1
+func (c *CgoMemoryManage) RetainCount() int32 {
+	return c.retainCount + 1
 }
-func (this *CgoMemoryManage) Release() {
-	atomic.AddInt32(&this.retainCount, -1)
-	debugLogf("Release", this)
+func (c *CgoMemoryManage) Release() {
+	atomic.AddInt32(&c.retainCount, -1)
+	debugLogf("Release", c)
 }
 
-func (this *CgoMemoryManage) Free() {
-	debugLogf("Free", this)
+func (c *CgoMemoryManage) Free() {
+	debugLogf("Free", c)
 }

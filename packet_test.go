@@ -1,36 +1,24 @@
-package gmf
+package gmf_test
 
 import (
+	"github.com/3d0c/gmf"
 	"testing"
 )
 
 func TestFramesIterator(t *testing.T) {
-	inputCtx, err := NewInputCtx(inputSampleFilename)
+	inputCtx, err := gmf.NewInputCtx(inputSampleFilename)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer inputCtx.CloseInputAndRelease()
+	defer inputCtx.Free()
 
 	cnt := 0
-
-	for packet := range inputCtx.GetNewPackets() {
-		if packet.Size() <= 0 {
-			t.Fatal("Expected size > 0")
-		}
-
-		ist := assert(inputCtx.GetStream(0)).(*Stream)
-
-		frame, err := packet.Frames(ist.CodecCtx())
-		if err != nil {
-			t.Fatal(err)
-		}
-		if frame == nil {
-			t.Fatal("Frame is nil")
-		}
-
+	ist := assert(inputCtx.GetStream(0)).(*gmf.Stream)
+	t.Log("NbFrames", ist.NbFrames())
+	ctx := ist.CodecCtx()
+	for frame := range gmf.GenSyntVideoNewFrame(ctx.Width(), ctx.Height(), ctx.PixFmt()) {
 		cnt++
-
-		Release(packet)
+		frame.Free()
 	}
 
 	if cnt != 25 {

@@ -55,7 +55,7 @@ import (
 type Image struct {
 	avPointers **C.uint8_t
 	avLineSize *C.int
-	bufsize    int
+	size       int
 	pixFmt     int32
 	width      int
 	height     int
@@ -64,28 +64,32 @@ type Image struct {
 
 // @todo find better way to do allocation
 func NewImage(w, h int, pixFmt int32, align int) (*Image, error) {
-	this := &Image{
+	image := &Image{
 		avPointers: C.alloc_uint4(), // allocate uint8_t *pointers[4]
 		avLineSize: C.alloc_int4(),  // allocate int[4]
 	}
 
-	ret := C.av_image_alloc(this.avPointers, this.avLineSize, C.int(w), C.int(h), pixFmt, C.int(align))
+	ret := C.av_image_alloc(image.avPointers, image.avLineSize, C.int(w), C.int(h), pixFmt, C.int(align))
 	if ret < 0 {
 		return nil, errors.New(fmt.Sprintf("Unable to allocate image:%s", AvError(int(ret))))
 	}
 
-	this.bufsize = int(ret)
-	this.pixFmt = pixFmt
-	this.width = w
-	this.height = h
+	image.size = int(ret)
+	image.pixFmt = pixFmt
+	image.width = w
+	image.height = h
 
-	return this, nil
+	return image, nil
 }
 
-func (this *Image) Copy(frame *Frame) {
-	C.copy_helper(this.avPointers, this.avLineSize, frame.avFrame, C.int(this.width), C.int(this.height), C.int(this.pixFmt))
+func (i *Image) Copy(frame *Frame) {
+	C.copy_helper(i.avPointers, i.avLineSize, frame.avFrame, C.int(i.width), C.int(i.height), C.int(i.pixFmt))
 }
 
-func (this *Image) Free() {
-	C.free_ptr(this.avPointers, this.avLineSize)
+func (i *Image) Size() int {
+	return i.size
+}
+
+func (i *Image) Free() {
+	C.free_ptr(i.avPointers, i.avLineSize)
 }

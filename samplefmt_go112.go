@@ -32,11 +32,11 @@ type Sample struct {
 
 func NewSample(nbSamples, nbChannels int, format SampleFormat) error {
 	panic("This stuff is unfinished.")
-	this := &Sample{format: format}
+	sample := &Sample{format: format}
 
 	if ret := int(C.av_samples_alloc_array_and_samples(
-		&this.data,
-		(*C.int)(unsafe.Pointer(&this.linesize)),
+		&sample.data,
+		(*C.int)(unsafe.Pointer(&sample.linesize)),
 		C.int(nbChannels), C.int(nbSamples), int32(format), 0)); ret < 0 {
 		return errors.New(fmt.Sprintf("Unable to allocate array and samples: %v", AvError(ret)))
 	}
@@ -44,11 +44,11 @@ func NewSample(nbSamples, nbChannels int, format SampleFormat) error {
 	return nil
 }
 
-func (this *Sample) SampleRealloc(nbSamples, nbChannels int) error {
+func (s *Sample) SampleRealloc(nbSamples, nbChannels int) error {
 	if ret := int(C.av_samples_alloc(
-		this.data,
-		(*C.int)(unsafe.Pointer(&this.linesize)),
-		C.int(nbChannels), C.int(nbSamples), int32(this.format), 0)); ret < 0 {
+		s.data,
+		(*C.int)(unsafe.Pointer(&s.linesize)),
+		C.int(nbChannels), C.int(nbSamples), int32(s.format), 0)); ret < 0 {
 		return errors.New(fmt.Sprintf("Unable to allocate samples: %v", AvError(ret)))
 	}
 

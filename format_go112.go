@@ -99,13 +99,16 @@ func LogSetLevel(level int) {
 	C.av_log_set_level(C.int(level))
 }
 
-// @todo return error if avCtx is null
 // @todo start_time is it needed?
 func NewCtx(options ...[]Option) *FmtCtx {
 	ctx := &FmtCtx{
 		avCtx:    C.avformat_alloc_context(),
 		streams:  make(map[int]*Stream),
 		customPb: false,
+	}
+
+	if ctx.avCtx == nil {
+		return nil
 	}
 
 	ctx.avCtx.start_time = 0
@@ -210,13 +213,13 @@ func NewInputCtxWithFormatName(filename, format string) (*FmtCtx, error) {
 	return ctx, nil
 }
 
-func (this *FmtCtx) SetOptions(options []*Option) {
+func (ctx *FmtCtx) SetOptions(options []*Option) {
 	for _, option := range options {
-		option.Set(this.avCtx)
+		option.Set(ctx.avCtx)
 	}
 }
 
-func (this *FmtCtx) OpenInputWithOption(filename string, inputOptions *Option) error {
+func (ctx *FmtCtx) OpenInputWithOption(filename string, inputOptions *Option) error {
 	var (
 		cfilename *C.char
 		options   *C.struct_AVDictionary = inputOptions.Val.(*Dict).avDict
@@ -229,120 +232,120 @@ func (this *FmtCtx) OpenInputWithOption(filename string, inputOptions *Option) e
 		defer C.free(unsafe.Pointer(cfilename))
 	}
 
-	if averr := C.avformat_open_input(&this.avCtx, cfilename, nil, &options); averr < 0 {
+	if averr := C.avformat_open_input(&ctx.avCtx, cfilename, nil, &options); averr < 0 {
 		return errors.New(fmt.Sprintf("Error opening input '%s': %s", filename, AvError(int(averr))))
 	}
 
-	if averr := C.avformat_find_stream_info(this.avCtx, nil); averr < 0 {
+	if averr := C.avformat_find_stream_info(ctx.avCtx, nil); averr < 0 {
 		return errors.New(fmt.Sprintf("Unable to find stream info: %s", AvError(int(averr))))
 	}
 
 	return nil
 }
 
-func (this *FmtCtx) OpenInput(filename string) error {
+func (ctx *FmtCtx) OpenInput(filename string) error {
 	//Create an empty Option object to pass to the open input
 	inputOptionsDict := NewDict([]Pair{})
 	inputOption := &Option{Key: "input_options", Val: inputOptionsDict}
-	if err := this.OpenInputWithOption(filename, inputOption); err != nil {
+	if err := ctx.OpenInputWithOption(filename, inputOption); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (this *FmtCtx) AddStreamWithCodeCtx(codeCtx *CodecCtx) (*Stream, error) {
+func (ctx *FmtCtx) AddStreamWithCodeCtx(codeCtx *CodecCtx) (*Stream, error) {
 	var ost *Stream
 
 	// Create Video stream in output context
-	if ost = this.NewStream(codeCtx.Codec()); ost == nil {
-		return nil, fmt.Errorf("unable to create stream in context, filename: %s", this.Filename)
+	if ost = ctx.NewStream(codeCtx.Codec()); ost == nil {
+		return nil, fmt.Errorf("unable to create stream in context, filename: %s", ctx.Filename)
 	}
 
 	ost.DumpContexCodec(codeCtx)
 
-	if this.avCtx.oformat != nil && int(this.avCtx.oformat.flags&C.AVFMT_GLOBALHEADER) > 0 {
+	if ctx.avCtx.oformat != nil && int(ctx.avCtx.oformat.flags&C.AVFMT_GLOBALHEADER) > 0 {
 		ost.SetCodecFlags()
 	}
 
 	return ost, nil
 }
 
-func (this *FmtCtx) WriteTrailer() {
-	C.av_write_trailer(this.avCtx)
+func (ctx *FmtCtx) WriteTrailer() {
+	C.av_write_trailer(ctx.avCtx)
 }
 
-func (this *FmtCtx) IsNoFile() bool {
-	return this.avCtx.oformat != nil && (this.avCtx.oformat.flags&C.AVFMT_NOFILE) != 0
+func (ctx *FmtCtx) IsNoFile() bool {
+	return ctx.avCtx.oformat != nil && (ctx.avCtx.oformat.flags&C.AVFMT_NOFILE) != 0
 }
 
-func (this *FmtCtx) IsGlobalHeader() bool {
-	return this.avCtx != nil && this.avCtx.oformat != nil && (this.avCtx.oformat.flags&C.AVFMT_GLOBALHEADER) != 0
+func (ctx *FmtCtx) IsGlobalHeader() bool {
+	return ctx.avCtx != nil && ctx.avCtx.oformat != nil && (ctx.avCtx.oformat.flags&C.AVFMT_GLOBALHEADER) != 0
 }
 
-func (this *FmtCtx) WriteHeader() error {
-	cfilename := &(this.avCtx.filename[0])
+func (ctx *FmtCtx) WriteHeader() error {
+	cfilename := &(ctx.avCtx.filename[0])
 
 	// If NOFILE flag isn't set and we don't use custom IO, open it
-	if !this.IsNoFile() && !this.customPb {
-		if averr := C.avio_open(&this.avCtx.pb, cfilename, C.AVIO_FLAG_WRITE); averr < 0 {
-			return errors.New(fmt.Sprintf("Unable to open '%s': %s", this.Filename, AvError(int(averr))))
+	if !ctx.IsNoFile() && !ctx.customPb {
+		if averr := C.avio_open(&ctx.avCtx.pb, cfilename, C.AVIO_FLAG_WRITE); averr < 0 {
+			return errors.New(fmt.Sprintf("Unable to open '%s': %s", ctx.Filename, AvError(int(averr))))
 		}
 	}
 
-	if averr := C.avformat_write_header(this.avCtx, nil); averr < 0 {
-		return errors.New(fmt.Sprintf("Unable to write header to '%s': %s", this.Filename, AvError(int(averr))))
+	if averr := C.avformat_write_header(ctx.avCtx, nil); averr < 0 {
+		return errors.New(fmt.Sprintf("Unable to write header to '%s': %s", ctx.Filename, AvError(int(averr))))
 	}
 
 	return nil
 }
 
-func (this *FmtCtx) WritePacket(p *Packet) error {
-	if averr := C.av_interleaved_write_frame(this.avCtx, &p.avPacket); averr < 0 {
-		return errors.New(fmt.Sprintf("Unable to write packet to '%s': %s", this.Filename, AvError(int(averr))))
+func (ctx *FmtCtx) WritePacket(p *Packet) error {
+	if averr := C.av_interleaved_write_frame(ctx.avCtx, &p.avPacket); averr < 0 {
+		return errors.New(fmt.Sprintf("Unable to write packet to '%s': %s", ctx.Filename, AvError(int(averr))))
 	}
 
 	return nil
 }
 
-func (this *FmtCtx) WritePacketNoBuffer(p *Packet) error {
-	if averr := C.av_write_frame(this.avCtx, &p.avPacket); averr < 0 {
-		return errors.New(fmt.Sprintf("Unable to write packet to '%s': %s", this.Filename, AvError(int(averr))))
+func (ctx *FmtCtx) WritePacketNoBuffer(p *Packet) error {
+	if averr := C.av_write_frame(ctx.avCtx, &p.avPacket); averr < 0 {
+		return errors.New(fmt.Sprintf("Unable to write packet to '%s': %s", ctx.Filename, AvError(int(averr))))
 	}
 
 	return nil
 }
 
-func (this *FmtCtx) SetOformat(ofmt *OutputFmt) error {
+func (ctx *FmtCtx) SetOformat(ofmt *OutputFmt) error {
 	if ofmt == nil {
 		return errors.New("'ofmt' is not initialized.")
 	}
 
-	if averr := C.avformat_alloc_output_context2(&this.avCtx, ofmt.avOutputFmt, nil, nil); averr < 0 {
+	if averr := C.avformat_alloc_output_context2(&ctx.avCtx, ofmt.avOutputFmt, nil, nil); averr < 0 {
 		return errors.New(fmt.Sprintf("Error creating output context: %s", AvError(int(averr))))
 	}
 
 	return nil
 }
 
-func (this *FmtCtx) Dump() {
-	if this.ofmt == nil {
-		C.av_dump_format(this.avCtx, 0, &(this.avCtx.filename[0]), 0)
+func (ctx *FmtCtx) Dump() {
+	if ctx.ofmt == nil {
+		C.av_dump_format(ctx.avCtx, 0, &(ctx.avCtx.filename[0]), 0)
 	} else {
-		C.av_dump_format(this.avCtx, 0, &(this.avCtx.filename[0]), 1)
+		C.av_dump_format(ctx.avCtx, 0, &(ctx.avCtx.filename[0]), 1)
 	}
 }
 
-func (this *FmtCtx) DumpAv() {
-	fmt.Println("AVCTX:\n", this.avCtx, "\niformat:\n", this.avCtx.iformat)
-	fmt.Println("flags:", this.avCtx.flags)
+func (ctx *FmtCtx) DumpAv() {
+	fmt.Println("AVCTX:\n", ctx.avCtx, "\niformat:\n", ctx.avCtx.iformat)
+	fmt.Println("flags:", ctx.avCtx.flags)
 }
 
-func (this *FmtCtx) GetNextPacket() (*Packet, error) {
+func (ctx *FmtCtx) GetNextPacket() (*Packet, error) {
 	pkt := NewPacket()
 
 	for {
-		ret := int(C.av_read_frame(this.avCtx, &pkt.avPacket))
+		ret := int(C.av_read_frame(ctx.avCtx, &pkt.avPacket))
 
 		if AvErrno(ret) == syscall.EAGAIN {
 			time.Sleep(10000 * time.Microsecond)
@@ -361,14 +364,14 @@ func (this *FmtCtx) GetNextPacket() (*Packet, error) {
 	return pkt, nil
 }
 
-func (this *FmtCtx) GetNewPackets() chan *Packet {
+func (ctx *FmtCtx) GetNewPackets() chan *Packet {
 	yield := make(chan *Packet)
 
 	go func() {
 		for {
 			p := NewPacket()
 
-			if ret := C.av_read_frame(this.avCtx, &p.avPacket); int(ret) < 0 {
+			if ret := C.av_read_frame(ctx.avCtx, &p.avPacket); int(ret) < 0 {
 				break
 			}
 
@@ -381,161 +384,161 @@ func (this *FmtCtx) GetNewPackets() chan *Packet {
 	return yield
 }
 
-func (this *FmtCtx) NewStream(c *Codec) *Stream {
+func (ctx *FmtCtx) NewStream(c *Codec) *Stream {
 	var avCodec *C.struct_AVCodec = nil
 
 	if c != nil {
 		avCodec = c.avCodec
 	}
 
-	if st := C.avformat_new_stream(this.avCtx, avCodec); st == nil {
+	if st := C.avformat_new_stream(ctx.avCtx, avCodec); st == nil {
 		return nil
 	} else {
-		this.streams[int(st.index)] = &Stream{avStream: st}
-		Retain(this.streams[int(st.index)])
-		return this.streams[int(st.index)]
+		ctx.streams[int(st.index)] = &Stream{avStream: st}
+		Retain(ctx.streams[int(st.index)])
+		return ctx.streams[int(st.index)]
 	}
 
 }
 
 // Original structure member is called instead of len(this.streams)
 // because there is no initialized Stream wrappers in input context.
-func (this *FmtCtx) StreamsCnt() int {
-	return int(this.avCtx.nb_streams)
+func (ctx *FmtCtx) StreamsCnt() int {
+	return int(ctx.avCtx.nb_streams)
 }
 
-func (this *FmtCtx) GetStream(idx int) (*Stream, error) {
-	if idx > this.StreamsCnt()-1 || this.StreamsCnt() == 0 {
-		return nil, errors.New(fmt.Sprintf("Stream index '%d' is out of range. There is only '%d' streams.", idx, this.StreamsCnt()))
+func (ctx *FmtCtx) GetStream(idx int) (*Stream, error) {
+	if idx > ctx.StreamsCnt()-1 || ctx.StreamsCnt() == 0 {
+		return nil, errors.New(fmt.Sprintf("Stream index '%d' is out of range. There is only '%d' streams.", idx, ctx.StreamsCnt()))
 	}
 
-	if _, ok := this.streams[idx]; !ok {
+	if _, ok := ctx.streams[idx]; !ok {
 		// create instance of Stream wrapper, when stream was initialized
-		// by demuxer. it means that this is an input context.
-		this.streams[idx] = &Stream{
-			avStream: C.gmf_get_stream(this.avCtx, C.int(idx)),
+		// by demuxer. it means that ctx is an input context.
+		ctx.streams[idx] = &Stream{
+			avStream: C.gmf_get_stream(ctx.avCtx, C.int(idx)),
 		}
 	}
 
-	return this.streams[idx], nil
+	return ctx.streams[idx], nil
 }
 
-func (this *FmtCtx) GetBestStream(typ int32) (*Stream, error) {
-	idx := C.av_find_best_stream(this.avCtx, typ, -1, -1, nil, 0)
+func (ctx *FmtCtx) GetBestStream(typ int32) (*Stream, error) {
+	idx := C.av_find_best_stream(ctx.avCtx, typ, -1, -1, nil, 0)
 	if int(idx) < 0 {
 		return nil, errors.New(fmt.Sprintf("stream type %d not found", typ))
 	}
 
-	return this.GetStream(int(idx))
+	return ctx.GetStream(int(idx))
 }
 
-func (this *FmtCtx) FindStreamInfo() error {
-	if averr := C.avformat_find_stream_info(this.avCtx, nil); averr < 0 {
+func (ctx *FmtCtx) FindStreamInfo() error {
+	if averr := C.avformat_find_stream_info(ctx.avCtx, nil); averr < 0 {
 		return errors.New(fmt.Sprintf("unable to find stream info: %s", AvError(int(averr))))
 	}
 
 	return nil
 }
 
-func (this *FmtCtx) SetInputFormat(name string) error {
+func (ctx *FmtCtx) SetInputFormat(name string) error {
 	cname := C.CString(name)
 	defer C.free(unsafe.Pointer(cname))
 
-	if this.avCtx.iformat = (*C.struct_AVInputFormat)(C.av_find_input_format(cname)); this.avCtx.iformat == nil {
+	if ctx.avCtx.iformat = (*C.struct_AVInputFormat)(C.av_find_input_format(cname)); ctx.avCtx.iformat == nil {
 		return errors.New("unable to find format for name: " + name)
 	}
 
-	if int(C.gmf_alloc_priv_data(this.avCtx, nil)) < 0 {
+	if int(C.gmf_alloc_priv_data(ctx.avCtx, nil)) < 0 {
 		return errors.New("unable to allocate priv_data")
 	}
 
 	return nil
 }
 
-func (this *FmtCtx) Close() {
-	if this.ofmt == nil {
-		this.CloseInput()
+func (ctx *FmtCtx) Close() {
+	if ctx.ofmt == nil {
+		ctx.CloseInput()
 	} else {
-		this.CloseOutput()
+		ctx.CloseOutput()
 	}
 }
 
-func (this *FmtCtx) CloseInput() {
-	if this.avCtx != nil {
-		C.avformat_close_input(&this.avCtx)
+func (ctx *FmtCtx) CloseInput() {
+	if ctx.avCtx != nil {
+		C.avformat_close_input(&ctx.avCtx)
 	}
 }
 
-func (this *FmtCtx) CloseOutput() {
-	if this.avCtx == nil {
+func (ctx *FmtCtx) CloseOutput() {
+	if ctx.avCtx == nil {
 		return
 	}
-	if this.IsNoFile() {
+	if ctx.IsNoFile() {
 		return
 	}
 
-	if this.avCtx.pb != nil && !this.customPb {
-		C.avio_close(this.avCtx.pb)
+	if ctx.avCtx.pb != nil && !ctx.customPb {
+		C.avio_close(ctx.avCtx.pb)
 	}
 }
 
-func (this *FmtCtx) Free() {
-	this.Close()
+func (ctx *FmtCtx) Free() {
+	ctx.Close()
 
-	if this.avCtx != nil {
-		C.avformat_free_context(this.avCtx)
+	if ctx.avCtx != nil {
+		C.avformat_free_context(ctx.avCtx)
 	}
 }
-func (this *FmtCtx) Duration() float64 {
-	return float64(this.avCtx.duration) / float64(AV_TIME_BASE)
+func (ctx *FmtCtx) Duration() float64 {
+	return float64(ctx.avCtx.duration) / float64(AV_TIME_BASE)
 }
 
 // Total stream bitrate in bit/s
-func (this *FmtCtx) BitRate() int64 {
-	return int64(this.avCtx.bit_rate)
+func (ctx *FmtCtx) BitRate() int64 {
+	return int64(ctx.avCtx.bit_rate)
 }
 
-func (this *FmtCtx) StartTime() int {
-	return int(this.avCtx.start_time)
+func (ctx *FmtCtx) StartTime() int {
+	return int(ctx.avCtx.start_time)
 }
 
-func (this *FmtCtx) SetStartTime(val int) *FmtCtx {
-	this.avCtx.start_time = C.int64_t(val)
-	return this
+func (ctx *FmtCtx) SetStartTime(val int) *FmtCtx {
+	ctx.avCtx.start_time = C.int64_t(val)
+	return ctx
 }
 
-func (this *FmtCtx) TsOffset(stime int) int {
+func (ctx *FmtCtx) TsOffset(stime int) int {
 	// temp solution. see ffmpeg_opt.c:899
 	return (0 - stime)
 }
 
-func (this *FmtCtx) SetDebug(val int) *FmtCtx {
-	this.avCtx.debug = C.int(val)
-	return this
+func (ctx *FmtCtx) SetDebug(val int) *FmtCtx {
+	ctx.avCtx.debug = C.int(val)
+	return ctx
 }
 
-func (this *FmtCtx) SetFlag(flag int) *FmtCtx {
-	this.avCtx.flags |= C.int(flag)
-	return this
+func (ctx *FmtCtx) SetFlag(flag int) *FmtCtx {
+	ctx.avCtx.flags |= C.int(flag)
+	return ctx
 }
 
-func (this *FmtCtx) SeekFile(ist *Stream, minTs, maxTs int64, flag int) error {
-	if ret := int(C.avformat_seek_file(this.avCtx, C.int(ist.Index()), C.int64_t(0), C.int64_t(minTs), C.int64_t(maxTs), C.int(flag))); ret < 0 {
+func (ctx *FmtCtx) SeekFile(ist *Stream, minTs, maxTs int64, flag int) error {
+	if ret := int(C.avformat_seek_file(ctx.avCtx, C.int(ist.Index()), C.int64_t(0), C.int64_t(minTs), C.int64_t(maxTs), C.int(flag))); ret < 0 {
 		return errors.New(fmt.Sprintf("Error creating output context: %s", AvError(ret)))
 	}
 
 	return nil
 }
 
-func (this *FmtCtx) SeekFrameAt(sec int64, streamIndex int) error {
-	ist, err := this.GetStream(streamIndex)
+func (ctx *FmtCtx) SeekFrameAt(sec int64, streamIndex int) error {
+	ist, err := ctx.GetStream(streamIndex)
 	if err != nil {
 		return err
 	}
 
 	frameTs := Rescale(sec*1000, int64(ist.TimeBase().AVR().Den), int64(ist.TimeBase().AVR().Num)) / 1000
 
-	if err := this.SeekFile(ist, frameTs, frameTs, C.AVSEEK_FLAG_FRAME); err != nil {
+	if err := ctx.SeekFile(ist, frameTs, frameTs, C.AVSEEK_FLAG_FRAME); err != nil {
 		return err
 	}
 
@@ -544,40 +547,40 @@ func (this *FmtCtx) SeekFrameAt(sec int64, streamIndex int) error {
 	return nil
 }
 
-func (this *FmtCtx) SetPb(val *AVIOContext) *FmtCtx {
-	this.avCtx.pb = val.avAVIOContext
-	this.customPb = true
-	return this
+func (ctx *FmtCtx) SetPb(val *AVIOContext) *FmtCtx {
+	ctx.avCtx.pb = val.avAVIOContext
+	ctx.customPb = true
+	return ctx
 }
 
-func (this *FmtCtx) GetSDPString() (sdp string) {
-	sdpChar := C.gmf_sprintf_sdp(this.avCtx)
+func (ctx *FmtCtx) GetSDPString() (sdp string) {
+	sdpChar := C.gmf_sprintf_sdp(ctx.avCtx)
 	defer C.free(unsafe.Pointer(sdpChar))
 
 	return C.GoString(sdpChar)
 }
 
-func (this *FmtCtx) WriteSDPFile(filename string) error {
+func (ctx *FmtCtx) WriteSDPFile(filename string) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Error open file:%s,error message:%s", filename, err))
 	}
 	defer file.Close()
 
-	file.WriteString(this.GetSDPString())
+	file.WriteString(ctx.GetSDPString())
 	return nil
 }
 
-func (this *FmtCtx) Position() int {
-	return int(this.avCtx.pb.pos)
+func (ctx *FmtCtx) Position() int {
+	return int(ctx.avCtx.pb.pos)
 }
 
-func (this *FmtCtx) SetProbeSize(v int64) {
-	this.avCtx.probesize = C.int64_t(v)
+func (ctx *FmtCtx) SetProbeSize(v int64) {
+	ctx.avCtx.probesize = C.int64_t(v)
 }
 
-func (this *FmtCtx) GetProbeSize() int64 {
-	return int64(this.avCtx.probesize)
+func (ctx *FmtCtx) GetProbeSize() int64 {
+	return int64(ctx.avCtx.probesize)
 }
 
 type OutputFmt struct {
@@ -609,22 +612,22 @@ func FindOutputFmt(format string, filename string, mime string) *OutputFmt {
 	return &OutputFmt{Filename: filename, avOutputFmt: ofmt}
 }
 
-func (this *OutputFmt) Free() {
-	fmt.Printf("(this *OutputFmt)Free()\n")
+func (f *OutputFmt) Free() {
+	fmt.Printf("(f *OutputFmt)Free()\n")
 }
 
-func (this *OutputFmt) Name() string {
-	return C.GoString(this.avOutputFmt.name)
+func (f *OutputFmt) Name() string {
+	return C.GoString(f.avOutputFmt.name)
 }
 
-func (this *OutputFmt) LongName() string {
-	return C.GoString(this.avOutputFmt.long_name)
+func (f *OutputFmt) LongName() string {
+	return C.GoString(f.avOutputFmt.long_name)
 }
 
-func (this *OutputFmt) MimeType() string {
-	return C.GoString(this.avOutputFmt.mime_type)
+func (f *OutputFmt) MimeType() string {
+	return C.GoString(f.avOutputFmt.mime_type)
 }
 
-func (this *OutputFmt) Infomation() string {
-	return this.Filename + ":" + this.Name() + "#" + this.LongName() + "#" + this.MimeType()
+func (f *OutputFmt) Infomation() string {
+	return f.Filename + ":" + f.Name() + "#" + f.LongName() + "#" + f.MimeType()
 }

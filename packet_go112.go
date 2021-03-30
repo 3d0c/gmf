@@ -22,6 +22,10 @@ import (
 	"unsafe"
 )
 
+const (
+	AV_PKT_FLAG_KEY = C.AV_PKT_FLAG_KEY
+)
+
 type Packet struct {
 	avPacket C.struct_AVPacket
 }
@@ -72,6 +76,11 @@ func (p *Packet) SetDts(val int64) *Packet {
 
 func (p *Packet) Flags() int {
 	return int(p.avPacket.flags)
+}
+
+func (p *Packet) SetFlags(flags int) *Packet {
+	p.avPacket.flags = C.int(flags)
+	return p
 }
 
 func (p *Packet) Duration() int64 {

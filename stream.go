@@ -77,6 +77,8 @@ func (s *Stream) CodecCtx() *CodecCtx {
 	return s.cc
 }
 
+// SetCodecCtx
+// Deprecated: Using AVStream.codec to pass codec parameters to muxers is deprecated, use AVStream.codecpar instead.
 func (s *Stream) SetCodecCtx(cc *CodecCtx) {
 	s.cc = cc
 }
@@ -91,7 +93,7 @@ func (s *Stream) SetCodecParameters(cp *CodecParameters) error {
 }
 
 func (s *Stream) IsCodecCtxSet() bool {
-	return (s.cc != nil)
+	return s.cc != nil
 }
 
 func (s *Stream) Index() int {
@@ -119,11 +121,11 @@ func (s *Stream) Type() int32 {
 }
 
 func (s *Stream) IsAudio() bool {
-	return (s.Type() == AVMEDIA_TYPE_AUDIO)
+	return s.Type() == AVMEDIA_TYPE_AUDIO
 }
 
 func (s *Stream) IsVideo() bool {
-	return (s.Type() == AVMEDIA_TYPE_VIDEO)
+	return s.Type() == AVMEDIA_TYPE_VIDEO
 }
 
 func (s *Stream) Duration() int64 {
