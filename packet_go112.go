@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	AV_PKT_FLAG_KEY = C.AV_PKT_FLAG_KEY
+	AV_PKT_FLAG_KEY = C.AV_PKT_FLAG_KEY // The packet contains a keyframe
 )
 
 type Packet struct {

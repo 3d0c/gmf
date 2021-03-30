@@ -1,9 +1,10 @@
 package gmf_test
 
 import (
-	"github.com/3d0c/gmf"
 	"log"
 	"testing"
+
+	"github.com/3d0c/gmf"
 )
 
 // @todo export rescaled frame as jpeg and compare dimension.
@@ -45,7 +46,7 @@ func TestScale(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	videoStream.SetCodecCtx(dstCodecCtx)
+	videoStream.DumpContexCodec(dstCodecCtx)
 	swsCtx, err := gmf.NewSwsCtx(srcEncCtx.Width(), srcEncCtx.Height(), srcEncCtx.PixFmt(), dstCodecCtx.Width(), dstCodecCtx.Height(), dstCodecCtx.PixFmt(), gmf.SWS_BICUBIC)
 	if err != nil {
 		t.Fatal(err)

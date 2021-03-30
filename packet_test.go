@@ -1,8 +1,9 @@
 package gmf_test
 
 import (
-	"github.com/3d0c/gmf"
 	"testing"
+
+	"github.com/3d0c/gmf"
 )
 
 func TestFramesIterator(t *testing.T) {
@@ -14,9 +15,8 @@ func TestFramesIterator(t *testing.T) {
 
 	cnt := 0
 	ist := assert(inputCtx.GetStream(0)).(*gmf.Stream)
-	t.Log("NbFrames", ist.NbFrames())
-	ctx := ist.CodecCtx()
-	for frame := range gmf.GenSyntVideoNewFrame(ctx.Width(), ctx.Height(), ctx.PixFmt()) {
+	par := ist.CodecPar()
+	for frame := range gmf.GenSyntVideoNewFrame(par.Width(), par.Height(), par.Format()) {
 		cnt++
 		frame.Free()
 	}
@@ -24,4 +24,17 @@ func TestFramesIterator(t *testing.T) {
 	if cnt != 25 {
 		t.Fatalf("Expected %d frames, obtained %d\n", 25, cnt)
 	}
+}
+
+func ExamplePacket_SetData() {
+	p := gmf.NewPacket()
+	defer p.Free()
+	p.SetData([]byte{0x00, 0x00, 0x00, 0x01, 0x67})
+	defer p.FreeData()
+}
+
+func ExamplePacket_SetFlags() {
+	p := gmf.NewPacket()
+	p.SetFlags(p.Flags() | gmf.AV_PKT_FLAG_KEY)
+	defer p.Free()
 }

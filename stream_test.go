@@ -1,9 +1,10 @@
 package gmf_test
 
 import (
-	"github.com/3d0c/gmf"
 	"log"
 	"testing"
+
+	"github.com/3d0c/gmf"
 )
 
 func TestStream(t *testing.T) {
@@ -34,9 +35,9 @@ func TestStream(t *testing.T) {
 
 	st := assert(ctx.GetStream(0)).(*gmf.Stream)
 
-	st.SetCodecCtx(cc)
+	st.DumpContexCodec(cc)
 
-	if st.CodecCtx().Height() != td.height || st.CodecCtx().Width() != td.width {
+	if cc.Height() != td.height || cc.Width() != td.width {
 		t.Fatalf("Expected dimension = %dx%d, %dx%d got\n", td.width, td.height, st.CodecCtx().Width(), st.CodecCtx().Height())
 	}
 
@@ -53,7 +54,7 @@ func TestStreamInputCtx(t *testing.T) {
 
 	ist := assert(inputCtx.GetStream(0)).(*gmf.Stream)
 
-	if ist.CodecCtx().Width() != inputSampleWidth || ist.CodecCtx().Height() != inputSampleHeight {
+	if ist.CodecPar().Width() != inputSampleWidth || ist.CodecPar().Height() != inputSampleHeight {
 		t.Fatalf("Expected dimension = %dx%d, %dx%d got\n", inputSampleWidth, inputSampleHeight, ist.CodecCtx().Width(), ist.CodecCtx().Height())
 	}
 
