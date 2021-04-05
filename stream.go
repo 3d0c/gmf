@@ -19,8 +19,9 @@ type Stream struct {
 	SwsCtx   *SwsCtx
 	SwrCtx   *SwrCtx
 	AvFifo   *AVAudioFifo
-	cc       *CodecCtx
-	Pts      int64
+	// Deprecated: Using AVStream.codec to pass codec parameters to muxers is deprecated, use AVStream.codecpar instead.
+	cc  *CodecCtx
+	Pts int64
 	CgoMemoryManage
 }
 
@@ -47,6 +48,8 @@ func (s *Stream) SetCodecFlags() {
 	s.avStream.codec.flags |= C.AV_CODEC_FLAG_GLOBAL_HEADER
 }
 
+// CodecCtx
+// Deprecated: Using AVStream.codec to pass codec parameters to muxers is deprecated, use AVStream.codecpar instead.
 func (s *Stream) CodecCtx() *CodecCtx {
 	// Supposed that output context is set and opened by user
 	if s.IsCodecCtxSet() {
@@ -77,11 +80,22 @@ func (s *Stream) CodecCtx() *CodecCtx {
 	return s.cc
 }
 
+// SetCodecCtx
+// Deprecated: Using AVStream.codec to pass codec parameters to muxers is deprecated, use AVStream.codecpar instead.
 func (s *Stream) SetCodecCtx(cc *CodecCtx) {
 	s.cc = cc
 }
 
-func (s *Stream) SetCodecParameters(cp *CodecParameters) error {
+func (s *Stream) CodecPar() *CodecParameters {
+	if s.avStream == nil || s.avStream.codecpar == nil {
+		return nil
+	}
+	return &CodecParameters{
+		avCodecParameters: s.avStream.codecpar,
+	}
+}
+
+func (s *Stream) SetCodecPar(cp *CodecParameters) error {
 	if cp == nil || cp.avCodecParameters == nil {
 		return fmt.Errorf("codec parameters are not initialized")
 	}
@@ -90,8 +104,10 @@ func (s *Stream) SetCodecParameters(cp *CodecParameters) error {
 	return nil
 }
 
+// IsCodecCtxSet
+// Deprecated: Using AVStream.codec to pass codec parameters to muxers is deprecated, use AVStream.codecpar instead.
 func (s *Stream) IsCodecCtxSet() bool {
-	return (s.cc != nil)
+	return s.cc != nil
 }
 
 func (s *Stream) Index() int {
@@ -115,15 +131,15 @@ func (s *Stream) TimeBase() AVRational {
 }
 
 func (s *Stream) Type() int32 {
-	return s.CodecCtx().Type()
+	return int32(s.CodecPar().CodecType())
 }
 
 func (s *Stream) IsAudio() bool {
-	return (s.Type() == AVMEDIA_TYPE_AUDIO)
+	return s.Type() == AVMEDIA_TYPE_AUDIO
 }
 
 func (s *Stream) IsVideo() bool {
-	return (s.Type() == AVMEDIA_TYPE_VIDEO)
+	return s.Type() == AVMEDIA_TYPE_VIDEO
 }
 
 func (s *Stream) Duration() int64 {

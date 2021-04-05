@@ -1,6 +1,7 @@
-package gmf
+package gmf_test
 
 import (
+	"github.com/3d0c/gmf"
 	"log"
 	"testing"
 )
@@ -8,16 +9,16 @@ import (
 func TestCodecEq(t *testing.T) {
 	dec, enc, notfound := 0, 0, 0
 
-	for _, codec := range Codecs {
+	for _, codec := range gmf.Codecs {
 		if codec.IsEncoder {
-			encById, err := FindEncoder(codec.Id())
+			encById, err := gmf.FindEncoder(codec.Id())
 			if err != nil {
 				log.Println("E", err, codec.Id())
 				notfound++
 				continue
 			}
 
-			encByName, err := FindEncoder(codec.Name())
+			encByName, err := gmf.FindEncoder(codec.Name())
 			if err != nil {
 				log.Println("E", err, codec.Id())
 				notfound++
@@ -30,14 +31,14 @@ func TestCodecEq(t *testing.T) {
 
 			enc++
 		} else {
-			decById, err := FindDecoder(codec.Id())
+			decById, err := gmf.FindDecoder(codec.Id())
 			if err != nil {
 				log.Println("D", err, codec.Id())
 				notfound++
 				continue
 			}
 
-			decByName, err := FindDecoder(codec.Name())
+			decByName, err := gmf.FindDecoder(codec.Name())
 			if err != nil {
 				log.Println("D", err, codec.Id())
 				notfound++
@@ -56,7 +57,7 @@ func TestCodecEq(t *testing.T) {
 }
 
 func TestFindByName(t *testing.T) {
-	c, err := FindEncoder("libx264")
+	c, err := gmf.FindEncoder("libx264")
 	if err != nil {
 		t.Fatal(err)
 	}

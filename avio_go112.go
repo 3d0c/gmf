@@ -122,14 +122,14 @@ func NewAVIOContext(ctx *FmtCtx, handlers *AVIOHandlers, size ...int) (*AVIOCont
 	return this, nil
 }
 
-func (this *AVIOContext) Free() {
-	delete(handlersMap, this.handlerKey)
-	C.av_free(unsafe.Pointer(this.avAVIOContext.buffer))
-	C.av_free(unsafe.Pointer(this.avAVIOContext))
+func (c *AVIOContext) Free() {
+	delete(handlersMap, c.handlerKey)
+	C.av_free(unsafe.Pointer(c.avAVIOContext.buffer))
+	C.av_free(unsafe.Pointer(c.avAVIOContext))
 }
 
-func (this *AVIOContext) Flush() {
-	C.avio_flush(this.avAVIOContext)
+func (c *AVIOContext) Flush() {
+	C.avio_flush(c.avAVIOContext)
 }
 
 //export readCallBack

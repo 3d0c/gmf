@@ -1,39 +1,40 @@
-package gmf
+package gmf_test
 
 import (
 	"testing"
+
+	"github.com/3d0c/gmf"
 )
 
 func TestFramesIterator(t *testing.T) {
-	inputCtx, err := NewInputCtx(inputSampleFilename)
+	inputCtx, err := gmf.NewInputCtx(inputSampleFilename)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer inputCtx.CloseInputAndRelease()
+	defer inputCtx.Free()
 
 	cnt := 0
-
-	for packet := range inputCtx.GetNewPackets() {
-		if packet.Size() <= 0 {
-			t.Fatal("Expected size > 0")
-		}
-
-		ist := assert(inputCtx.GetStream(0)).(*Stream)
-
-		frame, err := packet.Frames(ist.CodecCtx())
-		if err != nil {
-			t.Fatal(err)
-		}
-		if frame == nil {
-			t.Fatal("Frame is nil")
-		}
-
+	ist := assert(inputCtx.GetStream(0)).(*gmf.Stream)
+	par := ist.CodecPar()
+	for frame := range gmf.GenSyntVideoNewFrame(par.Width(), par.Height(), par.Format()) {
 		cnt++
-
-		Release(packet)
+		frame.Free()
 	}
 
 	if cnt != 25 {
 		t.Fatalf("Expected %d frames, obtained %d\n", 25, cnt)
 	}
+}
+
+func ExamplePacket_SetData() {
+	p := gmf.NewPacket()
+	defer p.Free()
+	p.SetData([]byte{0x00, 0x00, 0x00, 0x01, 0x67})
+	defer p.FreeData()
+}
+
+func ExamplePacket_SetFlags() {
+	p := gmf.NewPacket()
+	p.SetFlags(p.Flags() | gmf.AV_PKT_FLAG_KEY)
+	defer p.Free()
 }

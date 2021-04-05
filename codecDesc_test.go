@@ -1,15 +1,16 @@
-package gmf
+package gmf_test
 
 import (
+	"github.com/3d0c/gmf"
 	"log"
 	"testing"
 )
 
-var codecsMap = make(map[int]*CodecDescriptor)
+var codecsMap = make(map[int]*gmf.CodecDescriptor)
 
 func TestCodecs(t *testing.T) {
-	InitDesc()
-	nbCodecs := len(Codecs)
+	gmf.InitDesc()
+	nbCodecs := len(gmf.Codecs)
 
 	if nbCodecs == 0 {
 		t.Fatal("No codecs found. Expected any non zero value.")

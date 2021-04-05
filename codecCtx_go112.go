@@ -130,6 +130,7 @@ var (
 	AV_CODEC_ID_MPEG1VIDEO int = C.AV_CODEC_ID_MPEG1VIDEO
 	AV_CODEC_ID_MPEG2VIDEO int = C.AV_CODEC_ID_MPEG2VIDEO
 	AV_CODEC_ID_H264       int = C.AV_CODEC_ID_H264
+	AV_CODEC_ID_H265       int = C.AV_CODEC_ID_H265
 	AV_CODEC_ID_MPEG4      int = C.AV_CODEC_ID_MPEG4
 	AV_CODEC_ID_JPEG2000   int = C.AV_CODEC_ID_JPEG2000
 	AV_CODEC_ID_MJPEG      int = C.AV_CODEC_ID_MJPEG
@@ -143,6 +144,8 @@ var (
 	AV_CODEC_ID_TIFF       int = C.AV_CODEC_ID_TIFF
 	AV_CODEC_ID_GIF        int = C.AV_CODEC_ID_GIF
 	AV_CODEC_ID_RAWVIDEO   int = C.AV_CODEC_ID_RAWVIDEO
+
+	AV_CODEC_ID_AAC int = C.AV_CODEC_ID_AAC
 
 	CODEC_FLAG_GLOBAL_HEADER int   = C.AV_CODEC_FLAG_GLOBAL_HEADER
 	AV_CODEC_FLAG_QSCALE     int32 = C.AV_CODEC_FLAG_QSCALE
@@ -237,6 +240,18 @@ func (cc *CodecCtx) CopyExtra(ist *Stream) *CodecCtx {
 	return cc
 }
 
+// SetExtradata TODO: Improving performance
+//   Free or avcodec_free_context can free extradata
+func (cc *CodecCtx) SetExtradata(extradata []byte) *CodecCtx {
+	codec := cc.avCodecCtx
+	codec.extradata_size = C.int(len(extradata))
+	codec.extradata = (*C.uint8_t)(C.av_mallocz((C.size_t)((C.uint64_t)(len(extradata)) + C.AV_INPUT_BUFFER_PADDING_SIZE)))
+	tmp := unsafe.Pointer(C.CBytes(extradata))
+	C.memcpy(unsafe.Pointer(codec.extradata), tmp, (C.size_t)(codec.extradata_size))
+	C.free(tmp)
+	return cc
+}
+
 func (cc *CodecCtx) Open(dict *Dict) error {
 	if cc.IsOpen() {
 		return nil
@@ -321,7 +336,7 @@ func (cc *CodecCtx) Profile() int {
 }
 
 func (cc *CodecCtx) IsOpen() bool {
-	return (int(C.avcodec_is_open(cc.avCodecCtx)) > 0)
+	return int(C.avcodec_is_open(cc.avCodecCtx)) > 0
 }
 
 func (cc *CodecCtx) SetProfile(profile int) *CodecCtx {
@@ -538,7 +553,7 @@ func (cc *CodecCtx) GetChannelLayoutName() string {
 	return str
 }
 
-func (this *CodecCtx) GetDefaultChannelLayout(ac int) int {
+func (cc *CodecCtx) GetDefaultChannelLayout(ac int) int {
 	return int(C.av_get_default_channel_layout(C.int(ac)))
 }
 

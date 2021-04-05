@@ -1,6 +1,7 @@
-package gmf
+package gmf_test
 
 import (
+	"github.com/3d0c/gmf"
 	"log"
 	"testing"
 )
@@ -8,26 +9,26 @@ import (
 var CodecCtxTestData = struct {
 	width    int
 	height   int
-	timebase AVR
+	timebase gmf.AVR
 	pixfmt   int32
 	bitrate  int
 }{
-	100,
-	200,
-	AVR{1, 25},
-	AV_PIX_FMT_YUV420P,
-	400000,
+	width:    100,
+	height:   200,
+	timebase: gmf.AVR{Num: 1, Den: 25},
+	pixfmt:   gmf.AV_PIX_FMT_YUV420P,
+	bitrate:  400000,
 }
 
 func TestCodecCtx(t *testing.T) {
 	td := CodecCtxTestData
 
-	codec, err := FindEncoder("mpeg4")
+	codec, err := gmf.FindEncoder("mpeg4")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cc := NewCodecCtx(codec)
+	cc := gmf.NewCodecCtx(codec)
 	if cc == nil {
 		t.Fatal("Unable to allocate codec context")
 	}
@@ -56,5 +57,5 @@ func TestCodecCtx(t *testing.T) {
 
 	log.Println("CodecCtx is successfully created and opened.")
 
-	Release(cc)
+	cc.Free()
 }

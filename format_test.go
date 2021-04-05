@@ -1,8 +1,9 @@
-package gmf
+package gmf_test
 
 import (
 	"errors"
 	"fmt"
+	"github.com/3d0c/gmf"
 	"io"
 	"log"
 	"os"
@@ -25,40 +26,40 @@ func assert(i interface{}, err error) interface{} {
 }
 
 func TestCtxCreation(t *testing.T) {
-	ctx := NewCtx()
+	ctx := gmf.NewCtx()
 
-	if ctx.avCtx == nil {
+	if ctx == nil {
 		t.Fatal("AVContext is not initialized")
 	}
 
-	Release(ctx)
+	ctx.Free()
 }
 
 func TestCtxInput(t *testing.T) {
-	inputCtx, err := NewInputCtx(inputSampleFilename)
+	inputCtx, err := gmf.NewInputCtx(inputSampleFilename)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	inputCtx.CloseInputAndRelease()
+	inputCtx.Free()
 }
 
 func TestCtxOutput(t *testing.T) {
 	cases := map[interface{}]error{
-		outputSampleFilename:                        nil,
-		FindOutputFmt("mp4", "", ""):                nil,
-		FindOutputFmt("", outputSampleFilename, ""): nil,
-		FindOutputFmt("", "", "application/mp4"):    nil,
-		FindOutputFmt("", "", "wrong/mime"):         errors.New(fmt.Sprintf("output format is not initialized. Unable to allocate context")),
+		outputSampleFilename:                            nil,
+		gmf.FindOutputFmt("mp4", "", ""):                nil,
+		gmf.FindOutputFmt("", outputSampleFilename, ""): nil,
+		gmf.FindOutputFmt("", "", "application/mp4"):    nil,
+		gmf.FindOutputFmt("", "", "wrong/mime"):         errors.New(fmt.Sprintf("output format is not initialized. Unable to allocate context")),
 	}
 
 	for arg, expected := range cases {
-		if outuptCtx, err := NewOutputCtx(arg); err != nil {
+		if outuptCtx, err := gmf.NewOutputCtx(arg); err != nil {
 			if err.Error() != expected.Error() {
 				t.Error("Unexpected error:", err)
 			}
 		} else {
-			outuptCtx.CloseOutputAndRelease()
+			outuptCtx.Free()
 		}
 	}
 
@@ -66,49 +67,48 @@ func TestCtxOutput(t *testing.T) {
 }
 
 func TestCtxCloseEmpty(t *testing.T) {
-	ctx := NewCtx()
+	ctx := gmf.NewCtx()
 
-	ctx.CloseInputAndRelease()
-	ctx.CloseOutputAndRelease()
-	Release(ctx)
+	ctx.Free()
 }
 
 func TestNewStream(t *testing.T) {
-	ctx := NewCtx()
-	if ctx.avCtx == nil {
+	ctx := gmf.NewCtx()
+	if ctx == nil {
 		t.Fatal("AVContext is not initialized")
 	}
-	defer Release(ctx)
+	ctx.Free()
 
-	c := assert(FindEncoder(AV_CODEC_ID_MPEG1VIDEO)).(*Codec)
+	c := assert(gmf.FindEncoder(gmf.AV_CODEC_ID_MPEG1VIDEO)).(*gmf.Codec)
 
-	cc := NewCodecCtx(c)
-	defer Release(cc)
+	cc := gmf.NewCodecCtx(c)
+	defer cc.Free()
 
-	cc.SetTimeBase(AVR{1, 25})
+	cc.SetTimeBase(gmf.AVR{Num: 1, Den: 25})
 	cc.SetDimension(320, 200)
 
 	if ctx.IsGlobalHeader() {
-		cc.SetFlag(CODEC_FLAG_GLOBAL_HEADER)
+		cc.SetFlag(gmf.CODEC_FLAG_GLOBAL_HEADER)
 	}
 
 	log.Println("Dummy stream is created")
 }
 
 func TestWriteHeader(t *testing.T) {
-	outputCtx, err := NewOutputCtx(outputSampleFilename)
+	outputCtx, err := gmf.NewOutputCtx(outputSampleFilename)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer Release(outputCtx)
+	defer outputCtx.Free()
 
 	// write_header needs a valid stream with code context initialized
-	c := assert(FindEncoder(AV_CODEC_ID_MPEG1VIDEO)).(*Codec)
+	c := assert(gmf.FindEncoder(gmf.AV_CODEC_ID_MPEG1VIDEO)).(*gmf.Codec)
 	stream := outputCtx.NewStream(c)
-	defer Release(stream)
-	cc := NewCodecCtx(c).SetTimeBase(AVR{1, 25}).SetDimension(10, 10).SetFlag(CODEC_FLAG_GLOBAL_HEADER)
-	defer Release(cc)
-	stream.SetCodecCtx(cc)
+	defer stream.Free()
+	cc := gmf.NewCodecCtx(c).SetTimeBase(gmf.AVR{Num: 1, Den: 25}).SetDimension(10, 10).SetFlag(gmf.CODEC_FLAG_GLOBAL_HEADER)
+	defer cc.Free()
+	stream.DumpContexCodec(cc)
+	// stream.SetCodecCtx(cc)
 
 	if err := outputCtx.WriteHeader(); err != nil {
 		t.Fatal(err)
@@ -122,12 +122,12 @@ func TestWriteHeader(t *testing.T) {
 }
 
 func TestPacketsIterator(t *testing.T) {
-	inputCtx, err := NewInputCtx(inputSampleFilename)
+	inputCtx, err := gmf.NewInputCtx(inputSampleFilename)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer inputCtx.CloseInputAndRelease()
+	defer inputCtx.Free()
 
 	for packet := range inputCtx.GetNewPackets() {
 		if packet.Size() <= 0 {
@@ -135,19 +135,19 @@ func TestPacketsIterator(t *testing.T) {
 		} else {
 			log.Printf("One packet has been read. size: %v, pts: %v\n", packet.Size(), packet.Pts())
 		}
-		Release(packet)
+		packet.Free()
 
 		break
 	}
 }
 
 func TestGetNextPacket(t *testing.T) {
-	inputCtx, err := NewInputCtx(inputSampleFilename)
+	inputCtx, err := gmf.NewInputCtx(inputSampleFilename)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer inputCtx.CloseInputAndRelease()
+	defer inputCtx.Free()
 
 	packet, _ := inputCtx.GetNextPacket()
 	if packet.Size() <= 0 {
@@ -155,7 +155,7 @@ func TestGetNextPacket(t *testing.T) {
 	} else {
 		log.Printf("One packet has been read. size: %v, pts: %v\n", packet.Size(), packet.Pts())
 	}
-	Release(packet)
+	packet.Free()
 }
 
 var section *io.SectionReader
@@ -178,7 +178,7 @@ func customReader() ([]byte, int) {
 		section = io.NewSectionReader(file, 0, fi.Size())
 	}
 
-	b := make([]byte, IO_BUFFER_SIZE)
+	b := make([]byte, gmf.IO_BUFFER_SIZE)
 
 	n, err := section.Read(b)
 	if err != nil {
@@ -190,14 +190,14 @@ func customReader() ([]byte, int) {
 }
 
 func TestAVIOContext(t *testing.T) {
-	ictx := NewCtx()
+	ictx := gmf.NewCtx()
 
 	if err := ictx.SetInputFormat("mov"); err != nil {
 		t.Fatal(err)
 	}
 
-	avioCtx, err := NewAVIOContext(ictx, &AVIOHandlers{ReadPacket: customReader})
-	defer Release(avioCtx)
+	avioCtx, err := gmf.NewAVIOContext(ictx, &gmf.AVIOHandlers{ReadPacket: customReader})
+	defer avioCtx.Free()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,16 +206,16 @@ func TestAVIOContext(t *testing.T) {
 
 	for p := range ictx.GetNewPackets() {
 		_ = p
-		Release(p)
+		p.Free()
 	}
 
-	ictx.CloseInputAndRelease()
+	ictx.Free()
 
 }
 
 func ExampleNewAVIOContext() {
-	ctx := NewCtx()
-	defer Release(ctx)
+	ctx := gmf.NewCtx()
+	defer ctx.Free()
 
 	// In this example, we're using custom reader implementation,
 	// so we should specify format manually.
@@ -223,8 +223,8 @@ func ExampleNewAVIOContext() {
 		log.Fatal(err)
 	}
 
-	avioCtx, err := NewAVIOContext(ctx, &AVIOHandlers{ReadPacket: customReader})
-	defer Release(avioCtx)
+	avioCtx, err := gmf.NewAVIOContext(ctx, &gmf.AVIOHandlers{ReadPacket: customReader})
+	defer avioCtx.Free()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -238,6 +238,6 @@ func ExampleNewAVIOContext() {
 
 	for p := range ctx.GetNewPackets() {
 		_ = p
-		Release(p)
+		p.Free()
 	}
 }

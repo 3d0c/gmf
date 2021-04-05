@@ -23,23 +23,30 @@ func (cp *CodecParameters) Free() {
 	C.avcodec_parameters_free(&cp.avCodecParameters)
 }
 
-func (cp *CodecParameters) GetCodecType() int {
+func (cp *CodecParameters) CodecType() int {
 	return int(cp.avCodecParameters.codec_type)
 }
 
-func (cp *CodecParameters) GetCodecId() int {
+func (cp *CodecParameters) CodecId() int {
 	return int(cp.avCodecParameters.codec_id)
 }
 
-func (cp *CodecParameters) GetBitRate() int64 {
+func (cp *CodecParameters) BitRate() int64 {
 	return int64(cp.avCodecParameters.bit_rate)
 }
 
-func (cp *CodecParameters) GetWidth() int {
+func (cp *CodecParameters) Width() int {
 	return int(cp.avCodecParameters.width)
 }
 
-func (cp *CodecParameters) GetHeight() int {
+// Format
+// video: the pixel format, the value corresponds to enum AVPixelFormat.
+// audio: the sample format, the value corresponds to enum AVSampleFormat.
+func (cp *CodecParameters) Format() int32 {
+	return int32(cp.avCodecParameters.format)
+}
+
+func (cp *CodecParameters) Height() int {
 	return int(cp.avCodecParameters.height)
 }
 
