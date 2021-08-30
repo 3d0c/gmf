@@ -29,10 +29,19 @@ type Packet struct {
 func NewPacket() *Packet {
 	p := &Packet{}
 
-	C.av_init_packet(&p.avPacket)
+	C.av_new_packet(&p.avPacket, 0)
 
-	p.avPacket.data = nil
-	p.avPacket.size = 0
+	return p
+}
+
+// Init same to NewPacket and av_new_packet
+//   Initialize optional fields of a packet with default values.
+//   Note, this does not touch the data and size members, which have to be
+//   initialized separately.
+func Init() *Packet {
+	p := &Packet{}
+
+	C.av_new_packet(&p.avPacket, 0)
 
 	return p
 }
