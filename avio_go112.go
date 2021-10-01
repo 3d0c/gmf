@@ -24,6 +24,7 @@ import "C"
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"unsafe"
 )
 
@@ -55,6 +56,7 @@ type AVIOHandlers struct {
 // Global map of AVIOHandlers
 // one handlers struct per format context. Using ctx.avCtx pointer address as a key.
 var handlersMap map[uintptr]*AVIOHandlers
+var handlersMapMu sync.Mutex
 
 type AVIOContext struct {
 	avAVIOContext *C.AVIOContext
@@ -84,11 +86,13 @@ func NewAVIOContext(ctx *FmtCtx, handlers *AVIOHandlers, size ...int) (*AVIOCont
 	var ptrRead, ptrWrite, ptrSeek *[0]byte = nil, nil, nil
 
 	if handlers != nil {
+		handlersMapMu.Lock()
 		if handlersMap == nil {
 			handlersMap = make(map[uintptr]*AVIOHandlers)
 		}
 
 		handlersMap[uintptr(unsafe.Pointer(ctx.avCtx))] = handlers
+		handlersMapMu.Unlock()
 		this.handlerKey = uintptr(unsafe.Pointer(ctx.avCtx))
 	}
 
@@ -123,7 +127,9 @@ func NewAVIOContext(ctx *FmtCtx, handlers *AVIOHandlers, size ...int) (*AVIOCont
 }
 
 func (c *AVIOContext) Free() {
+	handlersMapMu.Lock()
 	delete(handlersMap, c.handlerKey)
+	handlersMapMu.Unlock()
 	C.av_free(unsafe.Pointer(c.avAVIOContext.buffer))
 	C.av_free(unsafe.Pointer(c.avAVIOContext))
 }
@@ -134,7 +140,9 @@ func (c *AVIOContext) Flush() {
 
 //export readCallBack
 func readCallBack(opaque unsafe.Pointer, buf *C.uint8_t, buf_size C.int) C.int {
+	handlersMapMu.Lock()
 	handlers, found := handlersMap[uintptr(opaque)]
+	handlersMapMu.Unlock()
 	if !found {
 		panic(fmt.Sprintf("No handlers instance found, according pointer: %v", opaque))
 	}
@@ -153,7 +161,9 @@ func readCallBack(opaque unsafe.Pointer, buf *C.uint8_t, buf_size C.int) C.int {
 
 //export writeCallBack
 func writeCallBack(opaque unsafe.Pointer, buf *C.uint8_t, buf_size C.int) C.int {
+	handlersMapMu.Lock()
 	handlers, found := handlersMap[uintptr(opaque)]
+	handlersMapMu.Unlock()
 	if !found {
 		panic(fmt.Sprintf("No handlers instance found, according pointer: %v", opaque))
 	}
@@ -167,7 +177,9 @@ func writeCallBack(opaque unsafe.Pointer, buf *C.uint8_t, buf_size C.int) C.int 
 
 //export seekCallBack
 func seekCallBack(opaque unsafe.Pointer, offset C.int64_t, whence C.int) C.int64_t {
+	handlersMapMu.Lock()
 	handlers, found := handlersMap[uintptr(opaque)]
+	handlersMapMu.Unlock()
 	if !found {
 		panic(fmt.Sprintf("No handlers instance found, according pointer: %v", opaque))
 	}
