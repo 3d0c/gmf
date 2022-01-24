@@ -31,137 +31,144 @@ Sleepy Programmer <hunan@emsym.com>
 package main
 
 import (
+	"fmt"
 	"log"
 
-	. "github.com/3d0c/gmf"
+	"github.com/3d0c/gmf"
 )
-
-func fatal(err error) {
-	log.Fatal(err)
-}
 
 func main() {
 	/// input
-	mic, _ := NewInputCtxWithFormatName("default", "alsa")
+	mic, err := gmf.NewInputCtxWithFormatName("default", "alsa")
+	if err != nil {
+		log.Fatalf("Could not open input context: %s", err)
+	}
 	mic.Dump()
 
-	ast, err := mic.GetBestStream(AVMEDIA_TYPE_AUDIO)
+	ast, err := mic.GetBestStream(gmf.AVMEDIA_TYPE_AUDIO)
 	if err != nil {
 		log.Fatal("failed to find audio stream")
 	}
 	cc := ast.CodecCtx()
 
 	/// fifo
-	fifo := NewAVAudioFifo(cc.SampleFmt(), cc.Channels(), 1024)
+	fifo := gmf.NewAVAudioFifo(cc.SampleFmt(), cc.Channels(), 1024)
 	if fifo == nil {
 		log.Fatal("failed to create audio fifo")
 	}
 
-	/// output
-	codec, err := FindEncoder("libmp3lame")
+	codec, err := gmf.FindEncoder("libmp3lame")
 	if err != nil {
 		log.Fatal("find encoder error:", err.Error())
 	}
 
-	occ := NewCodecCtx(codec)
-	if occ == nil {
+	audioEncCtx := gmf.NewCodecCtx(codec)
+	if audioEncCtx == nil {
 		log.Fatal("new output codec context error:", err.Error())
 	}
-	defer Release(occ)
+	defer audioEncCtx.Free()
 
-	occ.SetSampleFmt(AV_SAMPLE_FMT_S16P).
-		SetSampleRate(cc.SampleRate()).
-		SetChannels(cc.Channels()).
-		SetBitRate(128e3)
-	channelLayout := occ.SelectChannelLayout()
-	occ.SetChannelLayout(channelLayout)
-
-	if err := occ.Open(nil); err != nil {
-		log.Fatal("can't open output codec context", err.Error())
-		return
-	}
-
-	/// resample
-	options := []*Option{
-		{"in_channel_count", cc.Channels()},
-		{"out_channel_count", cc.Channels()},
-		{"in_sample_rate", cc.SampleRate()},
-		{"out_sample_rate", cc.SampleRate()},
-		{"in_sample_fmt", SampleFmt(cc.SampleFmt())},
-		{"out_sample_fmt", SampleFmt(AV_SAMPLE_FMT_S16P)},
-	}
-
-	swrCtx := NewSwrCtx(options, occ)
-	if swrCtx == nil {
-		log.Fatal("unable to create Swr Context")
-	}
-
-	/// mp3 file
-	outputCtx, err := NewOutputCtx("test.mp3")
+	outputCtx, err := gmf.NewOutputCtx("test.mp3")
 	if err != nil {
 		log.Fatal("new output fail", err.Error())
 		return
 	}
+	defer outputCtx.Free()
 
-	ost := outputCtx.NewStream(codec)
-	if ost == nil {
-		log.Fatal("Unable to create stream for [%s]\n", codec.LongName())
+	audioEncCtx.SetSampleFmt(gmf.AV_SAMPLE_FMT_S16P).
+		SetSampleRate(cc.SampleRate()).
+		SetChannels(cc.Channels()).
+		SetBitRate(128e3)
+
+	if outputCtx.IsGlobalHeader() {
+		audioEncCtx.SetFlag(gmf.CODEC_FLAG_GLOBAL_HEADER)
 	}
-	defer func() {
-		Release(ost)
-	}()
 
-	ost.SetCodecCtx(occ)
+	audioStream := outputCtx.NewStream(codec)
+	if audioStream == nil {
+		log.Fatal(fmt.Errorf("unable to create stream for audioEnc [%s]", codec.LongName()))
+	}
+	defer audioStream.Free()
+
+	if err := audioEncCtx.Open(nil); err != nil {
+		log.Fatal("can't open output codec context", err.Error())
+		return
+	}
+	audioStream.DumpContexCodec(audioEncCtx)
+
+	/// resample
+	options := []*gmf.Option{
+		{Key: "in_channel_count", Val: cc.Channels()},
+		{Key: "out_channel_count", Val: cc.Channels()},
+		{Key: "in_sample_rate", Val: cc.SampleRate()},
+		{Key: "out_sample_rate", Val: cc.SampleRate()},
+		{Key: "in_sample_fmt", Val: cc.SampleFmt()},
+		{Key: "out_sample_fmt", Val: gmf.AV_SAMPLE_FMT_S16P},
+	}
+
+	swrCtx, err := gmf.NewSwrCtx(options, audioStream.CodecCtx().Channels(), audioStream.CodecCtx().SampleFmt())
+	if err != nil {
+		log.Fatal("new swr context error:", err.Error())
+	}
+	if swrCtx == nil {
+		log.Fatal("unable to create Swr Context")
+	}
+
+	outputCtx.SetStartTime(0)
 
 	if err := outputCtx.WriteHeader(); err != nil {
 		log.Fatal(err.Error())
 	}
 
+	outputCtx.Dump()
+
 	count := 0
 	for packet := range mic.GetNewPackets() {
-		srcFrame, err := packet.Frames(ast.CodecCtx())
-		Release(packet)
+		srcFrames, err := cc.Decode(packet)
+		packet.Free()
 		if err != nil {
 			log.Println("capture audio error:", err)
 			continue
 		}
 
-		wrote := fifo.Write(srcFrame)
-		count += wrote
 		exit := false
+		for _, srcFrame := range srcFrames {
+			wrote := fifo.Write(srcFrame)
+			count += wrote
 
-		for fifo.SamplesToRead() >= 1152 {
-			winFrame := fifo.Read(1152)
-			dstFrame := swrCtx.Convert(winFrame)
-			Release(winFrame)
+			for fifo.SamplesToRead() >= 1152 {
+				winFrame := fifo.Read(1152)
+				dstFrame, err := swrCtx.Convert(winFrame)
+				if err != nil {
+					log.Println("convert audio error:", err)
+					exit = true
+					break
+				}
+				if dstFrame == nil {
+					continue
+				}
+				winFrame.Free()
 
-			if dstFrame == nil {
-				continue
-			}
+				writePacket, err := dstFrame.Encode(audioEncCtx)
+				if err != nil {
+					log.Fatal(err)
+				}
+				if writePacket == nil {
+					continue
+				}
 
-			writePacket, err := dstFrame.Encode(occ)
-			if err == nil {
 				if err := outputCtx.WritePacket(writePacket); err != nil {
 					log.Println("write packet err", err.Error())
 				}
-
-				Release(writePacket)
-
-				if count < int(cc.SampleRate())*10 {
+				writePacket.Free()
+				dstFrame.Free()
+				if count > int(cc.SampleRate())*10 {
 					break
-				} else { //exit
-					exit = true
-					writePacket, err = dstFrame.Encode(occ)
 				}
-			} else {
-				fatal(err)
 			}
-			Release(dstFrame)
 		}
-		Release(srcFrame)
 		if exit {
 			break
 		}
-
 	}
 }
