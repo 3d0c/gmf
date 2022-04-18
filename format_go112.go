@@ -1,3 +1,4 @@
+//go:build go1.12
 // +build go1.12
 
 // Format.
@@ -364,6 +365,21 @@ func (ctx *FmtCtx) GetNextPacket() (*Packet, error) {
 	return pkt, nil
 }
 
+func (ctx *FmtCtx) GetNextPacketForStreamIndex(streamIndex int) (*Packet, error) {
+	for {
+		packet, err := ctx.GetNextPacket()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get next packet: %s", err)
+		}
+
+		if packet.StreamIndex() == streamIndex {
+			return packet, nil
+		}
+
+		packet.Free()
+	}
+}
+
 func (ctx *FmtCtx) GetNewPackets() chan *Packet {
 	yield := make(chan *Packet)
 
@@ -545,6 +561,72 @@ func (ctx *FmtCtx) SeekFrameAt(sec int64, streamIndex int) error {
 	ist.CodecCtx().FlushBuffers()
 
 	return nil
+}
+
+func (ctx *FmtCtx) SeekFrameAtTimeCode(timecode string, streamIndex int) error {
+	ist, err := ctx.GetStream(streamIndex)
+	if err != nil {
+		return err
+	}
+
+	istCodecCtx := ist.CodecCtx()
+	istAvgFrameRate := ist.GetAvgFrameRate()
+
+	sec := int64(0)
+
+	found := false
+	for !found {
+		packet, err := ctx.GetNextPacket()
+		if err != nil {
+			return err
+		}
+		if packet.StreamIndex() != streamIndex {
+			continue
+		}
+
+		found, err = isPacketLaterThanTimeCode(packet, timecode, istCodecCtx, istAvgFrameRate)
+		if err != nil {
+			return err
+		}
+		if !found {
+			sec += 5
+			err = ctx.SeekFrameAt(sec, streamIndex)
+			if err != nil {
+				return err
+			}
+		}
+
+		packet.Free()
+	}
+
+	return nil
+}
+
+func isPacketLaterThanTimeCode(packet *Packet, timecode string, codecCtx *CodecCtx, avgFrameRate AVRational) (bool, error) {
+	frameTimeCode, err := getPacketTimeCode(packet, codecCtx, avgFrameRate)
+	if err != nil {
+		return false, err
+	}
+	if frameTimeCode >= timecode {
+		return true, nil
+	}
+	return false, nil
+}
+
+func getPacketTimeCode(packet *Packet, codecCtx *CodecCtx, avgFrameRate AVRational) (string, error) {
+	frames, err := codecCtx.Decode(packet)
+	if err != nil {
+		return "", err
+	}
+	for _, frame := range frames {
+		timecode, err := frame.GetTimeCode(avgFrameRate)
+		if err != nil {
+			return "", err
+		}
+		frame.Free()
+		return timecode, nil
+	}
+	return "", nil
 }
 
 func (ctx *FmtCtx) SetPb(val *AVIOContext) *FmtCtx {
