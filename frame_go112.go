@@ -1,3 +1,4 @@
+//go:build go1.12
 // +build go1.12
 
 package gmf
@@ -5,10 +6,13 @@ package gmf
 /*
 #cgo pkg-config: libavcodec libavutil
 
+#include <stdlib.h>
 #include "libavcodec/avcodec.h"
 #include "libavutil/frame.h"
 #include "libavutil/imgutils.h"
 #include "libavutil/timestamp.h"
+#include "libavutil/timecode.h"
+#include "libavutil/common.h"
 
 void gmf_set_frame_data(AVFrame *frame, int idx, int l_size, uint8_t data) {
     if(!frame) {
@@ -24,6 +28,15 @@ int gmf_get_frame_line_size(AVFrame *frame, int idx) {
 
 void gmf_free_data(AVFrame *frame) {
 	av_freep(&frame->data[0]);
+}
+
+int gmf_get_timecode(AVFrameSideData *sd, AVRational avgFrameRate, char *out) {
+	uint32_t *tc = (uint32_t*)sd->data;
+	char tcbuf[AV_TIMECODE_STR_SIZE];
+	av_timecode_make_smpte_tc_string2(tcbuf, avgFrameRate, tc[1], 0, 0);
+	int n;
+	n = sprintf(out, "%s", tcbuf);
+	return n;
 }
 
 */
@@ -275,4 +288,99 @@ func (f *Frame) GetRawAudioData(plane int) []byte {
 
 func (f *Frame) Time(timebase AVRational) int {
 	return int(float64(timebase.AVR().Num) / float64(timebase.AVR().Den) * float64(f.Pts()))
+}
+
+var frameSideDataTypes []uint32 = []uint32{
+	C.AV_FRAME_DATA_PANSCAN,
+	C.AV_FRAME_DATA_A53_CC,
+	C.AV_FRAME_DATA_AFD,
+	C.AV_FRAME_DATA_AUDIO_SERVICE_TYPE,
+	C.AV_FRAME_DATA_CONTENT_LIGHT_LEVEL,
+	C.AV_FRAME_DATA_DISPLAYMATRIX,
+	C.AV_FRAME_DATA_DOWNMIX_INFO,
+	C.AV_FRAME_DATA_DYNAMIC_HDR_PLUS,
+	C.AV_FRAME_DATA_FILM_GRAIN_PARAMS,
+	C.AV_FRAME_DATA_GOP_TIMECODE,
+	C.AV_FRAME_DATA_ICC_PROFILE,
+	C.AV_FRAME_DATA_MASTERING_DISPLAY_METADATA,
+	C.AV_FRAME_DATA_MATRIXENCODING,
+	C.AV_FRAME_DATA_MOTION_VECTORS,
+	C.AV_FRAME_DATA_QP_TABLE_DATA,
+	C.AV_FRAME_DATA_QP_TABLE_PROPERTIES,
+	C.AV_FRAME_DATA_REGIONS_OF_INTEREST,
+	C.AV_FRAME_DATA_REPLAYGAIN,
+	C.AV_FRAME_DATA_S12M_TIMECODE,
+	C.AV_FRAME_DATA_SEI_UNREGISTERED,
+	C.AV_FRAME_DATA_SKIP_SAMPLES,
+	C.AV_FRAME_DATA_SPHERICAL,
+	C.AV_FRAME_DATA_STEREO3D,
+	C.AV_FRAME_DATA_VIDEO_ENC_PARAMS,
+}
+
+func (f *Frame) GetSideDataTypes() (map[uint32]string, error) {
+	result := make(map[uint32]string)
+	// get a pointer to the side data of the frame
+	for _, sideDataType := range frameSideDataTypes {
+		sideDataPtr := C.av_frame_get_side_data(f.avFrame, sideDataType)
+		if sideDataPtr != nil {
+			// cast the pointer to the side data to a AVFrameSideData struct
+			sideData := (*C.struct_AVFrameSideData)(unsafe.Pointer(sideDataPtr))
+
+			sideDataType := C.GoString(C.av_frame_side_data_name(sideData._type))
+			result[uint32(sideData._type)] = sideDataType
+		}
+	}
+
+	return result, nil
+}
+
+func (f *Frame) GetUserData() ([]byte, error) {
+	// get a pointer to the side data of the frame
+	sideDataPtr := C.av_frame_get_side_data(f.avFrame, C.AV_FRAME_DATA_SEI_UNREGISTERED)
+
+	if sideDataPtr == nil {
+		return nil, errors.New("no user data found")
+	}
+
+	// cast the pointer to the side data to a AVFrameSideData struct
+	sideData := (*C.struct_AVFrameSideData)(unsafe.Pointer(sideDataPtr))
+
+	// gets the bytes from the pointer
+	data := C.GoBytes(unsafe.Pointer(sideData.data), C.int(sideData.size))
+
+	return data, nil
+}
+
+func (f *Frame) GetTimeCode(avgFrameRate AVRational) (string, error) {
+	// get a pointer to the side data of the frame
+	sideDataPtr := C.av_frame_get_side_data(f.avFrame, C.AV_FRAME_DATA_S12M_TIMECODE)
+
+	if sideDataPtr == nil {
+		return "", errors.New("no timecode data found")
+	}
+
+	// cast the pointer to the side data to a AVFrameSideData struct
+	sideData := (*C.struct_AVFrameSideData)(unsafe.Pointer(sideDataPtr))
+
+	// check if the side data is valid
+	if sideData._type != C.AV_FRAME_DATA_S12M_TIMECODE || sideData.size != 16 {
+		return "", errors.New("invalid timecode side data")
+	}
+
+	// prepare a byte slice to hold the timecode
+	ptr := C.malloc(C.sizeof_char * 1024)
+	defer C.free(unsafe.Pointer(ptr))
+
+	// cast the go avgFrameRate to a C AVRational
+	afr := (C.struct_AVRational)(avgFrameRate)
+
+	// get the timecode by calling the C function and passing the sideData, the AVRational and the pointer to the byte slice to hold the timecode
+	// returns the length of the timecode in bytes
+	tcSize := C.gmf_get_timecode(sideData, afr, (*C.char)(ptr))
+
+	// gets the bytes from the pointer
+	tc := C.GoBytes(ptr, tcSize)
+
+	tcString := string(tc)
+	return tcString, nil
 }
