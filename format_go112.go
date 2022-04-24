@@ -380,6 +380,40 @@ func (ctx *FmtCtx) GetNextPacketForStreamIndex(streamIndex int) (*Packet, error)
 	}
 }
 
+func (ctx *FmtCtx) GetFirstPacketForStreamIndex(streamIndex int) (*Packet, error) {
+	currentPacket, err := ctx.GetNextPacketForStreamIndex(streamIndex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current packet: %s", err)
+	}
+	originalPosition := currentPacket.Pos()
+
+	err = ctx.SeekFrameAt(0, streamIndex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to seek to first frame: %s", err)
+	}
+
+	packet, err := ctx.GetNextPacketForStreamIndex(streamIndex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get next packet: %s", err)
+	}
+
+	err = ctx.SeekFrameAt(originalPosition, streamIndex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to seek to original position: %s", err)
+	}
+
+	return packet, nil
+}
+
+func (ctx *FmtCtx) GetLastPacketForStreamIndex(streamIndex int) (*Packet, error) {
+	err := ctx.SeekFrameAt(int64(ctx.Duration()), streamIndex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to seek to last frame: %s", err)
+	}
+
+	return ctx.GetNextPacketForStreamIndex(streamIndex)
+}
+
 func (ctx *FmtCtx) GetNewPackets() chan *Packet {
 	yield := make(chan *Packet)
 
@@ -572,25 +606,76 @@ func (ctx *FmtCtx) SeekFrameAtTimeCode(timecode string, streamIndex int) error {
 	istCodecCtx := ist.CodecCtx()
 	istAvgFrameRate := ist.GetAvgFrameRate()
 
-	sec := int64(0)
+	// check if timecode is valid (i.e. if the timecode is between the first and last frame of the video)
+	firstPacket, err := ctx.GetFirstPacketForStreamIndex(streamIndex)
+	if err != nil {
+		return err
+	}
+	lastPacket, err := ctx.GetLastPacketForStreamIndex(streamIndex)
+	if err != nil {
+		return err
+	}
+	firstFrameTimeCode, err := getPacketTimeCode(firstPacket, istCodecCtx, istAvgFrameRate)
+	if err != nil {
+		return err
+	}
+	lastFrameTimeCode, err := getPacketTimeCode(lastPacket, istCodecCtx, istAvgFrameRate)
+	if err != nil {
+		return err
+	}
+
+	tcBetween, err := IsTimeCodeBetween(timecode, firstFrameTimeCode, lastFrameTimeCode)
+	if err != nil {
+		return err
+	}
+	if !tcBetween {
+		return errors.New("timecode is not between the first and last frame of the video")
+	}
+
+	// get comparable timecodes
+	hhToTest, hhStart, hhEnd, err := TimeCodeToComparable(timecode, firstFrameTimeCode, lastFrameTimeCode)
+	if err != nil {
+		return err
+	}
+
+	// calculate a good approximation of the position of the needed frame
+	var relativePos float64 = float64(float64(hhToTest-hhStart) / float64(hhEnd-hhStart))
+
+	// rewind a bit to be sure we are not too far
+	if relativePos-0.001 > 0 {
+		relativePos -= 0.001
+	}
+
+	sec := ctx.Duration() * relativePos
+	err = ctx.SeekFrameAt(int64(sec), streamIndex)
+	if err != nil {
+		return err
+	}
 
 	found := false
 	for !found {
-		packet, err := ctx.GetNextPacket()
+		packet, err := ctx.GetNextPacketForStreamIndex(streamIndex)
 		if err != nil {
 			return err
-		}
-		if packet.StreamIndex() != streamIndex {
-			continue
 		}
 
-		found, err = isPacketLaterThanTimeCode(packet, timecode, istCodecCtx, istAvgFrameRate)
+		frameTimeCode, err := getPacketTimeCode(packet, istCodecCtx, istAvgFrameRate)
 		if err != nil {
 			return err
 		}
-		if !found {
-			sec += 5
-			err = ctx.SeekFrameAt(sec, streamIndex)
+
+		hhFrameTimeCode, _, _, err := TimeCodeToComparable(frameTimeCode, firstFrameTimeCode, lastFrameTimeCode)
+		if err != nil {
+			return err
+		}
+
+		if hhFrameTimeCode >= hhToTest {
+			return nil
+		}
+
+		if hhFrameTimeCode < hhToTest {
+			sec += 1
+			err = ctx.SeekFrameAt(int64(sec), streamIndex)
 			if err != nil {
 				return err
 			}
