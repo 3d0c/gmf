@@ -27,6 +27,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"syscall"
 	"unsafe"
 )
@@ -183,4 +185,70 @@ func GenSyntVideoN(N, w, h int, fmt int32) chan *Frame {
 		}
 	}()
 	return yield
+}
+
+func TimeCodeToComparable(timeCodeToTest, timeCodeStart, timeCodeEnd string) (hhToTest int, hhStart int, hhEnd int, err error) {
+	hhStart, err = TimeCodeToHundredths(timeCodeStart)
+	if err != nil {
+		return
+	}
+	hhEnd, err = TimeCodeToHundredths(timeCodeEnd)
+	if err != nil {
+		return
+	}
+	hhToTest, err = TimeCodeToHundredths(timeCodeToTest)
+	if err != nil {
+		return
+	}
+
+	if hhEnd < hhStart {
+		hhStart -= hhEnd
+		hhToTest -= hhEnd
+		if hhToTest <= 0 {
+			hhToTest += 24 * 60 * 60 * 100
+		}
+		hhEnd = 24 * 60 * 60 * 100
+	}
+	return
+}
+
+func IsTimeCodeBetween(timeCodeToTest, timeCodeStart, timeCodeEnd string) (bool, error) {
+	hhToTest, hhStart, hhEnd, err := TimeCodeToComparable(timeCodeToTest, timeCodeStart, timeCodeEnd)
+	if err != nil {
+		return false, err
+	}
+	return hhToTest >= hhStart && hhToTest <= hhEnd, nil
+}
+
+// TimeCodeToHHMMSS splits a timeCode = "20:15:31:00" to return 20, 15, 31
+func TimeCodeToHHMMSS(timeCode string) (int, int, int, int, error) {
+	parts := strings.Split(timeCode, ":")
+	if len(parts) != 4 {
+		return -1, -1, -1, -1, errors.New("invalid timecode")
+	}
+	hh, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return -1, -1, -1, -1, errors.New("invalid timecode")
+	}
+	mm, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return -1, -1, -1, -1, errors.New("invalid timecode")
+	}
+	ss, err := strconv.Atoi(parts[2])
+	if err != nil {
+		return -1, -1, -1, -1, errors.New("invalid timecode")
+	}
+	hs, err := strconv.Atoi(parts[3])
+	if err != nil {
+		return -1, -1, -1, -1, errors.New("invalid timecode")
+	}
+	return hh, mm, ss, hs, nil
+}
+
+func TimeCodeToHundredths(timeCode string) (int, error) {
+	hh, mm, ss, hs, err := TimeCodeToHHMMSS(timeCode)
+	if err != nil {
+		return -1, err
+	}
+	return (hh * 60 * 60 * 100) + (mm * 60 * 100) + (ss * 100) + hs, nil
 }
