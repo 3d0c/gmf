@@ -45,7 +45,7 @@ func (s *Stream) DumpContexCodec(codec *CodecCtx) {
 }
 
 func (s *Stream) SetCodecFlags() {
-	s.avStream.codec.flags |= C.AV_CODEC_FLAG_GLOBAL_HEADER
+	s.avStream.event_flags |= C.AV_CODEC_FLAG_GLOBAL_HEADER
 }
 
 // CodecCtx
@@ -57,7 +57,7 @@ func (s *Stream) CodecCtx() *CodecCtx {
 	}
 
 	// Open input codec context
-	c, err := FindDecoder(int(s.avStream.codec.codec_id))
+	c, err := FindDecoder(int(s.avStream.codecpar.codec_id))
 	if err != nil {
 		return nil
 	}
@@ -75,7 +75,7 @@ func (s *Stream) CodecCtx() *CodecCtx {
 		panic("error opening codec context")
 	}
 
-	s.cc.avCodecCtx.time_base = s.avStream.codec.time_base
+	s.cc.avCodecCtx.time_base = s.avStream.time_base
 
 	return s.cc
 }

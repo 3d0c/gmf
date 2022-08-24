@@ -124,7 +124,7 @@ func (f *Frame) Height() int {
 }
 
 func (f *Frame) PktPts() int64 {
-	return int64(f.avFrame.pkt_pts)
+	return int64(f.avFrame.pts)
 }
 
 func (f *Frame) PktPos() int64 {
@@ -132,7 +132,7 @@ func (f *Frame) PktPos() int64 {
 }
 
 func (f *Frame) SetPktPts(val int64) {
-	f.avFrame.pkt_pts = (C.int64_t)(val)
+	f.avFrame.pts = (C.int64_t)(val)
 }
 
 func (f *Frame) PktDts() int {
@@ -305,8 +305,6 @@ var frameSideDataTypes []uint32 = []uint32{
 	C.AV_FRAME_DATA_MASTERING_DISPLAY_METADATA,
 	C.AV_FRAME_DATA_MATRIXENCODING,
 	C.AV_FRAME_DATA_MOTION_VECTORS,
-	C.AV_FRAME_DATA_QP_TABLE_DATA,
-	C.AV_FRAME_DATA_QP_TABLE_PROPERTIES,
 	C.AV_FRAME_DATA_REGIONS_OF_INTEREST,
 	C.AV_FRAME_DATA_REPLAYGAIN,
 	C.AV_FRAME_DATA_S12M_TIMECODE,
