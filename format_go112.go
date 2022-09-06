@@ -285,11 +285,11 @@ func (ctx *FmtCtx) IsGlobalHeader() bool {
 }
 
 func (ctx *FmtCtx) WriteHeader() error {
-	cfilename := &(ctx.avCtx.filename[0])
+	cfilename := &(ctx.avCtx.url)
 
 	// If NOFILE flag isn't set and we don't use custom IO, open it
 	if !ctx.IsNoFile() && !ctx.customPb {
-		if averr := C.avio_open(&ctx.avCtx.pb, cfilename, C.AVIO_FLAG_WRITE); averr < 0 {
+		if averr := C.avio_open(&ctx.avCtx.pb, *cfilename, C.AVIO_FLAG_WRITE); averr < 0 {
 			return errors.New(fmt.Sprintf("Unable to open '%s': %s", ctx.Filename, AvError(int(averr))))
 		}
 	}
@@ -331,9 +331,9 @@ func (ctx *FmtCtx) SetOformat(ofmt *OutputFmt) error {
 
 func (ctx *FmtCtx) Dump() {
 	if ctx.ofmt == nil {
-		C.av_dump_format(ctx.avCtx, 0, &(ctx.avCtx.filename[0]), 0)
+		C.av_dump_format(ctx.avCtx, 0, ctx.avCtx.url, 0)
 	} else {
-		C.av_dump_format(ctx.avCtx, 0, &(ctx.avCtx.filename[0]), 1)
+		C.av_dump_format(ctx.avCtx, 0, ctx.avCtx.url, 1)
 	}
 }
 
